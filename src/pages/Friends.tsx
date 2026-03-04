@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
-import { motion } from "motion/react";
-import { ArrowLeft, Users, UserPlus, Zap, MessageSquare, Link, Copy, Plus, X, Trash2, Edit2 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowLeft, Users, UserPlus, Zap, MessageSquare, Link, Copy, Plus, X, Trash2, Edit2, ChevronDown } from "lucide-react";
 import Header from "../components/Header";
 import { transliterate } from "../utils/transliterate";
 import ProfilePopup from "../components/ProfilePopup";
+import { useTelegram } from "../context/TelegramContext";
+import { supabase } from "../integrations/supabase/client";
 
 export default function Friends() {
   const navigate = useNavigate();
   const location = useLocation();
   const { character, friends, groupChats, addFriend, toggleFriendAi, addEnergy, addFear, createGroupChat, globalBackgroundUrl, pageBackgrounds, deleteFriend, deleteGroupChat, updateGroupName } = usePlayerStore();
+  const { profile } = useTelegram();
   const [newFriendName, setNewFriendName] = useState("");
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -18,11 +21,32 @@ export default function Friends() {
   const [showProfilePopup, setShowProfilePopup] = useState<string | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
+  const [referralCount, setReferralCount] = useState(0);
+  const [referralFriends, setReferralFriends] = useState<Array<{first_name: string; username: string | null}>>([]);
+  const [showReferralList, setShowReferralList] = useState(false);
+
+  useEffect(() => {
+    if (!character) return;
+    const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
+    supabase
+      .from("profiles")
+      .select("first_name, username")
+      .eq("referral_code", latinName)
+      .then(({ data }) => {
+        if (data) {
+          setReferralCount(data.length);
+          setReferralFriends(data);
+        }
+      });
+  }, [character]);
 
   if (!character) {
     navigate("/");
     return null;
   }
+
+  const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
+  const referralLink = `https://t.me/Bab_AIbot/app?startapp=${latinName}`;
 
   const handleAddFriend = () => {
     if (newFriendName.trim() && newFriendName !== character.name) {
@@ -32,16 +56,10 @@ export default function Friends() {
   };
 
   const handleCopyRef = () => {
-    const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
-    navigator.clipboard.writeText(`https://bab-ai.ru/invite/${latinName}`);
-    alert("Реферальная ссылка скопирована! За каждого друга вы получите 100 энергии и 100 страха.");
-    // Simulate someone joining via ref link
-    setTimeout(() => {
-      addEnergy(100);
-      addFear(100);
-      alert("По вашей ссылке зарегистрировался новый Бабай! Начислено 100 энергии и 100 страха.");
-    }, 5000);
+    navigator.clipboard.writeText(referralLink);
+    alert("Реферальная ссылка скопирована!");
   };
+
 
   const shareEnergy = (friendName: string) => {
     const { energy, useEnergy } = usePlayerStore.getState();
@@ -104,20 +122,54 @@ export default function Friends() {
       />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8 relative z-10">
-        <section className="bg-neutral-900/80 backdrop-blur-md p-6 rounded-2xl border border-neutral-800">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
+        <section className="bg-neutral-900/80 backdrop-blur-md p-6 rounded-2xl border border-neutral-800 space-y-3">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-white">
             <Link size={18} className="text-red-500" /> Реферальная программа
           </h2>
-          <p className="text-sm text-neutral-400 mb-4">
+          <p className="text-sm text-neutral-400">
             Приглашайте друзей по ссылке и получайте бонусы: 100 <Zap size={12} className="inline text-yellow-500" /> и 100 <span className="text-red-500">Страха</span>.
           </p>
+          {/* Referral counter */}
           <button
-            onClick={handleCopyRef}
-            className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 border border-neutral-700"
+            onClick={() => setShowReferralList(!showReferralList)}
+            className="w-full flex items-center justify-between bg-neutral-950 border border-neutral-800 hover:border-red-900/50 rounded-xl px-4 py-3 transition-colors"
           >
-            <Copy size={16} /> Скопировать ссылку
+            <span className="flex items-center gap-2 text-sm text-neutral-300">
+              <Users size={16} className="text-red-500" /> Пришло по ссылке
+            </span>
+            <span className="font-black text-white text-lg">{referralCount}</span>
           </button>
+          {/* Referral list */}
+          {showReferralList && (
+            <div className="space-y-2">
+              {referralFriends.length === 0 ? (
+                <p className="text-neutral-500 text-xs text-center py-2">Пока никто не пришёл по вашей ссылке</p>
+              ) : referralFriends.map((f, i) => (
+                <div key={i} className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2">
+                  <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-bold text-red-400">
+                    {f.first_name[0]}
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-bold">{f.first_name}</p>
+                    {f.username && <p className="text-neutral-500 text-xs">@{f.username}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-500 truncate">
+              {referralLink}
+            </div>
+            <button
+              onClick={handleCopyRef}
+              className="p-3 bg-red-700 hover:bg-red-600 text-white rounded-xl transition-colors flex items-center justify-center shrink-0"
+            >
+              <Copy size={16} />
+            </button>
+          </div>
         </section>
+
 
         <section className="bg-neutral-900/80 backdrop-blur-md p-6 rounded-2xl border border-neutral-800">
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">

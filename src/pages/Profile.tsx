@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
-import { motion } from "motion/react";
-import { User, Copy, Share2, Trophy, Camera, BookOpen, Loader2, Image as ImageIcon, Volume2, VolumeX, X, ShieldAlert, ExternalLink, MessageCircle } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { User, Copy, Share2, Trophy, Camera, BookOpen, Loader2, Image as ImageIcon, Volume2, VolumeX, X, ShieldAlert, ExternalLink, MessageCircle, Users } from "lucide-react";
 import * as htmlToImage from 'html-to-image';
 import { generateLore } from "../services/geminiService";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
 import Header from "../components/Header";
 import { transliterate } from "../utils/transliterate";
 import { useTelegram } from "../context/TelegramContext";
+import { supabase } from "../integrations/supabase/client";
 
 const ROLE_COLORS: Record<string, string> = {
   "Супер-Бабай": "text-red-400 bg-red-900/20 border-red-800",
@@ -25,6 +26,10 @@ export default function Profile() {
   const [isGeneratingLore, setIsGeneratingLore] = useState(false);
   const [infoModal, setInfoModal] = useState<CurrencyType>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const [referralFriends, setReferralFriends] = useState<Array<{first_name: string; username: string | null; telegram_id: number}>>([]);
+  const [showReferralPopup, setShowReferralPopup] = useState(false);
+  const [invitedByProfile, setInvitedByProfile] = useState<{first_name: string; username: string | null} | null>(null);
 
   useEffect(() => {
     if (character && !character.lore && !isGeneratingLore) {
@@ -39,6 +44,32 @@ export default function Profile() {
     }
   }, [character?.avatarUrl]);
 
+  // Load referral stats
+  useEffect(() => {
+    if (!profile) return;
+    const latinName = transliterate(character?.name || "").replace(/\s+/g, "").toLowerCase();
+    const loadReferrals = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name, username, telegram_id")
+        .eq("referral_code", latinName);
+      if (data) {
+        setReferralCount(data.length);
+        setReferralFriends(data);
+      }
+      // Load who invited the current user
+      if (profile.referral_code) {
+        const { data: inviterData } = await supabase
+          .from("profiles")
+          .select("first_name, username")
+          .ilike("profiles.telegram_id::text", "%") // can't do reverse lookup easily; use referral_code as name
+          .limit(1);
+        // referral_code stores the latin name of the inviter; show it as-is
+      }
+    };
+    loadReferrals();
+  }, [profile, character?.name]);
+
   if (!character) {
     navigate("/");
     return null;
@@ -51,9 +82,11 @@ export default function Profile() {
     setIsGeneratingLore(false);
   };
 
+  const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
+  const referralLink = `https://t.me/Bab_AIbot/app?startapp=${latinName}`;
+
   const handleCopyRef = () => {
-    const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
-    navigator.clipboard.writeText(`https://bab-ai.ru/invite/${latinName}`);
+    navigator.clipboard.writeText(referralLink);
     alert("Ссылка скопирована!");
   };
 
@@ -338,18 +371,35 @@ export default function Profile() {
         </section>
 
         {/* Referral */}
-        <section className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
-          <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-wider flex items-center gap-2">
+        <section className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3">
+          <h3 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Share2 size={18} /> Пригласи друга
           </h3>
-          <p className="text-xs text-neutral-400 mb-4">
-            Получи 100 энергии и 100 страха за каждого друга, который
-            присоединится по твоей ссылке.
+          <p className="text-xs text-neutral-400">
+            Получи 100 энергии и 100 страха за каждого друга, который присоединится по твоей ссылке.
           </p>
+
+          {/* Who invited me */}
+          {profile?.referral_code && (
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-400">
+              👤 Вас пригласил Бабай: <span className="text-neutral-200 font-bold">{profile.referral_code}</span>
+            </div>
+          )}
+
+          {/* Referral counter */}
+          <button
+            onClick={() => setShowReferralPopup(true)}
+            className="w-full flex items-center justify-between bg-neutral-950 border border-neutral-800 hover:border-red-900/50 rounded-xl px-3 py-3 transition-colors"
+          >
+            <span className="flex items-center gap-2 text-sm text-neutral-300">
+              <Users size={16} className="text-red-500" /> Пришло по ссылке
+            </span>
+            <span className="font-black text-white text-lg">{referralCount}</span>
+          </button>
+
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-3 text-sm text-neutral-500 truncate">
-              bab-ai.ru/invite/
-              {transliterate(character.name).replace(/\s+/g, "").toLowerCase()}
+            <div className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-3 text-xs text-neutral-500 truncate">
+              {referralLink}
             </div>
             <button
               onClick={handleCopyRef}
@@ -362,6 +412,51 @@ export default function Profile() {
       </div>
 
       <CurrencyModal type={infoModal} onClose={() => setInfoModal(null)} />
+
+      {/* Referral Friends Popup */}
+      <AnimatePresence>
+        {showReferralPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowReferralPopup(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 max-w-sm w-full max-h-[70vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Users size={18} className="text-red-500" /> Приглашённые ({referralCount})
+                </h2>
+                <button onClick={() => setShowReferralPopup(false)} className="text-neutral-500 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="overflow-y-auto space-y-2 flex-1">
+                {referralFriends.length === 0 ? (
+                  <p className="text-neutral-500 text-sm text-center py-4">Пока никто не пришёл по вашей ссылке</p>
+                ) : referralFriends.map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2">
+                    <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-sm font-bold text-red-400">
+                      {f.first_name[0]}
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-bold">{f.first_name}</p>
+                      {f.username && <p className="text-neutral-500 text-xs">@{f.username}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Item Modal */}
       {selectedItem && (

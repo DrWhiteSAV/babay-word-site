@@ -23,6 +23,35 @@ const DEFAULT_AI_SETTINGS = [
     service: "gemini-3-flash-preview",
     prompt: "Сгенерируй 5 уникальных имен для персонажа в хоррор-игре.",
   },
+  {
+    section_id: "background",
+    name: "Генерация Фонов (Игра/Хаб)",
+    service: "gemini-3.1-flash-image-preview",
+    prompt: "Создай атмосферный фон для хоррор-игры в стиле {style}. Имя персонажа: {name}. Пол: {gender}. Страх: {fear}. Уровень телекинеза: {telekinesis}. Уровень босса: {boss_level}. Арбузы: {watermelons}. Локация: мрачный заброшенный дом, ночь, туман.",
+  },
+  {
+    section_id: "lore",
+    name: "Генерация Лора персонажа",
+    service: "gemini-3-flash-preview",
+    prompt: "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Сделай историю атмосферной и жуткой.",
+  },
+];
+
+const MACRO_DOCS = [
+  { macro: "{name}", desc: "Имя Бабая" },
+  { macro: "{gender}", desc: "Пол (Бабай/Бабайка)" },
+  { macro: "{style}", desc: "Стиль (Хоррор, Аниме...)" },
+  { macro: "{fear}", desc: "Текущий страх" },
+  { macro: "{energy}", desc: "Текущая энергия" },
+  { macro: "{watermelons}", desc: "Арбузы" },
+  { macro: "{telekinesis}", desc: "Уровень телекинеза" },
+  { macro: "{boss_level}", desc: "Уровень босса" },
+  { macro: "{lore}", desc: "История духа" },
+  { macro: "{username}", desc: "Username в Telegram" },
+  { macro: "{first_name}", desc: "Имя в Telegram" },
+  { macro: "{telegram_id}", desc: "Telegram ID пользователя" },
+  { macro: "{wishes}", desc: "Желания персонажа (через запятую)" },
+  { macro: "{inventory}", desc: "Инвентарь (список предметов)" },
 ];
 
 type AISetting = { section_id: string; name: string; service: string; prompt: string };
@@ -76,6 +105,21 @@ export default function AdminAI() {
           Настройки ИИ синхронизируются с базой данных при сохранении.
         </div>
 
+        {/* Macros Reference */}
+        <details className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+          <summary className="px-4 py-3 text-xs font-bold text-neutral-400 cursor-pointer uppercase tracking-wider flex items-center gap-2">
+            <Key size={12} /> Доступные макросы для промптов
+          </summary>
+          <div className="px-4 pb-4 grid grid-cols-2 gap-1.5">
+            {MACRO_DOCS.map(({ macro, desc }) => (
+              <div key={macro} className="flex items-start gap-2 bg-neutral-950 rounded-lg px-2 py-1.5">
+                <code className="text-[10px] text-red-400 font-mono shrink-0">{macro}</code>
+                <span className="text-[10px] text-neutral-500">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+
         {loading ? (
           <div className="flex items-center justify-center py-12"><Loader2 size={24} className="animate-spin text-red-500" /></div>
         ) : settings.map((s, idx) => (
@@ -97,9 +141,11 @@ export default function AdminAI() {
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-1"><MessageSquare size={10} /> Системный Промпт</label>
-                <textarea rows={3}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none resize-none"
+                <textarea rows={4}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none resize-y"
+                  placeholder="Используй макросы: {name}, {gender}, {style}..."
                   value={s.prompt} onChange={e => update(idx, "prompt", e.target.value)} />
+                <p className="text-[9px] text-neutral-600">Макросы заменяются реальными данными пользователя при запросе</p>
               </div>
             </div>
           </div>
