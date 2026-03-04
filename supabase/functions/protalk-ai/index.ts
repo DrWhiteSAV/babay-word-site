@@ -42,11 +42,15 @@ async function askProTalk(
   return data.done || data.message || data.text || data.response || "";
 }
 
-// Extract image URL from ProTalk response text (looks for http/https links ending in image extensions or /file/ paths)
+// Extract image URL from ProTalk response text
+// Handles: plain URLs, markdown ![alt](url), ![alt]url, or any http URL
 function extractImageUrl(text: string): string | null {
-  // Match Telegram file URLs or common image URLs
-  const urlMatch = text.match(/https?:\/\/[^\s\])"']+(?:\.(?:png|jpg|jpeg|webp|gif)|\/file\/[^\s\])"']+)/i);
-  return urlMatch ? urlMatch[0] : null;
+  // 1. Markdown image: ![alt](url) or ![alt]url (no closing paren)
+  const mdMatch = text.match(/!\[[^\]]*\]\(?( *https?:\/\/[^\s\])"']+)\)?/i);
+  if (mdMatch) return mdMatch[1].trim();
+  // 2. Any bare https URL
+  const urlMatch = text.match(/https?:\/\/[^\s\])"'<>]+/i);
+  return urlMatch ? urlMatch[0].trim() : null;
 }
 
 serve(async (req) => {
