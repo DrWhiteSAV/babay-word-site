@@ -73,7 +73,7 @@ export async function generateCharacterName(
 ): Promise<string> {
   try {
     const settings = await loadAISettings("names");
-    const model = settings?.service || "gemini-3-flash-preview";
+    const model = settings?.service || "gemini-2.0-flash";
     const basePrompt = settings?.prompt || "Сгенерируй уникальное, забавное имя для славянского кибернетического духа. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни только имя, без лишних слов.";
     const prompt = applyMacros(basePrompt, { gender, style });
 
@@ -106,12 +106,12 @@ export async function generateAvatar(
   });
 
   try {
-    const model = settings?.service || "gemini-2.5-flash-image";
+    const model = settings?.service || "gemini-2.0-flash-preview-image-generation";
     const response = await withRetry(() => getAI().models.generateContent({
       model,
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: { aspectRatio: "1:1" },
+        responseModalities: ["IMAGE", "TEXT"],
       },
     }));
 
@@ -136,7 +136,7 @@ export async function generateScenario(
 ): Promise<{ text: string; options: string[]; correctAnswer: number; successText: string; failureText: string }> {
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: `Ты - ведущий текстовой ролевой игры "Бабай". Игрок - славянский кибер-дух (старик/старуха в пижаме с длинным языком и телекинезом).
       Цель: выгнать жильцов из многоквартирного дома.
       Стиль игры: ${style}. Этап: ${stage}. Сложность: ${difficulty}.
@@ -211,12 +211,12 @@ export async function generateBackgroundImage(
   });
 
   try {
-    const model = settings?.service || "gemini-2.5-flash-image";
+    const model = settings?.service || "gemini-2.0-flash-preview-image-generation";
     const response = await withRetry(() => getAI().models.generateContent({
       model,
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: { aspectRatio: "16:9" },
+        responseModalities: ["IMAGE", "TEXT"],
       },
     }));
 
@@ -252,12 +252,12 @@ export async function generateBossImage(
   });
 
   try {
-    const model = settings?.service || "gemini-2.5-flash-image";
+    const model = settings?.service || "gemini-2.0-flash-preview-image-generation";
     const response = await withRetry(() => getAI().models.generateContent({
       model,
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: { aspectRatio: "1:1" },
+        responseModalities: ["IMAGE", "TEXT"],
       },
     }));
 
@@ -319,7 +319,7 @@ export async function generateFriendChat(
     parts.push({ text: promptText });
 
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: { parts },
     }));
     return response.text?.trim() || "Продолжай работать.";
@@ -349,7 +349,7 @@ export async function generateLore(
     const settings = await loadAISettings("lore");
     const basePrompt = settings?.prompt || "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Сделай историю атмосферной и жуткой.";
     const prompt = applyMacros(basePrompt, { name, gender, style, ...extraData });
-    const model = settings?.service || "gemini-3-flash-preview";
+    const model = settings?.service || "gemini-2.0-flash";
 
     const response = await withRetry(() => getAI().models.generateContent({
       model,

@@ -14,7 +14,7 @@ function getAI(): GoogleGenAI {
 export const generateLore = async (name: string, gender: string, style: string) => {
   try {
     const response = await getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: `Придумай мрачную, но интересную предысторию (лор) для славянского кибернетического духа по имени ${name}. Пол: ${gender}. Стиль: ${style}. Дух выглядит как страшный старик или старуха в пижаме с длинным языком более 1 метра, которым он хватает предметы, и обладает телекинезом. Напиши 3-4 абзаца.`,
     });
     return response.text || "Лор скрыт во мраке...";
@@ -43,7 +43,7 @@ export const generateAiChatResponse = async (friendName: string, userMessage: st
     }
 
     const response = await getAI().models.generateContent({
-      model: "gemini-2.5-flash-lite-latest",
+      model: "gemini-2.0-flash-lite",
       contents: { parts },
     });
     return response.text || "Мррр... язык заплелся.";
@@ -80,18 +80,12 @@ export const generateAudio = async (text: string) => {
 export const generateBossImage = async (style: string) => {
   try {
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-2.0-flash-preview-image-generation',
       contents: {
-        parts: [
-          {
-            text: `Огромный, ужасающий босс-жилец многоквартирного дома, кибер-славянский стиль, ${style}, мрачная атмосфера, высокое качество.`,
-          },
-        ],
+        parts: [{ text: `Огромный, ужасающий босс-жилец многоквартирного дома, кибер-славянский стиль, ${style}, мрачная атмосфера, высокое качество.` }],
       },
       config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        }
+        responseModalities: ["IMAGE", "TEXT"],
       }
     });
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -118,18 +112,12 @@ export const editAvatarWithItem = async (currentAvatar: string, character: any, 
     let prompt = `Update the Slavic cybernetic spirit named ${character.name} (${character.gender}), style: ${character.style}. Current avatar: ${currentAvatar}. ${itemsDescription} NEW item just purchased and should be prominently featured: ${newItemName}. ${wishesDescription} Keep the character identity, high quality portrait.`;
 
     const response = await getAI().models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-2.0-flash-preview-image-generation',
       contents: {
-        parts: [
-          {
-            text: prompt,
-          },
-        ],
+        parts: [{ text: prompt }],
       },
       config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        }
+        responseModalities: ["IMAGE", "TEXT"],
       }
     });
     for (const part of response.candidates?.[0]?.content?.parts || []) {
