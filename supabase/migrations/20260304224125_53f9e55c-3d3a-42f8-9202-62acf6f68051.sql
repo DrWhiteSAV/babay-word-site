@@ -1,0 +1,1 @@
+UPDATE public.ai_settings SET service = 'protalk-image' WHERE section_id IN ('avatar', 'avatar_shop', 'background', 'boss'); UPDATE public.ai_settings SET service = 'protalk-text' WHERE section_id IN ('chat', 'lore', 'names');
