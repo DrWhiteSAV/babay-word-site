@@ -5,6 +5,8 @@ import { DEFAULT_GALLERY_IMAGES } from "../config/defaultSettings";
 import { generateCharacterName, generateAvatar } from "../services/ai";
 import { motion } from "motion/react";
 import { Loader2, ArrowRight, UserPlus, Sparkles } from "lucide-react";
+import { saveImageToGallery } from "../utils/galleryUtils";
+import { useTelegram } from "../context/TelegramContext";
 
 const STYLES: Style[] = [
   "Фотореализм",
@@ -33,6 +35,7 @@ export default function CharacterCreate() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setCharacter, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
+  const { profile } = useTelegram();
     
   const [gender, setGender] = useState<Gender | null>(null);
   const [style, setStyle] = useState<Style | null>(null);
@@ -55,19 +58,30 @@ export default function CharacterCreate() {
     try {
       const name = await generateCharacterName(gender, style);
       let avatarUrl = selectedDefaultImage;
+      let avatarPrompt: string | undefined;
       
       if (!avatarUrl) {
-        avatarUrl = await generateAvatar(gender, style, wishes);
+        const result = await generateAvatar(gender, style, wishes, { name });
+        avatarUrl = result.url;
+        avatarPrompt = result.prompt;
       }
+
+      const finalUrl = avatarUrl || "https://picsum.photos/id/874/1920/1080";
 
       setCharacter({
         name,
         gender,
         style,
         wishes,
-        avatarUrl: avatarUrl || "https://picsum.photos/id/874/1920/1080", // fallback
+        avatarUrl: finalUrl,
         telekinesisLevel: 1,
       });
+
+      // Save to gallery via Telegram bot
+      if (profile?.telegram_id && !selectedDefaultImage) {
+        saveImageToGallery(finalUrl, profile.telegram_id, `Аватар: ${name}`, avatarPrompt).catch(console.error);
+      }
+
       navigate("/hub");
     } catch (error) {
       console.error(error);

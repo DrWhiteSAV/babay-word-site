@@ -14,26 +14,32 @@ const DEFAULT_AI_SETTINGS = [
   {
     section_id: "avatar",
     name: "Генерация Аватаров",
-    service: "gemini-3.1-flash-image-preview",
-    prompt: "Создай аватар в стиле киберпанк/аниме/реализм для персонажа с именем {name}.",
+    service: "gemini-2.5-flash-image",
+    prompt: "A portrait of a Slavic cybernetic spirit named {name} ({gender}). They wear pajamas and have a spooky but funny appearance with a long tongue. Style: {style}. Additional wishes: {wishes}. High quality, detailed, atmospheric.",
   },
   {
     section_id: "names",
     name: "Генерация Имен",
     service: "gemini-3-flash-preview",
-    prompt: "Сгенерируй 5 уникальных имен для персонажа в хоррор-игре.",
+    prompt: "Сгенерируй уникальное, забавное имя для славянского кибернетического духа. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни только имя, без лишних слов.",
   },
   {
     section_id: "background",
     name: "Генерация Фонов (Игра/Хаб)",
-    service: "gemini-3.1-flash-image-preview",
-    prompt: "Создай атмосферный фон для хоррор-игры в стиле {style}. Имя персонажа: {name}. Пол: {gender}. Страх: {fear}. Уровень телекинеза: {telekinesis}. Уровень босса: {boss_level}. Арбузы: {watermelons}. Локация: мрачный заброшенный дом, ночь, туман.",
+    service: "gemini-2.5-flash-image",
+    prompt: "Create an atmospheric horror game background in style {style}. Character name: {name}. Gender: {gender}. Fear level: {fear}. Telekinesis level: {telekinesis}. Boss level: {boss_level}. Watermelons: {watermelons}. Location: dark abandoned house, night, fog. No people, no text.",
+  },
+  {
+    section_id: "boss",
+    name: "Генерация Боссов",
+    service: "gemini-2.5-flash-image",
+    prompt: "A massive terrifying boss creature for a Slavic horror game. It is a corrupted spirit guardian for {name} ({gender}) to fight. Style: {style}. Boss level: {boss_level}. Fear power: {fear}. Epic, menacing, high quality.",
   },
   {
     section_id: "lore",
     name: "Генерация Лора персонажа",
     service: "gemini-3-flash-preview",
-    prompt: "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Сделай историю атмосферной и жуткой.",
+    prompt: "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Страх: {fear}. Сделай историю атмосферной и жуткой.",
   },
 ];
 
@@ -46,12 +52,18 @@ const MACRO_DOCS = [
   { macro: "{watermelons}", desc: "Арбузы" },
   { macro: "{telekinesis}", desc: "Уровень телекинеза" },
   { macro: "{boss_level}", desc: "Уровень босса" },
+  { macro: "{stage}", desc: "Текущий этап игры" },
   { macro: "{lore}", desc: "История духа" },
+  { macro: "{wishes}", desc: "Желания персонажа (через запятую)" },
+  { macro: "{inventory}", desc: "Инвентарь (список предметов)" },
   { macro: "{username}", desc: "Username в Telegram" },
   { macro: "{first_name}", desc: "Имя в Telegram" },
   { macro: "{telegram_id}", desc: "Telegram ID пользователя" },
-  { macro: "{wishes}", desc: "Желания персонажа (через запятую)" },
-  { macro: "{inventory}", desc: "Инвентарь (список предметов)" },
+  { macro: "{button_size}", desc: "Размер кнопок" },
+  { macro: "{font_family}", desc: "Шрифт интерфейса" },
+  { macro: "{theme}", desc: "Тема оформления" },
+  { macro: "{total_clicks}", desc: "Всего кликов" },
+  { macro: "{max_energy}", desc: "Максимальная энергия" },
 ];
 
 type AISetting = { section_id: string; name: string; service: string; prompt: string };

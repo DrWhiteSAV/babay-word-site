@@ -1,0 +1,1 @@
+ALTER TABLE public.gallery ADD COLUMN IF NOT EXISTS prompt text;
