@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import { CutscenePlayer } from "../components/CutscenePlayer";
+import { saveImageToGallery } from "../utils/galleryUtils";
+import { useTelegram } from "../context/TelegramContext";
 
 type Difficulty = "Сложная" | "Невозможная" | "Бесконечная";
 
@@ -36,6 +38,7 @@ export default function Game() {
   const location = useLocation();
   const { character, fear, energy, useEnergy, addFear, settings, gallery, addToGallery, addWatermelons, inventory, watermelons, lastEnergyUpdate, bossLevel, globalBackgroundUrl, pageBackgrounds, storeConfig } =
     usePlayerStore();
+  const { profile } = useTelegram();
     
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [stage, setStage] = useState(1);
@@ -165,6 +168,23 @@ export default function Game() {
     setIsLoading(true);
     setIsResultView(false);
 
+    // Build character data for macros
+    const charData: Record<string, string> = character ? {
+      name: character.name,
+      gender: character.gender,
+      style: character.style,
+      wishes: character.wishes.join(", "),
+      telekinesis: String(character.telekinesisLevel),
+      lore: character.lore || "",
+      fear: String(fear),
+      watermelons: String(watermelons),
+      boss_level: String(bossLevel),
+      username: profile?.username || "",
+      first_name: profile?.first_name || "",
+      telegram_id: String(profile?.telegram_id || ""),
+    } : {};
+
+
     // Boss Battle check (stages 16 and 46)
     if (currentStage === 16 || currentStage === 46) {
       setShowCutscene(true);
@@ -173,8 +193,12 @@ export default function Game() {
       setBossTimer(30 + getBossTimeBonus());
       setIsBossDefeated(false);
       if (character) {
-        const bImg = await generateBossImage(currentStage, character.style);
-        setBossImage(bImg);
+        const bResult = await generateBossImage(currentStage, character.style, charData);
+        setBossImage(bResult.url);
+        // Save boss image to gallery
+        if (profile?.telegram_id) {
+          saveImageToGallery(bResult.url, profile.telegram_id, `Босс уровня ${bossLevel}`, bResult.prompt).catch(console.error);
+        }
       }
       setIsLoading(false);
       return;
@@ -183,11 +207,14 @@ export default function Game() {
     // Generate background image on stage 1 or every 5th stage
     if (currentStage === 1 || currentStage % 5 === 0) {
       if (character) {
-        // Always try to generate new if possible, but use gallery as fallback
-        generateBackgroundImage(currentStage, character.style).then((newBg) => {
-          if (newBg) {
-            setBgImage(newBg);
-            addToGallery(newBg);
+        generateBackgroundImage(currentStage, character.style, charData).then((result) => {
+          if (result.url) {
+            setBgImage(result.url);
+            addToGallery(result.url);
+            // Save background to gallery via Telegram
+            if (profile?.telegram_id) {
+              saveImageToGallery(result.url, profile.telegram_id, `Фон этапа ${currentStage}`, result.prompt).catch(console.error);
+            }
           } else if (gallery.length > 0) {
             const randomBg = gallery[Math.floor(Math.random() * gallery.length)];
             setBgImage(randomBg);
@@ -195,6 +222,7 @@ export default function Game() {
         });
       }
     }
+
 
     // Check if it's Danil time (every 5th stage)
     if (currentStage > 1 && currentStage % 5 === 0) {

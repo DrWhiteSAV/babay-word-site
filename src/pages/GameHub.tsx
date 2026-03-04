@@ -14,12 +14,15 @@ import {
   Trophy,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
+import { usePlayerStatsSync } from "../hooks/usePlayerStatsSync";
 
 export default function GameHub() {
   const navigate = useNavigate();
   const location = useLocation();
   const { character, fear, energy, watermelons, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
-      const [infoModal, setInfoModal] = useState<CurrencyType>(null);
+  const [infoModal, setInfoModal] = useState<CurrencyType>(null);
+  usePlayerStatsSync();
+
 
   if (!character) {
     navigate("/");

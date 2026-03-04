@@ -256,6 +256,7 @@ export type Database = {
           id: string
           image_url: string
           label: string | null
+          prompt: string | null
           telegram_id: number
         }
         Insert: {
@@ -263,6 +264,7 @@ export type Database = {
           id?: string
           image_url: string
           label?: string | null
+          prompt?: string | null
           telegram_id: number
         }
         Update: {
@@ -270,6 +272,7 @@ export type Database = {
           id?: string
           image_url?: string
           label?: string | null
+          prompt?: string | null
           telegram_id?: number
         }
         Relationships: [

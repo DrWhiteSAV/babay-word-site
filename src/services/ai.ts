@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { compressImage } from "../utils/imageUtils";
+import { supabase } from "../integrations/supabase/client";
 
 let _ai: GoogleGenAI | null = null;
 
@@ -23,6 +24,25 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Pr
     }
     throw e;
   }
+}
+
+// Load AI settings for a section from Supabase
+async function loadAISettings(sectionId: string): Promise<{ service: string; prompt: string } | null> {
+  try {
+    const { data } = await supabase
+      .from("ai_settings")
+      .select("service, prompt")
+      .eq("section_id", sectionId)
+      .single();
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
+// Replace macros in prompt with actual player data
+function applyMacros(prompt: string, data: Record<string, string>): string {
+  return prompt.replace(/\{(\w+)\}/g, (_, key) => data[key] ?? `{${key}}`);
 }
 
 export async function generateSpookyVoice(text: string): Promise<string> {
@@ -52,11 +72,14 @@ export async function generateCharacterName(
   style: string,
 ): Promise<string> {
   try {
+    const settings = await loadAISettings("names");
+    const model = settings?.service || "gemini-3-flash-preview";
+    const basePrompt = settings?.prompt || "Сгенерируй уникальное, забавное имя для славянского кибернетического духа. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни только имя, без лишних слов.";
+    const prompt = applyMacros(basePrompt, { gender, style });
+
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Сгенерируй уникальное, забавное имя для славянского кибернетического духа.
-      Пол: ${gender}. Стиль: ${style}. 
-      Имя должно состоять из одного или двух слов. Верни только имя, без лишних слов.`,
+      model,
+      contents: prompt,
     }));
     return response.text?.trim() || "Безымянный";
   } catch (e) {
@@ -70,33 +93,39 @@ export async function generateAvatar(
   gender: string,
   style: string,
   wishes: string[],
-): Promise<string> {
-  try {
-    const prompt = `A portrait of a Slavic cybernetic spirit named ${gender === "Бабай" ? "Babay (old man)" : "Babayka (old woman)"}. 
-    They wear pajamas and have a spooky but funny appearance with a long tongue. 
-    Style: ${style}. Additional wishes: ${wishes.join(", ")}. 
-    High quality, detailed, atmospheric, slightly comical.`;
+  extraData?: Record<string, string>
+): Promise<{ url: string; prompt: string }> {
+  const settings = await loadAISettings("avatar");
+  const basePrompt = settings?.prompt || "A portrait of a Slavic cybernetic spirit named {gender}. They wear pajamas and have a spooky but funny appearance with a long tongue. Style: {style}. Additional wishes: {wishes}. High quality, detailed, atmospheric, slightly comical.";
+  const prompt = applyMacros(basePrompt, {
+    gender,
+    style,
+    wishes: wishes.join(", "),
+    name: extraData?.name || gender,
+    ...extraData,
+  });
 
+  try {
+    const model = settings?.service || "gemini-2.5-flash-image";
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model,
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        },
+        imageConfig: { aspectRatio: "1:1" },
       },
     }));
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         const base64 = `data:image/png;base64,${part.inlineData.data}`;
-        return await compressImage(base64, 512, 512);
+        const url = await compressImage(base64, 512, 512);
+        return { url, prompt };
       }
     }
-    return "https://i.ibb.co/BVgY7XrT/babai.png";
+    return { url: "https://i.ibb.co/BVgY7XrT/babai.png", prompt };
   } catch (e) {
     console.error("Avatar gen error:", e);
-    return "https://i.ibb.co/BVgY7XrT/babai.png"; 
+    return { url: "https://i.ibb.co/BVgY7XrT/babai.png", prompt };
   }
 }
 
@@ -158,58 +187,91 @@ export async function generateScenario(
 export async function generateBackgroundImage(
   stage: number,
   style: string,
-): Promise<string> {
+  characterData?: Record<string, string>
+): Promise<{ url: string; prompt: string }> {
+  const settings = await loadAISettings("background");
+  const basePrompt = settings?.prompt || "A beautiful, atmospheric background image for a video game. It shows an empty hallway or room in a futuristic apartment building. The style is {style}. Stage {stage}. No text, no people, just the environment, highly detailed.";
+  const prompt = applyMacros(basePrompt, {
+    style,
+    stage: String(stage),
+    name: characterData?.name || "",
+    gender: characterData?.gender || "",
+    fear: characterData?.fear || "",
+    energy: characterData?.energy || "",
+    watermelons: characterData?.watermelons || "",
+    telekinesis: characterData?.telekinesis || "",
+    boss_level: characterData?.boss_level || "",
+    lore: characterData?.lore || "",
+    wishes: characterData?.wishes || "",
+    inventory: characterData?.inventory || "",
+    username: characterData?.username || "",
+    first_name: characterData?.first_name || "",
+    telegram_id: characterData?.telegram_id || "",
+    ...characterData,
+  });
+
   try {
-    const prompt = `A beautiful, atmospheric background image for a video game. It shows an empty hallway or room in a futuristic apartment building. The style is ${style}. Stage ${stage}. No text, no people, just the environment, highly detailed.`;
+    const model = settings?.service || "gemini-2.5-flash-image";
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model,
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: {
-          aspectRatio: "16:9",
-        },
+        imageConfig: { aspectRatio: "16:9" },
       },
     }));
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         const base64 = `data:image/png;base64,${part.inlineData.data}`;
-        return await compressImage(base64, 1280, 720);
+        const url = await compressImage(base64, 1280, 720);
+        return { url, prompt };
       }
     }
-    return "https://picsum.photos/id/1015/1920/1080";
+    return { url: "https://picsum.photos/id/1015/1920/1080", prompt };
   } catch (e) {
     console.error("Background image gen error:", e);
-    return "https://picsum.photos/id/1015/1920/1080";
+    return { url: "https://picsum.photos/id/1015/1920/1080", prompt };
   }
 }
 
 export async function generateBossImage(
   stage: number,
   style: string,
-): Promise<string> {
+  characterData?: Record<string, string>
+): Promise<{ url: string; prompt: string }> {
+  const settings = await loadAISettings("boss");
+  const basePrompt = settings?.prompt || "A massive boss character for a Slavic cyberpunk game. It is a corrupted version of a building manager or a giant mechanical spider-like spirit. Style: {style}. Boss stage: {stage}. Epic, detailed, high quality.";
+  const prompt = applyMacros(basePrompt, {
+    style,
+    stage: String(stage),
+    name: characterData?.name || "",
+    gender: characterData?.gender || "",
+    boss_level: characterData?.boss_level || String(stage),
+    fear: characterData?.fear || "",
+    ...characterData,
+  });
+
   try {
-    const prompt = `A massive boss character for a Slavic cyberpunk game. It is a corrupted version of a building manager or a giant mechanical spider-like spirit. Style: ${style}. Epic, detailed, high quality.`;
+    const model = settings?.service || "gemini-2.5-flash-image";
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model,
       contents: { parts: [{ text: prompt }] },
       config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        },
+        imageConfig: { aspectRatio: "1:1" },
       },
     }));
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         const base64 = `data:image/png;base64,${part.inlineData.data}`;
-        return await compressImage(base64, 512, 512);
+        const url = await compressImage(base64, 512, 512);
+        return { url, prompt };
       }
     }
-    return "https://picsum.photos/id/718/1920/1080";
+    return { url: "https://picsum.photos/id/718/1920/1080", prompt };
   } catch (e) {
     console.error("Boss image gen error:", e);
-    return "https://picsum.photos/id/718/1920/1080";
+    return { url: "https://picsum.photos/id/718/1920/1080", prompt };
   }
 }
 
@@ -241,11 +303,9 @@ export async function generateFriendChat(
 
     let promptText = "";
     if (friendName === "ДанИИл") {
-      promptText = `Ты - ДанИИл, дух-начальник (ИИ), который контролирует Бабаев. 
-      Стиль общения: строгий, саркастичный, требует отчетов о выселении жильцов. Учитывай стиль мира: ${style}.
-      Игрок (Бабай по имени ${character?.name || 'Неизвестный'}) пишет тебе: "${message}".${historyText}
-      ${imageUrl ? "Игрок также прислал изображение. Прокомментируй его, если оно относится к делу." : ""}
-      Ответь коротко (1-2 предложения), оцени работу и дай добро на следующий этап, если игрок убедителен.`;
+      const settings = await loadAISettings("chat");
+      const basePrompt = settings?.prompt || "Ты ДанИИл, дух-начальник (ИИ), который контролирует Бабаев. Стиль общения: строгий, саркастичный, требует отчетов о выселении жильцов.";
+      promptText = `${basePrompt} Учитывай стиль мира: ${style}. Игрок (Бабай по имени ${character?.name || 'Неизвестный'}) пишет тебе: "${message}".${historyText}${imageUrl ? "Игрок также прислал изображение. Прокомментируй его, если оно относится к делу." : ""} Ответь коротко (1-2 предложения), оцени работу и дай добро на следующий этап, если игрок убедителен.`;
     } else {
       promptText = `Ты - ИИ-заместитель друга по имени ${friendName}. 
       Твой собеседник - Бабай по имени ${character?.name || 'Неизвестный'} (описание: ${character?.description || 'нет описания'}).
@@ -276,5 +336,28 @@ export async function generateFriendChat(
     } else {
       return "Связь прервалась. Попробуй позже.";
     }
+  }
+}
+
+export async function generateLore(
+  name: string,
+  gender: string,
+  style: string,
+  extraData?: Record<string, string>
+): Promise<string> {
+  try {
+    const settings = await loadAISettings("lore");
+    const basePrompt = settings?.prompt || "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Сделай историю атмосферной и жуткой.";
+    const prompt = applyMacros(basePrompt, { name, gender, style, ...extraData });
+    const model = settings?.service || "gemini-3-flash-preview";
+
+    const response = await withRetry(() => getAI().models.generateContent({
+      model,
+      contents: prompt,
+    }));
+    return response.text?.trim() || "";
+  } catch (e) {
+    console.error("Lore gen error:", e);
+    return "";
   }
 }
