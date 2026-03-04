@@ -57,14 +57,21 @@ export default function Profile() {
         setReferralCount(data.length);
         setReferralFriends(data);
       }
-      // Load who invited the current user
+      // Load who invited the current user: referral_code = latin name of inviter's babay
       if (profile.referral_code) {
-        const { data: inviterData } = await supabase
-          .from("profiles")
-          .select("first_name, username")
-          .ilike("profiles.telegram_id::text", "%") // can't do reverse lookup easily; use referral_code as name
+        const { data: inviterStats } = await supabase
+          .from("player_stats")
+          .select("character_name, telegram_id")
+          .ilike("character_name", profile.referral_code.replace(/-/g, " "))
           .limit(1);
-        // referral_code stores the latin name of the inviter; show it as-is
+        if (inviterStats?.[0]) {
+          const { data: inviterProf } = await supabase
+            .from("profiles")
+            .select("first_name, username")
+            .eq("telegram_id", inviterStats[0].telegram_id)
+            .single();
+          if (inviterProf) setInvitedByProfile(inviterProf);
+        }
       }
     };
     loadReferrals();
@@ -212,7 +219,9 @@ export default function Profile() {
                 </div>
                 {profile.referral_code && (
                   <p className="text-[10px] text-neutral-500 mt-1">
-                    👥 Пришёл по ссылке: <span className="text-neutral-300 font-mono">{profile.referral_code}</span>
+                    👥 Пришёл по ссылке Бабая: <span className="text-neutral-300 font-mono">
+                      {invitedByProfile ? `${invitedByProfile.first_name}${invitedByProfile.username ? ` @${invitedByProfile.username}` : ""}` : profile.referral_code}
+                    </span>
                   </p>
                 )}
               </div>
@@ -375,14 +384,26 @@ export default function Profile() {
           <h3 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Share2 size={18} /> Пригласи друга
           </h3>
-          <p className="text-xs text-neutral-400">
-            Получи 100 энергии и 100 страха за каждого друга, который присоединится по твоей ссылке.
-          </p>
+
+          {/* Bonus breakdown */}
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+              <div className="text-2xl font-black text-yellow-400">+{100 * Math.max(1, character.telekinesisLevel)}</div>
+              <div className="text-[10px] text-neutral-500 uppercase tracking-wider mt-1">⚡ Энергии</div>
+            </div>
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
+              <div className="text-2xl font-black text-red-400">+{100 * Math.max(1, character.telekinesisLevel)}</div>
+              <div className="text-[10px] text-neutral-500 uppercase tracking-wider mt-1">👻 Страха</div>
+            </div>
+          </div>
+          {character.telekinesisLevel > 1 && (
+            <p className="text-[11px] text-purple-400 text-center">✨ Твой телекинез ×{character.telekinesisLevel} умножает вознаграждение!</p>
+          )}
 
           {/* Who invited me */}
           {profile?.referral_code && (
-            <div className="bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-400">
-              👤 Вас пригласил Бабай: <span className="text-neutral-200 font-bold">{profile.referral_code}</span>
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-400 flex items-center gap-2">
+              👤 Вас пригласил: <span className="text-neutral-200 font-bold">@{profile.referral_code}</span>
             </div>
           )}
 
@@ -397,17 +418,16 @@ export default function Profile() {
             <span className="font-black text-white text-lg">{referralCount}</span>
           </button>
 
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-3 text-xs text-neutral-500 truncate">
-              {referralLink}
-            </div>
-            <button
-              onClick={handleCopyRef}
-              className="p-3 bg-red-700 hover:bg-red-600 text-white rounded-xl transition-colors flex items-center justify-center"
-            >
-              <Copy size={18} />
-            </button>
+          {/* Beautiful invite text */}
+          <div className="bg-neutral-950 border border-neutral-700 rounded-xl p-4 text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap font-mono">
+            {`👻 Привет! Я — ${character.name}, бессмертный кибер-дух Бабай!\n\n🔥 Приглашаю тебя в игру «Бабай» — стань своим Бабаем, пугай жильцов и собирай арбузы!\n\n⚡ Если зайдёшь по моей ссылке — получишь бонус ${100 * Math.max(1, character.telekinesisLevel)} энергии!\n\n👇 Жми сюда:\n${referralLink}`}
           </div>
+          <button
+            onClick={handleCopyRef}
+            className="w-full py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+          >
+            <Copy size={16} /> Скопировать приглашение
+          </button>
         </section>
       </div>
 

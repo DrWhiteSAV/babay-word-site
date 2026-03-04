@@ -1,32 +1,67 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion } from "motion/react";
-import { ArrowLeft, Trophy, Medal, Star, Target, CheckCircle2, ChevronRight, UserPlus } from "lucide-react";
-
+import { Trophy, Medal, Star, Target, CheckCircle2, ChevronRight, UserPlus, Loader2, Zap, Shield, Flame, Leaf } from "lucide-react";
 import Header from "../components/Header";
 import ProfilePopup from "../components/ProfilePopup";
+import { supabase } from "../integrations/supabase/client";
+import { useTelegram } from "../context/TelegramContext";
+
+type SortKey = "fear" | "watermelons" | "boss_level" | "energy" | "telekinesis_level";
+
+const SORT_OPTIONS: { key: SortKey; label: string; icon: any; color: string }[] = [
+  { key: "fear", label: "Страх", icon: Flame, color: "text-red-400" },
+  { key: "watermelons", label: "Арбузы", icon: Leaf, color: "text-green-400" },
+  { key: "boss_level", label: "Боссы", icon: Shield, color: "text-purple-400" },
+  { key: "energy", label: "Энергия", icon: Zap, color: "text-yellow-400" },
+  { key: "telekinesis_level", label: "Телекинез", icon: Star, color: "text-blue-400" },
+];
+
+interface LeaderboardEntry {
+  telegram_id: number;
+  character_name: string | null;
+  avatar_url: string | null;
+  fear: number;
+  watermelons: number;
+  boss_level: number;
+  energy: number;
+  telekinesis_level: number;
+}
 
 export default function Leaderboard() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { character, achievements, globalBackgroundUrl, pageBackgrounds, addFriend, friends } = usePlayerStore();
-    
+  const { character, achievements, addFriend, friends } = usePlayerStore();
+  const { profile } = useTelegram();
   const [showProfilePopup, setShowProfilePopup] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>("fear");
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock leaderboard data
-  const leaderboard = [
-    { rank: 1, name: "Бабайка_99", score: 15000, avatar: "https://picsum.photos/seed/b1/100/100" },
-    { rank: 2, name: "ТёмныйЛорд", score: 12400, avatar: "https://picsum.photos/seed/b2/100/100" },
-    { rank: 3, name: "НочнойУжас", score: 10200, avatar: "https://picsum.photos/seed/b3/100/100" },
-    { rank: 4, name: character?.name || "Вы", score: 8500, avatar: character?.avatarUrl || "https://picsum.photos/seed/user/100/100", isUser: true },
-    { rank: 5, name: "Скример", score: 7100, avatar: "https://picsum.photos/seed/b4/100/100" },
-  ];
+  useEffect(() => {
+    loadLeaderboard();
+  }, [sortBy]);
+
+  const loadLeaderboard = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("player_stats")
+      .select("telegram_id, character_name, avatar_url, fear, watermelons, boss_level, energy, telekinesis_level")
+      .order(sortBy, { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setLeaderboard(data);
+    }
+    setLoading(false);
+  };
 
   const handleAddFriend = (name: string) => {
     addFriend(name);
     alert(`Заявка в друзья отправлена ${name}!`);
   };
+
+  const sortOption = SORT_OPTIONS.find(s => s.key === sortBy)!;
 
   return (
     <motion.div
@@ -35,66 +70,97 @@ export default function Leaderboard() {
       exit={{ opacity: 0, scale: 1.05 }}
       className="flex-1 flex flex-col bg-transparent text-neutral-200 relative overflow-hidden"
     >
-            
-      <Header 
+      <Header
         title={<><Trophy size={20} className="text-yellow-500" /> Рейтинг</>}
         backUrl="/hub"
       />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-8 relative z-10">
-        
-        {/* Leaderboard Section */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 relative z-10">
+
+        {/* Sort Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {SORT_OPTIONS.map(({ key, label, icon: Icon, color }) => (
+            <button
+              key={key}
+              onClick={() => setSortBy(key)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all shrink-0 ${
+                sortBy === key
+                  ? "bg-neutral-800 border-neutral-600 text-white"
+                  : "bg-neutral-900 border-neutral-800 text-neutral-500 hover:border-neutral-600"
+              }`}
+            >
+              <Icon size={12} className={sortBy === key ? color : ""} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Leaderboard */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider flex items-center gap-2">
-            <Medal size={20} className="text-yellow-500" /> Топ Бабаев
+            <Medal size={20} className="text-yellow-500" /> Топ Бабаев — {sortOption.label}
           </h2>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
-            {leaderboard.map((user) => {
-              const isFriend = friends.some(f => f.name === user.name);
-              return (
-              <div 
-                key={user.rank} 
-                className={`flex items-center gap-4 p-4 border-b border-neutral-800 last:border-0 ${user.isUser ? 'bg-red-900/20' : ''}`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                  user.rank === 1 ? 'bg-yellow-500 text-black' :
-                  user.rank === 2 ? 'bg-neutral-300 text-black' :
-                  user.rank === 3 ? 'bg-amber-700 text-white' : 'bg-neutral-800 text-neutral-400'
-                }`}>
-                  {user.rank}
-                </div>
-                <img 
-                  src={user.avatar} 
-                  alt={user.name} 
-                  className="w-12 h-12 rounded-full border border-neutral-700 object-cover cursor-pointer" 
-                  onClick={() => setShowProfilePopup(user.isUser ? "user" : user.name)}
-                />
-                <div className="flex-1">
-                  <h3 
-                    className={`font-bold cursor-pointer hover:underline ${user.isUser ? 'text-red-400' : 'text-white'}`}
-                    onClick={() => setShowProfilePopup(user.isUser ? "user" : user.name)}
+
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-red-500" /></div>
+          ) : leaderboard.length === 0 ? (
+            <p className="text-neutral-500 text-center py-8">Нет данных</p>
+          ) : (
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
+              {leaderboard.map((user, idx) => {
+                const rank = idx + 1;
+                const isUser = user.telegram_id === profile?.telegram_id;
+                const displayName = user.character_name || `Бабай #${user.telegram_id}`;
+                const isFriend = friends.some(f => f.name === displayName);
+                const SortIcon = sortOption.icon;
+                return (
+                  <div
+                    key={user.telegram_id}
+                    className={`flex items-center gap-3 p-3 border-b border-neutral-800 last:border-0 ${isUser ? 'bg-red-900/20' : ''}`}
                   >
-                    {user.name}
-                  </h3>
-                  <p className="text-sm text-neutral-500">{user.score} очков страха</p>
-                </div>
-                {!user.isUser && !isFriend && (
-                  <button
-                    onClick={() => handleAddFriend(user.name)}
-                    className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-full text-blue-400 transition-colors"
-                    title="Добавить в друзья"
-                  >
-                    <UserPlus size={18} />
-                  </button>
-                )}
-              </div>
-            )})}
-          </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
+                      rank === 1 ? 'bg-yellow-500 text-black' :
+                      rank === 2 ? 'bg-neutral-300 text-black' :
+                      rank === 3 ? 'bg-amber-700 text-white' : 'bg-neutral-800 text-neutral-400'
+                    }`}>
+                      {rank}
+                    </div>
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={displayName} className="w-10 h-10 rounded-full border border-neutral-700 object-cover shrink-0 cursor-pointer" onClick={() => setShowProfilePopup(isUser ? "user" : displayName)} />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-lg shrink-0 cursor-pointer" onClick={() => setShowProfilePopup(isUser ? "user" : displayName)}>
+                        👻
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-bold text-sm truncate cursor-pointer hover:underline ${isUser ? 'text-red-400' : 'text-white'}`} onClick={() => setShowProfilePopup(isUser ? "user" : displayName)}>
+                        {displayName}{isUser ? " (Вы)" : ""}
+                      </h3>
+                      <div className="flex items-center gap-1 text-xs text-neutral-500">
+                        <SortIcon size={10} className={sortOption.color} />
+                        <span className={sortOption.color + " font-bold"}>{user[sortBy]}</span>
+                        <span className="text-neutral-600">/ тк {user.telekinesis_level}</span>
+                      </div>
+                    </div>
+                    {!isUser && !isFriend && (
+                      <button
+                        onClick={() => handleAddFriend(displayName)}
+                        className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-full text-blue-400 transition-colors shrink-0"
+                        title="Добавить в друзья"
+                      >
+                        <UserPlus size={16} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
-        {/* Events Link Section */}
+        {/* Events Link */}
         <section>
-          <button 
+          <button
             onClick={() => navigate('/events')}
             className="w-full bg-neutral-900 border border-neutral-800 hover:border-red-900/50 rounded-2xl p-4 flex items-center justify-between transition-colors group"
           >
@@ -111,7 +177,7 @@ export default function Leaderboard() {
           </button>
         </section>
 
-        {/* Achievements Section */}
+        {/* Achievements */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider flex items-center gap-2">
             <CheckCircle2 size={20} className="text-green-500" /> Достижения
@@ -134,7 +200,6 @@ export default function Leaderboard() {
             )}
           </div>
         </section>
-
       </div>
 
       {showProfilePopup && (

@@ -112,9 +112,10 @@ export const generateBossImage = async (style: string) => {
 
 export const editAvatarWithItem = async (currentAvatar: string, character: any, allOwnedItems: string[], newItemName: string) => {
   try {
-    const itemsDescription = allOwnedItems.length > 0 ? `На нем надето: ${allOwnedItems.join(", ")}.` : "";
-    const wishesDescription = character.wishes && character.wishes.length > 0 ? `Особые приметы: ${character.wishes.join(", ")}.` : "";
-    const prompt = `Кибер-славянский бабай по имени ${character.name}. Пол: ${character.gender}. Стиль: ${character.style}. Уровень телекинеза: ${character.telekinesisLevel}. Выглядит как страшный старик или старуха в пижаме с длинным языком более 1 метра, которым он хватает предметы. ${wishesDescription} ${itemsDescription} Особое внимание удели новому предмету: ${newItemName}. Мрачная атмосфера, высокое качество, портретное фото.`;
+    const itemsDescription = allOwnedItems.length > 0 ? `Previously owned items: ${allOwnedItems.join(", ")}.` : "";
+    const wishesDescription = character.wishes && character.wishes.length > 0 ? `Special features: ${character.wishes.join(", ")}.` : "";
+    // Try to load prompt from ai_settings avatar_shop section
+    let prompt = `Update the Slavic cybernetic spirit named ${character.name} (${character.gender}), style: ${character.style}. Current avatar: ${currentAvatar}. ${itemsDescription} NEW item just purchased and should be prominently featured: ${newItemName}. ${wishesDescription} Keep the character identity, high quality portrait.`;
 
     const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash-image',

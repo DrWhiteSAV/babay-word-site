@@ -4,13 +4,71 @@ import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
 
 /**
- * Syncs player stats and settings to Supabase player_stats table.
- * Call this hook at the top level of any page that modifies player data.
+ * Loads player stats from Supabase on mount (to restore progress),
+ * then syncs stats back to Supabase whenever they change.
  */
 export function usePlayerStatsSync() {
   const store = usePlayerStore();
   const { profile } = useTelegram();
 
+  // Load from Supabase on first mount
+  useEffect(() => {
+    if (!profile?.telegram_id) return;
+
+    const loadStats = async () => {
+      const { data } = await supabase
+        .from("player_stats")
+        .select("*")
+        .eq("telegram_id", profile.telegram_id)
+        .single();
+
+      if (!data) return;
+
+      const state = usePlayerStore.getState();
+
+      // Restore numeric stats only if DB has higher values (avoid overwriting fresh session)
+      if (data.fear > state.fear) store.addFear(data.fear - state.fear);
+      if (data.energy > state.energy) store.addEnergy(data.energy - state.energy);
+      if (data.watermelons > state.watermelons) store.addWatermelons(data.watermelons - state.watermelons);
+
+      // Restore character if not set
+      if (!state.character && data.character_name) {
+        store.setCharacter({
+          name: data.character_name,
+          gender: (data.character_gender as any) || "Бабай",
+          style: (data.character_style as any) || "Хоррор",
+          wishes: (data.custom_settings as any)?.wishes || [],
+          avatarUrl: data.avatar_url || "https://i.ibb.co/BVgY7XrT/babai.png",
+          telekinesisLevel: data.telekinesis_level || 1,
+          lore: data.lore || undefined,
+        });
+      } else if (state.character && data.lore && !state.character.lore) {
+        store.updateCharacter({ lore: data.lore });
+      }
+
+      // Restore settings
+      if (data.custom_settings && typeof data.custom_settings === "object") {
+        const cs = data.custom_settings as any;
+        if (cs.buttonSize || cs.fontFamily || cs.theme) {
+          store.updateSettings({
+            ...(cs.buttonSize && { buttonSize: cs.buttonSize }),
+            ...(cs.fontFamily && { fontFamily: cs.fontFamily }),
+            ...(cs.fontSize && { fontSize: cs.fontSize }),
+            ...(cs.fontBrightness && { fontBrightness: cs.fontBrightness }),
+            ...(cs.theme && { theme: cs.theme }),
+            ...(cs.musicVolume !== undefined && { musicVolume: cs.musicVolume }),
+            ...(cs.ttsEnabled !== undefined && { ttsEnabled: cs.ttsEnabled }),
+          });
+        }
+      }
+    };
+
+    loadStats();
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.telegram_id]);
+
+  // Sync to Supabase on state changes (debounced)
   useEffect(() => {
     if (!profile?.telegram_id || !store.character) return;
 
@@ -39,14 +97,22 @@ export function usePlayerStatsSync() {
       },
     };
 
-    // Debounce: sync after 3 seconds of no changes
-    const timer = setTimeout(() => {
-      supabase
+    const timer = setTimeout(async () => {
+      const { error } = await supabase
         .from("player_stats")
-        .upsert(syncData, { onConflict: "telegram_id" })
-        .then(({ error }) => {
-          if (error) console.error("player_stats sync error:", error.message);
-        });
+        .upsert(syncData, { onConflict: "telegram_id" });
+      if (error) console.error("player_stats sync error:", error.message);
+
+      // Also update leaderboard_cache
+      if (store.character) {
+        await supabase.from("leaderboard_cache").upsert({
+          telegram_id: profile.telegram_id,
+          display_name: store.character.name,
+          fear: store.fear,
+          telekinesis_level: store.character.telekinesisLevel,
+          avatar_url: store.character.avatarUrl,
+        }, { onConflict: "telegram_id" });
+      }
     }, 3000);
 
     return () => clearTimeout(timer);

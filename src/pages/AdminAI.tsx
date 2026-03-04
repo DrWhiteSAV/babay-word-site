@@ -8,14 +8,20 @@ const DEFAULT_AI_SETTINGS = [
   {
     section_id: "chat",
     name: "Чат с ИИ (ДанИИл)",
-    service: "gemini-3.1-pro-preview",
-    prompt: "Ты ДанИИл, друг пользователя. Отвечай коротко, с юмором, иногда используй сленг.",
+    service: "gemini-3-flash-preview",
+    prompt: "Ты ДанИИл, друг пользователя. Отвечай коротко, с юмором, иногда используй сленг. Имя бабая: {name}. Пол: {gender}. Стиль: {style}.",
   },
   {
     section_id: "avatar",
     name: "Генерация Аватаров",
     service: "gemini-2.5-flash-image",
     prompt: "A portrait of a Slavic cybernetic spirit named {name} ({gender}). They wear pajamas and have a spooky but funny appearance with a long tongue. Style: {style}. Additional wishes: {wishes}. High quality, detailed, atmospheric.",
+  },
+  {
+    section_id: "avatar_shop",
+    name: "Обновление Аватара после Покупки",
+    service: "gemini-2.5-flash-image",
+    prompt: "Update the appearance of a Slavic cybernetic spirit named {name} ({gender}), style: {style}. Current avatar: {avatar_url}. All previously purchased items worn: {inventory}. NEW item just purchased: {new_item}. Apply the new item visually to the existing character appearance. Wishes/features: {wishes}. High quality portrait, keep the character identity.",
   },
   {
     section_id: "names",
@@ -33,13 +39,13 @@ const DEFAULT_AI_SETTINGS = [
     section_id: "boss",
     name: "Генерация Боссов",
     service: "gemini-2.5-flash-image",
-    prompt: "A massive terrifying boss creature for a Slavic horror game. It is a corrupted spirit guardian for {name} ({gender}) to fight. Style: {style}. Boss level: {boss_level}. Fear power: {fear}. Epic, menacing, high quality.",
+    prompt: "A massive terrifying boss creature for a Slavic horror game. It is a corrupted spirit guardian for {name} ({gender}) to fight. Style: {style}. Boss level: {boss_level}. Fear power: {fear}. Inventory context: {inventory}. Epic, menacing, high quality.",
   },
   {
     section_id: "lore",
     name: "Генерация Лора персонажа",
     service: "gemini-3-flash-preview",
-    prompt: "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Страх: {fear}. Сделай историю атмосферной и жуткой.",
+    prompt: "Напиши захватывающую историю (4-5 предложений) происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Страх: {fear}. Уровень телекинеза: {telekinesis}. Желания: {wishes}. Telegram: @{username}. Сделай историю атмосферной, жуткой и уникальной.",
   },
 ];
 
@@ -54,9 +60,11 @@ const MACRO_DOCS = [
   { macro: "{boss_level}", desc: "Уровень босса" },
   { macro: "{stage}", desc: "Текущий этап игры" },
   { macro: "{lore}", desc: "История духа" },
-  { macro: "{wishes}", desc: "Желания персонажа (через запятую)" },
-  { macro: "{inventory}", desc: "Инвентарь (список предметов)" },
-  { macro: "{username}", desc: "Username в Telegram" },
+  { macro: "{wishes}", desc: "Особые приметы (через запятую)" },
+  { macro: "{inventory}", desc: "Все купленные предметы" },
+  { macro: "{new_item}", desc: "Только что купленный предмет" },
+  { macro: "{avatar_url}", desc: "URL текущей аватарки" },
+  { macro: "{username}", desc: "Username в Telegram (@)" },
   { macro: "{first_name}", desc: "Имя в Telegram" },
   { macro: "{telegram_id}", desc: "Telegram ID пользователя" },
   { macro: "{button_size}", desc: "Размер кнопок" },
@@ -64,6 +72,8 @@ const MACRO_DOCS = [
   { macro: "{theme}", desc: "Тема оформления" },
   { macro: "{total_clicks}", desc: "Всего кликов" },
   { macro: "{max_energy}", desc: "Максимальная энергия" },
+  { macro: "{referral_count}", desc: "Кол-во приглашённых" },
+  { macro: "{profile_url}", desc: "Ссылка профиля Telegram" },
 ];
 
 type AISetting = { section_id: string; name: string; service: string; prompt: string };
@@ -147,13 +157,14 @@ export default function AdminAI() {
                   value={s.service} onChange={e => update(idx, "service", e.target.value)}>
                   <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
                   <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
+                  <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
                   <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Image</option>
                   <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 TTS</option>
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-1"><MessageSquare size={10} /> Системный Промпт</label>
-                <textarea rows={4}
+                <textarea rows={5}
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none resize-y"
                   placeholder="Используй макросы: {name}, {gender}, {style}..."
                   value={s.prompt} onChange={e => update(idx, "prompt", e.target.value)} />
