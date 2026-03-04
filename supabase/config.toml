@@ -1,1 +1,4 @@
 project_id = "psuvnvqvspqibsezcrny"
+
+[functions.save-to-gallery]
+verify_jwt = false

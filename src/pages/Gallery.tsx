@@ -1,18 +1,48 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Image as ImageIcon, X, Download } from "lucide-react";
+import { Image as ImageIcon, X, Download, Loader2 } from "lucide-react";
 import { useAudio } from "../hooks/useAudio";
-
 import Header from "../components/Header";
+import { supabase } from "../integrations/supabase/client";
+import { useTelegram } from "../context/TelegramContext";
+
+interface GalleryItem {
+  id: string;
+  image_url: string;
+  label: string | null;
+  created_at: string;
+}
 
 export default function Gallery() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { gallery, settings, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
-      const { playClick } = useAudio(settings.musicVolume);
+  const { settings } = usePlayerStore();
+  const { playClick } = useAudio(settings.musicVolume);
+  const { profile } = useTelegram();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      if (profile?.telegram_id) {
+        const { data } = await supabase
+          .from("gallery")
+          .select("id, image_url, label, created_at")
+          .eq("telegram_id", profile.telegram_id)
+          .order("created_at", { ascending: false });
+        if (data) setItems(data);
+      } else {
+        // Fallback: show gallery from playerStore (local)
+        const { gallery } = usePlayerStore.getState();
+        setItems(gallery.map((url, i) => ({ id: String(i), image_url: url, label: null, created_at: "" })));
+      }
+      setLoading(false);
+    };
+    load();
+  }, [profile]);
 
   return (
     <motion.div
@@ -21,22 +51,22 @@ export default function Gallery() {
       exit={{ opacity: 0 }}
       className="flex-1 flex flex-col bg-transparent text-neutral-200 relative overflow-hidden h-screen"
     >
-            <div className="fog-container">
+      <div className="fog-container">
         <div className="fog-layer"></div>
         <div className="fog-layer-2"></div>
       </div>
 
-      <Header 
+      <Header
         title={<><ImageIcon size={20} /> Галерея</>}
         backUrl="/profile"
       />
 
-      <div className="bg-red-900/20 border-b border-red-900/30 p-2 text-[10px] text-center text-red-300 uppercase tracking-tighter">
-        Память духа ограничена. Хранятся только последние 6 образов.
-      </div>
-
       <div className="flex-1 overflow-y-auto p-4">
-        {gallery.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 size={32} className="animate-spin text-red-500" />
+          </div>
+        ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-neutral-500">
             <ImageIcon size={48} className="mb-4 opacity-50" />
             <p>Галерея пуста...</p>
@@ -44,23 +74,27 @@ export default function Gallery() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {gallery.map((img, index) => (
+            {items.map((item, index) => (
               <motion.div
-                key={index}
+                key={item.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.03 }}
                 className="aspect-square rounded-xl overflow-hidden border border-neutral-800 cursor-pointer hover:border-red-900/50 transition-colors relative group"
-                onClick={() => setSelectedImage(img)}
+                onClick={() => setSelectedImage(item.image_url)}
               >
                 <img
-                  src={img}
-                  alt={`Gallery item ${index}`}
+                  src={item.image_url}
+                  alt={item.label || `Gallery item ${index}`}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   loading="lazy"
                   referrerPolicy="no-referrer"
-                  crossOrigin="anonymous"
                 />
+                {item.label && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[10px] text-neutral-300 px-2 py-1 truncate">
+                    {item.label}
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
               </motion.div>
             ))}
@@ -87,14 +121,13 @@ export default function Gallery() {
             >
               <X size={24} />
             </button>
-            
+
             <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
               <img
                 src={selectedImage}
                 alt="Full size"
                 className="max-w-full max-h-[80vh] rounded-lg shadow-2xl border border-neutral-800"
                 referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
               />
               <div className="mt-4 flex justify-center">
                 <a
