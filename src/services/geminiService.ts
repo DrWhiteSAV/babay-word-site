@@ -1,11 +1,20 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { compressImage } from "../utils/imageUtils";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "" });
+let _ai: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!_ai) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error("VITE_GEMINI_API_KEY не установлен");
+    _ai = new GoogleGenAI({ apiKey });
+  }
+  return _ai;
+}
 
 export const generateLore = async (name: string, gender: string, style: string) => {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Придумай мрачную, но интересную предысторию (лор) для славянского кибернетического духа по имени ${name}. Пол: ${gender}. Стиль: ${style}. Дух выглядит как страшный старик или старуха в пижаме с длинным языком более 1 метра, которым он хватает предметы, и обладает телекинезом. Напиши 3-4 абзаца.`,
     });
@@ -34,7 +43,7 @@ export const generateAiChatResponse = async (friendName: string, userMessage: st
       parts[0].text += " Пользователь также прислал картинку. Прокомментируй её.";
     }
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.5-flash-lite-latest",
       contents: { parts },
     });
@@ -47,7 +56,7 @@ export const generateAiChatResponse = async (friendName: string, userMessage: st
 
 export const generateAudio = async (text: string) => {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text }] }],
       config: {
@@ -71,7 +80,7 @@ export const generateAudio = async (text: string) => {
 
 export const generateBossImage = async (style: string) => {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
@@ -108,7 +117,7 @@ export const editAvatarWithItem = async (currentAvatar: string, character: any, 
     const wishesDescription = character.wishes && character.wishes.length > 0 ? `Особые приметы: ${character.wishes.join(", ")}.` : "";
     const prompt = `Кибер-славянский бабай по имени ${character.name}. Пол: ${character.gender}. Стиль: ${character.style}. Уровень телекинеза: ${character.telekinesisLevel}. Выглядит как страшный старик или старуха в пижаме с длинным языком более 1 метра, которым он хватает предметы. ${wishesDescription} ${itemsDescription} Особое внимание удели новому предмету: ${newItemName}. Мрачная атмосфера, высокое качество, портретное фото.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
@@ -126,7 +135,7 @@ export const editAvatarWithItem = async (currentAvatar: string, character: any, 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         const base64 = `data:image/png;base64,${part.inlineData.data}`;
-        return await compressImage(base64, 512, 512); // Increased from 256 to 512
+        return await compressImage(base64, 512, 512);
       }
     }
   } catch (e: any) {

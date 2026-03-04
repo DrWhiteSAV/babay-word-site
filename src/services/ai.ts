@@ -1,7 +1,16 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { compressImage } from "../utils/imageUtils";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || "" });
+let _ai: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!_ai) {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) throw new Error("VITE_GEMINI_API_KEY не установлен");
+    _ai = new GoogleGenAI({ apiKey });
+  }
+  return _ai;
+}
 
 // Helper for exponential backoff retry
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> {
@@ -19,7 +28,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Pr
 
 export async function generateSpookyVoice(text: string): Promise<string> {
   try {
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: `Произнеси жутким, пугающим голосом: ${text}` }] }],
       config: {
@@ -44,7 +53,7 @@ export async function generateCharacterName(
   style: string,
 ): Promise<string> {
   try {
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Сгенерируй уникальное, забавное имя для славянского кибернетического духа.
       Пол: ${gender}. Стиль: ${style}. 
@@ -69,7 +78,7 @@ export async function generateAvatar(
     Style: ${style}. Additional wishes: ${wishes.join(", ")}. 
     High quality, detailed, atmospheric, slightly comical.`;
 
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-2.5-flash-image",
       contents: { parts: [{ text: prompt }] },
       config: {
@@ -98,7 +107,7 @@ export async function generateScenario(
   style: string,
 ): Promise<{ text: string; options: string[]; correctAnswer: number; successText: string; failureText: string }> {
   try {
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Ты - ведущий текстовой ролевой игры "Бабай". Игрок - славянский кибер-дух (старик/старуха в пижаме с длинным языком и телекинезом).
       Цель: выгнать жильцов из многоквартирного дома.
@@ -153,7 +162,7 @@ export async function generateBackgroundImage(
 ): Promise<string> {
   try {
     const prompt = `A beautiful, atmospheric background image for a video game. It shows an empty hallway or room in a futuristic apartment building. The style is ${style}. Stage ${stage}. No text, no people, just the environment, highly detailed.`;
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-2.5-flash-image",
       contents: { parts: [{ text: prompt }] },
       config: {
@@ -182,7 +191,7 @@ export async function generateBossImage(
 ): Promise<string> {
   try {
     const prompt = `A massive boss character for a Slavic cyberpunk game. It is a corrupted version of a building manager or a giant mechanical spider-like spirit. Style: ${style}. Epic, detailed, high quality.`;
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-2.5-flash-image",
       contents: { parts: [{ text: prompt }] },
       config: {
@@ -250,7 +259,7 @@ export async function generateFriendChat(
 
     parts.push({ text: promptText });
 
-    const response = await withRetry(() => ai.models.generateContent({
+    const response = await withRetry(() => getAI().models.generateContent({
       model: "gemini-3-flash-preview",
       contents: { parts },
     }));
@@ -270,4 +279,3 @@ export async function generateFriendChat(
     }
   }
 }
-
