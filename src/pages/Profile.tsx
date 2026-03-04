@@ -2,18 +2,26 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion } from "motion/react";
-import { User, ArrowLeft, Copy, Share2, Trophy, Camera, BookOpen, Loader2, Image as ImageIcon, Volume2, VolumeX, X, ShieldAlert } from "lucide-react";
+import { User, Copy, Share2, Trophy, Camera, BookOpen, Loader2, Image as ImageIcon, Volume2, VolumeX, X, ShieldAlert, ExternalLink, MessageCircle } from "lucide-react";
 import * as htmlToImage from 'html-to-image';
 import { generateLore } from "../services/geminiService";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
 import Header from "../components/Header";
 import { transliterate } from "../utils/transliterate";
+import { useTelegram } from "../context/TelegramContext";
+
+const ROLE_COLORS: Record<string, string> = {
+  "Супер-Бабай": "text-red-400 bg-red-900/20 border-red-800",
+  "Ад-Бабай": "text-orange-400 bg-orange-900/20 border-orange-800",
+  "Бабай": "text-neutral-300 bg-neutral-800/50 border-neutral-700",
+};
 
 export default function Profile() {
   const navigate = useNavigate();
   const location = useLocation();
   const { character, fear, energy, watermelons, inventory, updateCharacter, gallery, addToGallery, settings, updateSettings, globalBackgroundUrl, pageBackgrounds, shopItems, bossItems } = usePlayerStore();
-      const profileRef = useRef<HTMLDivElement>(null);
+  const { profile } = useTelegram();
+  const profileRef = useRef<HTMLDivElement>(null);
   const [isGeneratingLore, setIsGeneratingLore] = useState(false);
   const [infoModal, setInfoModal] = useState<CurrencyType>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -126,6 +134,59 @@ export default function Profile() {
       />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8" ref={profileRef}>
+        {/* Telegram Profile Block */}
+        {profile && (
+          <section className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+            <div className="flex items-center gap-4">
+              {profile.photo_url ? (
+                <img
+                  src={profile.photo_url}
+                  alt={profile.first_name}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-neutral-700 shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-neutral-800 border-2 border-neutral-700 flex items-center justify-center shrink-0">
+                  <MessageCircle size={24} className="text-neutral-500" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-white text-base">
+                    {profile.first_name}{profile.last_name ? ` ${profile.last_name}` : ""}
+                  </span>
+                  {profile.role && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${ROLE_COLORS[profile.role] || ROLE_COLORS["Бабай"]}`}>
+                      {profile.role}
+                    </span>
+                  )}
+                </div>
+                {profile.username && (
+                  <p className="text-neutral-400 text-sm">@{profile.username}</p>
+                )}
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  <span className="text-[10px] text-neutral-600 font-mono">ID: {profile.telegram_id}</span>
+                  {profile.profile_url && (
+                    <a
+                      href={profile.profile_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      <ExternalLink size={10} /> Telegram
+                    </a>
+                  )}
+                </div>
+                {profile.referral_code && (
+                  <p className="text-[10px] text-neutral-500 mt-1">
+                    👥 Пришёл по ссылке: <span className="text-neutral-300 font-mono">{profile.referral_code}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Avatar & Info */}
         <section className="flex flex-col items-center text-center">
           <div className="w-32 h-32 rounded-full border-4 border-red-900/50 overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.2)] bg-neutral-900 mb-4 relative">

@@ -6,6 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { usePlayerStore } from "./store/playerStore";
+import { TelegramProvider } from "./context/TelegramContext";
 import { useState, useEffect, useRef } from "react";
 import { useAudio, menuMusic, bgMusics } from "./hooks/useAudio";
 import BottomNav from "./components/BottomNav";
@@ -199,7 +200,9 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
-      <AppContent />
+      <TelegramProvider>
+        <AppContent />
+      </TelegramProvider>
     </Router>
   );
 }
