@@ -11,6 +11,7 @@ export default function AdminStore() {
   const [config, setConfig] = useState({ ...storeConfig });
   const [localShopItems, setLocalShopItems] = useState([...shopItems]);
   const [localBossItems, setLocalBossItems] = useState([...bossItems]);
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
   const handleChange = (key: keyof typeof config, value: string) => {
     const numValue = parseFloat(value);
@@ -39,6 +40,92 @@ export default function AdminStore() {
     setLocalBossItems(newItems);
   };
 
+  const ItemRow = ({
+    item,
+    index,
+    onChange,
+  }: {
+    item: typeof localShopItems[0];
+    index: number;
+    onChange: (index: number, field: string, value: string | number) => void;
+  }) => {
+    const isExpanded = expandedItem === item.id;
+    return (
+      <div className="bg-neutral-950 rounded-lg border border-neutral-800 overflow-hidden">
+        {/* Compact row */}
+        <div
+          className="grid grid-cols-[2fr_1fr_1fr_auto] gap-2 items-center p-2 cursor-pointer hover:bg-neutral-900/50 transition-colors"
+          onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-lg shrink-0">{item.icon}</span>
+            <span className="text-xs text-white font-medium truncate">{item.name}</span>
+          </div>
+          <input
+            type="text"
+            value={item.icon}
+            onClick={e => e.stopPropagation()}
+            onChange={(e) => onChange(index, 'icon', e.target.value)}
+            className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-red-500 w-full"
+            placeholder="Иконка"
+          />
+          <input
+            type="number"
+            value={item.cost}
+            onClick={e => e.stopPropagation()}
+            onChange={(e) => onChange(index, 'cost', parseInt(e.target.value) || 0)}
+            className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-red-500 w-full"
+          />
+          <button className="text-neutral-600 hover:text-white text-xs px-1 shrink-0">
+            {isExpanded ? "▲" : "▼"}
+          </button>
+        </div>
+        {/* Expanded details */}
+        {isExpanded && (
+          <div className="p-3 border-t border-neutral-800 space-y-2 bg-neutral-950">
+            <div>
+              <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Название</label>
+              <input
+                type="text"
+                value={item.name}
+                onChange={(e) => onChange(index, 'name', e.target.value)}
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Тип / категория</label>
+              <input
+                type="text"
+                value={item.type}
+                onChange={(e) => onChange(index, 'type', e.target.value)}
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Ссылка на иконку (URL или эмодзи)</label>
+              <input
+                type="text"
+                value={item.icon}
+                onChange={(e) => onChange(index, 'icon', e.target.value)}
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-red-500"
+                placeholder="🎭 или https://..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Описание</label>
+              <textarea
+                value={item.description}
+                onChange={(e) => onChange(index, 'description', e.target.value)}
+                rows={2}
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-red-500 resize-none"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -47,7 +134,7 @@ export default function AdminStore() {
       className="flex-1 flex flex-col bg-neutral-950 text-neutral-200 relative overflow-y-auto h-screen"
     >
       <div className="p-4 md:p-6 max-w-4xl mx-auto w-full pb-24">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-6">
           <button 
             onClick={() => navigate("/admin")}
             className="p-2 bg-neutral-900 rounded-xl hover:bg-neutral-800 transition-colors"
@@ -60,179 +147,106 @@ export default function AdminStore() {
           </h1>
         </div>
 
-        <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800 mb-6 text-sm text-neutral-400">
-          Здесь вы можете настроить базовые стоимости, множители и награды для систем прокачки (Телекинез и Босс), а также скорость восстановления энергии.
+        <div className="bg-neutral-900/50 p-3 rounded-xl border border-neutral-800 mb-6 text-xs text-neutral-400">
+          Настройте стоимости, множители и товары магазина. Кликните на товар для редактирования описания и иконки.
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Telekinesis Config */}
           <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
-            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <Settings2 size={18} />
-              Прокачка Телекинеза
+            <h2 className="text-base font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
+              <Settings2 size={16} /> Прокачка Телекинеза
             </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Базовая стоимость (Страх)</label>
-                <input
-                  type="number"
-                  value={config.telekinesisBaseCost}
-                  onChange={(e) => handleChange('telekinesisBaseCost', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Множитель стоимости</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={config.telekinesisCostMultiplier}
-                  onChange={(e) => handleChange('telekinesisCostMultiplier', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Бонус страха за уровень</label>
-                <input
-                  type="number"
-                  value={config.telekinesisRewardBonus}
-                  onChange={(e) => handleChange('telekinesisRewardBonus', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Boss Config */}
-          <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
-            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <Settings2 size={18} />
-              Усиление Босса
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Базовая стоимость (Арбузы)</label>
-                <input
-                  type="number"
-                  value={config.bossBaseCost}
-                  onChange={(e) => handleChange('bossBaseCost', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Множитель стоимости</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={config.bossCostMultiplier}
-                  onChange={(e) => handleChange('bossCostMultiplier', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Базовая награда (Арбузы)</label>
-                <input
-                  type="number"
-                  value={config.bossRewardBase}
-                  onChange={(e) => handleChange('bossRewardBase', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Множитель награды</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={config.bossRewardMultiplier}
-                  onChange={(e) => handleChange('bossRewardMultiplier', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Energy Config */}
-          <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
-            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <Settings2 size={18} />
-              Энергия
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Время восстановления (минуты)</label>
-                <input
-                  type="number"
-                  value={config.energyRegenMinutes}
-                  onChange={(e) => handleChange('energyRegenMinutes', e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Shop Items */}
-          <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
-            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <Package size={18} />
-              Товары за Страх
-            </h2>
-            <div className="space-y-4">
-              {localShopItems.map((item, index) => (
-                <div key={item.id} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-neutral-950 p-4 rounded-lg border border-neutral-800">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Название ({item.icon})</label>
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => handleShopItemChange(index, 'name', e.target.value)}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Стоимость (Страх)</label>
-                    <input
-                      type="number"
-                      value={item.cost}
-                      onChange={(e) => handleShopItemChange(index, 'cost', parseInt(e.target.value) || 0)}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                    />
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { key: 'telekinesisBaseCost', label: 'Базовая стоимость (Страх)' },
+                { key: 'telekinesisCostMultiplier', label: 'Множитель стоимости' },
+                { key: 'telekinesisRewardBonus', label: 'Бонус страха за уровень' },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">{label}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={config[key as keyof typeof config]}
+                    onChange={(e) => handleChange(key as keyof typeof config, e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500 text-sm"
+                  />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Boss Items */}
+          {/* Boss Config */}
           <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-4">
-            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <Package size={18} />
-              Экипировка для Боссов
+            <h2 className="text-base font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
+              <Settings2 size={16} /> Усиление Босса
             </h2>
-            <div className="space-y-4">
-              {localBossItems.map((item, index) => (
-                <div key={item.id} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-neutral-950 p-4 rounded-lg border border-neutral-800">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Название ({item.icon})</label>
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => handleBossItemChange(index, 'name', e.target.value)}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-neutral-500 uppercase tracking-wider mb-1">Стоимость (Арбузы)</label>
-                    <input
-                      type="number"
-                      value={item.cost}
-                      onChange={(e) => handleBossItemChange(index, 'cost', parseInt(e.target.value) || 0)}
-                      className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 transition-colors"
-                    />
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { key: 'bossBaseCost', label: 'Базовая стоимость (Арбузы)' },
+                { key: 'bossCostMultiplier', label: 'Множитель стоимости' },
+                { key: 'bossRewardBase', label: 'Базовая награда (Арбузы)' },
+                { key: 'bossRewardMultiplier', label: 'Множитель награды' },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">{label}</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={config[key as keyof typeof config]}
+                    onChange={(e) => handleChange(key as keyof typeof config, e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500 text-sm"
+                  />
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Energy Config */}
+          <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-3">
+            <h2 className="text-base font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
+              <Settings2 size={16} /> Энергия
+            </h2>
+            <div>
+              <label className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Время восстановления (минуты)</label>
+              <input
+                type="number"
+                value={config.energyRegenMinutes}
+                onChange={(e) => handleChange('energyRegenMinutes', e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500 text-sm max-w-xs"
+              />
+            </div>
+          </div>
+
+          {/* Shop Items */}
+          <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-3">
+            <h2 className="text-base font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
+              <Package size={16} /> Товары за Страх
+              <span className="text-xs text-neutral-500 font-normal ml-auto">Клик — развернуть</span>
+            </h2>
+            <div className="text-[10px] text-neutral-600 grid grid-cols-[2fr_1fr_1fr_auto] gap-2 px-2">
+              <span>Название</span><span>Иконка</span><span>Стоимость</span><span></span>
+            </div>
+            <div className="space-y-1">
+              {localShopItems.map((item, index) => (
+                <ItemRow key={item.id} item={item} index={index} onChange={handleShopItemChange} />
+              ))}
+            </div>
+          </div>
+
+          {/* Boss Items */}
+          <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 space-y-3">
+            <h2 className="text-base font-bold text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
+              <Package size={16} /> Экипировка для Боссов
+              <span className="text-xs text-neutral-500 font-normal ml-auto">Клик — развернуть</span>
+            </h2>
+            <div className="text-[10px] text-neutral-600 grid grid-cols-[2fr_1fr_1fr_auto] gap-2 px-2">
+              <span>Название</span><span>Иконка</span><span>Стоимость (🍉)</span><span></span>
+            </div>
+            <div className="space-y-1">
+              {localBossItems.map((item, index) => (
+                <ItemRow key={item.id} item={item} index={index} onChange={handleBossItemChange} />
               ))}
             </div>
           </div>
@@ -240,7 +254,7 @@ export default function AdminStore() {
 
         <button
           onClick={handleSave}
-          className="mt-8 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+          className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
         >
           <Save className="w-5 h-5" />
           Сохранить настройки

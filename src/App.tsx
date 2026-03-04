@@ -32,7 +32,6 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminAI from "./pages/AdminAI";
 import AdminAudio from "./pages/AdminAudio";
 import AdminText from "./pages/AdminText";
-import AdminRole from "./pages/AdminRole";
 import AdminStat from "./pages/AdminStat";
 
 function AppContent() {
@@ -187,7 +186,7 @@ function AppContent() {
           <Route path="/admin/ai" element={<AdminAI />} />
           <Route path="/admin/audio" element={<AdminAudio />} />
           <Route path="/admin/text" element={<AdminText />} />
-          <Route path="/admin/role" element={<AdminRole />} />
+          <Route path="/admin/role" element={<AdminUsers />} />
           <Route path="/admin/stat" element={<AdminStat />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

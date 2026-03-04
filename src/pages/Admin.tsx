@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { ArrowLeft, Image as ImageIcon, Video, ShieldAlert, ShoppingCart, Users, Bot, Music, Type, Shield, BarChart3 } from "lucide-react";
+import { Image as ImageIcon, Video, ShieldAlert, ShoppingCart, Users, Bot, Music, Type, BarChart3 } from "lucide-react";
 import Header from "../components/Header";
 
 export default function Admin() {
@@ -29,18 +29,6 @@ export default function Admin() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={() => navigate("/admin/role")}
-            className="bg-neutral-900 border border-neutral-800 hover:border-red-500 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 transition-colors group"
-          >
-            <div className="w-16 h-16 rounded-full bg-neutral-800 group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
-              <Shield size={32} className="text-neutral-400 group-hover:text-red-500 transition-colors" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-1">Уровни доступа</h3>
-              <p className="text-xs text-neutral-500">Управление ролями и правами пользователей</p>
-            </div>
-          </button>
 
           <button
             onClick={() => navigate("/admin/stat")}
