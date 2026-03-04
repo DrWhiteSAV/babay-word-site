@@ -1,23 +1,62 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, ButtonSize, FontFamily, Theme } from "../store/playerStore";
 import { motion } from "motion/react";
 import {
   Settings as SettingsIcon,
-  ArrowLeft,
   Volume2,
   VolumeX,
   Type,
   Square,
   Bell,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { supabase } from "../integrations/supabase/client";
+import { useTelegram } from "../context/TelegramContext";
 
 import Header from "../components/Header";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { settings, updateSettings, character } = usePlayerStore();
+  const { profile } = useTelegram();
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetProgress = async () => {
+    if (!window.confirm("Вы уверены? Весь прогресс, персонаж, очки и инвентарь будут удалены безвозвратно.")) return;
+    setResetting(true);
+    try {
+      const telegramId = profile?.telegram_id;
+      if (telegramId) {
+        // Удаляем данные из Supabase
+        await Promise.all([
+          supabase.from("player_stats").delete().eq("telegram_id", telegramId),
+          supabase.from("player_inventory").delete().eq("telegram_id", telegramId),
+          supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
+          supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
+        ]);
+      }
+    } catch (e) {
+      console.error("Reset error:", e);
+    }
+    // Сбрасываем store и localStorage
+    usePlayerStore.setState({
+      character: null,
+      fear: 0,
+      energy: 50,
+      watermelons: 0,
+      bossLevel: 1,
+      lastEnergyUpdate: Date.now(),
+      inventory: [],
+      achievements: [],
+      friends: [{ name: "ДанИИл", isAiEnabled: true }],
+      quests: [],
+    });
+    localStorage.removeItem("babai-storage");
+    setResetting(false);
+    navigate("/create");
+  };
 
   if (!character) {
     navigate("/");
@@ -228,19 +267,11 @@ export default function Settings() {
           </button>
 
           <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Вы уверены, что хотите удалить персонажа и начать заново?",
-                )
-              ) {
-                localStorage.removeItem("babai-storage");
-                window.location.href = "/";
-              }
-            }}
-            className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-xl font-bold transition-colors"
+            onClick={handleResetProgress}
+            disabled={resetting}
+            className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
           >
-            СБРОСИТЬ ПРОГРЕСС
+            {resetting ? <><Loader2 size={18} className="animate-spin" /> Сброс...</> : "СБРОСИТЬ ПРОГРЕСС"}
           </button>
         </section>
 
