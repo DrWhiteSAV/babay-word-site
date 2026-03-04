@@ -34,9 +34,14 @@ export default function Settings() {
     try {
       const telegramId = profile?.telegram_id;
       if (telegramId) {
-        // Удаляем данные из Supabase
         await Promise.all([
-          supabase.from("player_stats").delete().eq("telegram_id", telegramId),
+          // Сбрасываем player_stats (обнуляем поля вместо удаления, чтобы не нарушать FK)
+          supabase.from("player_stats").update({
+            fear: 0, watermelons: 0, energy: 100, boss_level: 0,
+            telekinesis_level: 0, total_clicks: 0,
+            character_name: null, character_gender: null, character_style: null,
+            avatar_url: null, lore: null, custom_settings: {},
+          }).eq("telegram_id", telegramId),
           supabase.from("player_inventory").delete().eq("telegram_id", telegramId),
           supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
           supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
