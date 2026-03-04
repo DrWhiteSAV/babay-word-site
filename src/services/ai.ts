@@ -57,15 +57,23 @@ export async function generateCharacterName(
     const service = settings?.service || "protalk-text";
     const basePrompt =
       settings?.prompt ||
-      "Сгенерируй уникальное, забавное имя для славянского кибернетического духа. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни только имя, без лишних слов.";
+      "Сгенерируй одно уникальное, забавное имя для славянского кибернетического духа-Бабая. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни ТОЛЬКО само имя, без нумерации, без пояснений, без кавычек.";
     const prompt = applyMacros(basePrompt, { gender, style });
     console.log(`[AI] generateCharacterName: service=${service}, tgId=${telegramId}`);
     const { text } = await callAI(service, prompt, telegramId);
-    return text.trim() || "Безымянный";
+    // Clean up: take first line, remove numbering like "1. Name" or "- Name"
+    const cleaned = text
+      .split("\n")[0]
+      .replace(/^[\d]+[.)]\s*/, "")
+      .replace(/^[-*•]\s*/, "")
+      .replace(/["""]/g, "")
+      .trim();
+    console.log(`[AI] name cleaned: "${cleaned}" (raw: "${text.substring(0, 80)}")`);
+    return cleaned || "Безымянный";
   } catch (e) {
     console.error("[AI] Name gen error:", e);
-    const names = ["Бабай", "Бука", "Жмых", "Кибер-Леший", "Яга-Бот", "Скрежет"];
-    return names[Math.floor(Math.random() * names.length)] + " " + Math.floor(Math.random() * 100);
+    const names = ["Тьмарь", "Жуткий", "Скрежет", "Хладень", "Бурьян", "Крипень"];
+    return names[Math.floor(Math.random() * names.length)];
   }
 }
 
