@@ -56,6 +56,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          message: string
+          send_popup: boolean
+          send_telegram: boolean
+          title: string
+          trigger_event: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message: string
+          send_popup?: boolean
+          send_telegram?: boolean
+          title: string
+          trigger_event?: string | null
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          send_popup?: boolean
+          send_telegram?: boolean
+          title?: string
+          trigger_event?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       ai_settings: {
         Row: {
           id: string
@@ -350,6 +386,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_send_history: {
+        Row: {
+          error_message: string | null
+          id: string
+          message: string
+          notification_id: string | null
+          sent_at: string
+          status: string
+          telegram_id: number
+          title: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          message: string
+          notification_id?: string | null
+          sent_at?: string
+          status?: string
+          telegram_id: number
+          title: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          message?: string
+          notification_id?: string | null
+          sent_at?: string
+          status?: string
+          telegram_id?: number
+          title?: string
+        }
+        Relationships: []
+      }
       page_backgrounds: {
         Row: {
           dimming: number
@@ -566,6 +635,7 @@ export type Database = {
           profile_url: string | null
           referral_code: string | null
           role: string
+          telegram_blocked: boolean
           telegram_id: number
           updated_at: string
           username: string | null
@@ -579,6 +649,7 @@ export type Database = {
           profile_url?: string | null
           referral_code?: string | null
           role?: string
+          telegram_blocked?: boolean
           telegram_id: number
           updated_at?: string
           username?: string | null
@@ -592,6 +663,7 @@ export type Database = {
           profile_url?: string | null
           referral_code?: string | null
           role?: string
+          telegram_blocked?: boolean
           telegram_id?: number
           updated_at?: string
           username?: string | null
