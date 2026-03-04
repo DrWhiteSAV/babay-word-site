@@ -350,6 +350,7 @@ export default function Game() {
   const [localWatermelons, setLocalWatermelons] = useState(0);
   const [exitedEarly, setExitedEarly] = useState(false);
   const [pvpResults, setPvpResults] = useState<{name: string, fear: number, watermelons: number, isLocal: boolean, exited?: boolean}[] | null>(null);
+
   const { friends } = usePlayerStore();
 
   const handleInviteFriend = (friendName: string) => {
@@ -381,7 +382,7 @@ export default function Game() {
 
   useEffect(() => {
     if (isGameOver && pvpParticipants.length > 0 && !pvpResults) {
-      const results = pvpParticipants.map(p => {
+      const results: {name: string, fear: number, watermelons: number, isLocal: boolean, exited?: boolean}[] = pvpParticipants.map(p => {
         const successRate = 0.5 + Math.random() * 0.4;
         const simulatedFear = Math.floor(maxStages * successRate);
         const numBosses = Math.floor(maxStages / 15);
