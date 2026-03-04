@@ -24,28 +24,96 @@ export interface TelegramProfile {
   updated_at: string;
 }
 
+export type EntryMode = "lovable" | "telegram" | "browser";
+
+/**
+ * Detects how the app was opened:
+ * - "lovable"  → inside Lovable editor iframe (lovable.app / lovable.dev)
+ * - "telegram" → Telegram Mini App (window.Telegram.WebApp with user data)
+ * - "browser"  → plain browser, no special context
+ */
+export function detectEntryMode(): EntryMode {
+  // Check if running inside Lovable editor iframe
+  try {
+    const isInIframe = window.self !== window.top;
+    if (isInIframe) {
+      // We're in an iframe — most likely Lovable editor
+      return "lovable";
+    }
+  } catch (_) {
+    // Cross-origin iframe, treat as lovable editor to be safe
+    return "lovable";
+  }
+
+  // Also check referrer / hostname for Lovable preview URLs
+  const href = window.location.href;
+  if (
+    href.includes("lovable.app") ||
+    href.includes("lovable.dev") ||
+    href.includes("id-preview--")
+  ) {
+    return "lovable";
+  }
+
+  // Check Telegram WebApp
+  const tg = (window as any).Telegram?.WebApp;
+  if (tg?.initDataUnsafe?.user || tg?.initData) {
+    return "telegram";
+  }
+
+  return "browser";
+}
+
+const LOVABLE_SUPER_USER: TelegramProfile = {
+  id: "lovable-dev",
+  telegram_id: 0,
+  first_name: "Lovable",
+  last_name: "Dev",
+  username: "lovable_dev",
+  profile_url: null,
+  photo_url: null,
+  referral_code: null,
+  role: "Супер-Бабай",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 /**
  * Reads Telegram WebApp initData, registers/updates the user in Supabase profiles table,
- * and returns the stored profile.
+ * and returns the stored profile. In Lovable editor returns a super-admin mock profile.
  */
 export function useTelegramAuth() {
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
   const [profile, setProfile] = useState<TelegramProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [entryMode, setEntryMode] = useState<EntryMode>("browser");
 
   useEffect(() => {
     const init = async () => {
-      const tg = (window as any).Telegram?.WebApp;
+      const mode = detectEntryMode();
+      setEntryMode(mode);
 
-      // Parse user from Telegram WebApp initData
+      // Lovable editor → give super admin access immediately, no DB call
+      if (mode === "lovable") {
+        setProfile(LOVABLE_SUPER_USER);
+        setIsLoading(false);
+        return;
+      }
+
+      // Browser (not Telegram, not Lovable) → show warning page, no registration
+      if (mode === "browser") {
+        setIsLoading(false);
+        return;
+      }
+
+      // Telegram Mini App flow
+      const tg = (window as any).Telegram?.WebApp;
       let user: TelegramUser | null = null;
 
       if (tg?.initDataUnsafe?.user) {
         user = tg.initDataUnsafe.user as TelegramUser;
-        // Expand the WebApp to full height
         tg.expand();
       } else {
-        // Dev fallback: try to parse from URL hash or search params
         try {
           const raw = tg?.initData || "";
           if (raw) {
@@ -63,13 +131,10 @@ export function useTelegramAuth() {
 
       setTelegramUser(user);
 
-      // Build profile_url
       const profileUrl = user.username
         ? `https://t.me/${user.username}`
         : `tg://user?id=${user.id}`;
 
-      // Extract referral code from startapp param:
-      // https://t.me/Bab_AIbot/app?startapp=babai  →  startapp=babai
       let referralCode: string | null = null;
       try {
         const startParam =
@@ -79,7 +144,6 @@ export function useTelegramAuth() {
         if (startParam) referralCode = startParam;
       } catch (_) {}
 
-      // Upsert into Supabase profiles (by telegram_id)
       const upsertData = {
         telegram_id: user.id,
         first_name: user.first_name,
@@ -108,5 +172,5 @@ export function useTelegramAuth() {
     init();
   }, []);
 
-  return { telegramUser, profile, isLoading };
+  return { telegramUser, profile, isLoading, entryMode };
 }

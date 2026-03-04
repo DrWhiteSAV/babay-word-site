@@ -34,8 +34,11 @@ import AdminAI from "./pages/AdminAI";
 import AdminAudio from "./pages/AdminAudio";
 import AdminText from "./pages/AdminText";
 import AdminStat from "./pages/AdminStat";
+import TelegramOnly from "./pages/TelegramOnly";
+import { useTelegram } from "./context/TelegramContext";
 
 function AppContent() {
+  const { entryMode, isLoading } = useTelegram();
   const [hasSeenInitialCutscene, setHasSeenInitialCutscene] = useState(false);
   const { updateEnergy, settings, globalBackgroundUrl, setGlobalBackgroundUrl, character, pageBackgrounds } = usePlayerStore();
   const { playClick } = useAudio(settings.musicVolume);
@@ -144,6 +147,11 @@ function AppContent() {
   // If no custom dimming, use default 80% to 95% gradient
   const dimmingTop = customBg ? customBg.dimming / 100 : 0.8;
   const dimmingBottom = customBg ? Math.min(1, (customBg.dimming + 15) / 100) : 0.95;
+
+  // Show warning page for plain browser access (not Lovable editor, not Telegram)
+  if (!isLoading && entryMode === "browser") {
+    return <TelegramOnly />;
+  }
 
   return (
     <div 
