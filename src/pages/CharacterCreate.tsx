@@ -43,18 +43,22 @@ export default function CharacterCreate() {
   const handleGenerate = async () => {
     if (!gender || !style) return;
     setIsGenerating(true);
+    const tgId = profile?.telegram_id;
+    console.log(`[Create] handleGenerate: gender=${gender}, style=${style}, tgId=${tgId}`);
     try {
       setGenerationStep("Призыв имени...");
-      const name = await generateCharacterName(gender, style);
+      const name = await generateCharacterName(gender, style, tgId);
+      console.log(`[Create] name generated: ${name}`);
 
       let avatarUrl = selectedDefaultImage;
       let avatarPrompt: string | undefined;
 
       if (!avatarUrl) {
         setGenerationStep("Генерация облика...");
-        const result = await generateAvatar(gender, style, wishes, { name });
+        const result = await generateAvatar(gender, style, wishes, { name }, tgId);
         avatarUrl = result.url;
         avatarPrompt = result.prompt;
+        console.log(`[Create] avatar url: ${avatarUrl}`);
       }
 
       const finalUrl = avatarUrl || "https://picsum.photos/id/874/1920/1080";
@@ -69,8 +73,8 @@ export default function CharacterCreate() {
       });
 
       // Save avatar to gallery via Telegram bot
-      if (profile?.telegram_id && !selectedDefaultImage) {
-        saveImageToGallery(finalUrl, profile.telegram_id, `Аватар: ${name}`, avatarPrompt).catch(console.error);
+      if (tgId && !selectedDefaultImage) {
+        saveImageToGallery(finalUrl, tgId, `Аватар: ${name}`, avatarPrompt).catch(console.error);
       }
 
       // Generate lore in background
@@ -79,14 +83,13 @@ export default function CharacterCreate() {
         wishes: wishes.join(", "),
         username: profile?.username || "",
         first_name: profile?.first_name || "",
-      }).then(async (lore) => {
+      }, tgId).then(async (lore) => {
         if (lore) {
           updateCharacter({ lore });
-          // Save lore to player_stats
-          if (profile?.telegram_id) {
+          if (tgId) {
             await supabase.from("player_stats")
               .update({ lore })
-              .eq("telegram_id", profile.telegram_id);
+              .eq("telegram_id", tgId);
           }
         }
       }).catch(console.error);

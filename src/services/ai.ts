@@ -20,16 +20,6 @@ function applyMacros(prompt: string, data: Record<string, string>): string {
   return prompt.replace(/\{(\w+)\}/g, (_, key) => data[key] ?? `{${key}}`);
 }
 
-// Get telegram ID from Telegram WebApp if available
-function getTelegramId(): number | undefined {
-  try {
-    const tg = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
-    return tg ? Number(tg) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 // Determine if service is image type
 function isImageService(service: string): boolean {
   return service === "protalk-image";
@@ -41,21 +31,27 @@ async function callAI(
   prompt: string,
   telegramId?: number,
 ): Promise<{ text: string; imageUrl?: string | null }> {
+  console.log(`[AI] callAI: service=${service}, telegramId=${telegramId}, promptLen=${prompt.length}`);
   if (isImageService(service)) {
     const result = await protalkGenerateImage(prompt, telegramId);
+    console.log(`[AI] image result url=${result.url}`);
     return { text: result.url, imageUrl: result.url };
   } else {
     const text = await protalkGenerateText(prompt, telegramId);
+    console.log(`[AI] text result len=${text?.length}`);
     return { text };
   }
 }
 
 export async function generateSpookyVoice(_text: string): Promise<string> {
-  // TTS не поддерживается ProTalk — падаем на браузерный TTS
   return "";
 }
 
-export async function generateCharacterName(gender: string, style: string): Promise<string> {
+export async function generateCharacterName(
+  gender: string,
+  style: string,
+  telegramId?: number,
+): Promise<string> {
   try {
     const settings = await loadAISettings("names");
     const service = settings?.service || "protalk-text";
@@ -63,10 +59,11 @@ export async function generateCharacterName(gender: string, style: string): Prom
       settings?.prompt ||
       "Сгенерируй уникальное, забавное имя для славянского кибернетического духа. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни только имя, без лишних слов.";
     const prompt = applyMacros(basePrompt, { gender, style });
-    const { text } = await callAI(service, prompt, getTelegramId());
+    console.log(`[AI] generateCharacterName: service=${service}, tgId=${telegramId}`);
+    const { text } = await callAI(service, prompt, telegramId);
     return text.trim() || "Безымянный";
   } catch (e) {
-    console.error("Name gen error:", e);
+    console.error("[AI] Name gen error:", e);
     const names = ["Бабай", "Бука", "Жмых", "Кибер-Леший", "Яга-Бот", "Скрежет"];
     return names[Math.floor(Math.random() * names.length)] + " " + Math.floor(Math.random() * 100);
   }
@@ -77,6 +74,7 @@ export async function generateAvatar(
   style: string,
   wishes: string[],
   extraData?: Record<string, string>,
+  telegramId?: number,
 ): Promise<{ url: string; prompt: string }> {
   const settings = await loadAISettings("avatar");
   const service = settings?.service || "protalk-image";
@@ -91,12 +89,14 @@ export async function generateAvatar(
     ...extraData,
   });
 
+  console.log(`[AI] generateAvatar: service=${service}, tgId=${telegramId}`);
   try {
-    const { imageUrl } = await callAI(service, prompt, getTelegramId());
+    const { imageUrl } = await callAI(service, prompt, telegramId);
     const url = imageUrl && imageUrl.startsWith("http") ? imageUrl : null;
+    console.log(`[AI] avatar url=${url}`);
     return { url: url || "https://i.ibb.co/BVgY7XrT/babai.png", prompt };
   } catch (e) {
-    console.error("Avatar gen error:", e);
+    console.error("[AI] Avatar gen error:", e);
     return { url: "https://i.ibb.co/BVgY7XrT/babai.png", prompt };
   }
 }
@@ -106,6 +106,7 @@ export async function generateAvatarWithItem(
   character: any,
   allOwnedItems: string[],
   newItemName: string,
+  telegramId?: number,
 ): Promise<string> {
   try {
     const settings = await loadAISettings("avatar_shop");
@@ -122,10 +123,10 @@ export async function generateAvatarWithItem(
       new_item: newItemName,
       wishes: (character.wishes || []).join(", "),
     });
-    const { imageUrl } = await callAI(service, prompt, getTelegramId());
+    const { imageUrl } = await callAI(service, prompt, telegramId);
     return imageUrl && imageUrl.startsWith("http") ? imageUrl : currentAvatar;
   } catch (e) {
-    console.error("Avatar with item error:", e);
+    console.error("[AI] Avatar with item error:", e);
     return currentAvatar;
   }
 }
@@ -134,6 +135,7 @@ export async function generateScenario(
   stage: number,
   difficulty: string,
   style: string,
+  telegramId?: number,
 ): Promise<{ text: string; options: string[]; correctAnswer: number; successText: string; failureText: string }> {
   try {
     const prompt = `Ты - ведущий текстовой ролевой игры "Бабай". Игрок - славянский кибер-дух (старик/старуха в пижаме с длинным языком и телекинезом).
@@ -146,12 +148,12 @@ export async function generateScenario(
 Ответь строго в формате JSON:
 {"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
 
-    const { text } = await callAI("protalk-text", prompt, getTelegramId());
+    const { text } = await callAI("protalk-text", prompt, telegramId);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
     throw new Error("No JSON in response");
   } catch (e) {
-    console.error("Scenario gen error:", e);
+    console.error("[AI] Scenario gen error:", e);
     const fallbacks = [
       {
         text: `Этаж ${stage}. Жилец заперся в ванной и поёт песни. Что будешь делать?`,
@@ -176,6 +178,7 @@ export async function generateBackgroundImage(
   stage: number,
   style: string,
   characterData?: Record<string, string>,
+  telegramId?: number,
 ): Promise<{ url: string; prompt: string }> {
   const settings = await loadAISettings("background");
   const service = settings?.service || "protalk-image";
@@ -195,11 +198,11 @@ export async function generateBackgroundImage(
   });
 
   try {
-    const { imageUrl } = await callAI(service, prompt, getTelegramId());
+    const { imageUrl } = await callAI(service, prompt, telegramId);
     const url = imageUrl && imageUrl.startsWith("http") ? imageUrl : null;
     return { url: url || "https://picsum.photos/id/1015/1920/1080", prompt };
   } catch (e) {
-    console.error("Background gen error:", e);
+    console.error("[AI] Background gen error:", e);
     return { url: "https://picsum.photos/id/1015/1920/1080", prompt };
   }
 }
@@ -208,6 +211,7 @@ export async function generateBossImage(
   stage: number,
   style: string,
   characterData?: Record<string, string>,
+  telegramId?: number,
 ): Promise<{ url: string; prompt: string }> {
   const settings = await loadAISettings("boss");
   const service = settings?.service || "protalk-image";
@@ -226,11 +230,11 @@ export async function generateBossImage(
   });
 
   try {
-    const { imageUrl } = await callAI(service, prompt, getTelegramId());
+    const { imageUrl } = await callAI(service, prompt, telegramId);
     const url = imageUrl && imageUrl.startsWith("http") ? imageUrl : null;
     return { url: url || "https://picsum.photos/id/718/1920/1080", prompt };
   } catch (e) {
-    console.error("Boss gen error:", e);
+    console.error("[AI] Boss gen error:", e);
     return { url: "https://picsum.photos/id/718/1920/1080", prompt };
   }
 }
@@ -242,6 +246,7 @@ export async function generateFriendChat(
   style: string,
   chatHistory: { sender: string; text: string }[] = [],
   _imageUrl?: string,
+  telegramId?: number,
 ): Promise<string> {
   try {
     let historyText = "";
@@ -262,15 +267,15 @@ export async function generateFriendChat(
         settings?.prompt ||
         "Ты ДанИИл, дух-начальник (ИИ), который контролирует Бабаев. Стиль: строгий, саркастичный, требует отчётов о выселении жильцов.";
       promptText = `${basePrompt} Стиль мира: ${style}. Бабай по имени ${character?.name || "Неизвестный"} пишет: "${message}".${historyText} Ответь коротко (1-2 предложения).`;
-      const { text } = await callAI(service, promptText, getTelegramId());
+      const { text } = await callAI(service, promptText, telegramId);
       return text.trim() || "Продолжай работать.";
     } else {
       promptText = `Ты - ИИ-заместитель друга по имени ${friendName}. Твой собеседник - Бабай ${character?.name || "Неизвестный"}. Стиль мира: ${style}. Игрок пишет: "${message}".${historyText} Ответь коротко (1-3 предложения).`;
-      const { text } = await callAI("protalk-text", promptText, getTelegramId());
+      const { text } = await callAI("protalk-text", promptText, telegramId);
       return text.trim() || "Продолжай работать.";
     }
   } catch (e) {
-    console.error("Friend chat error:", e);
+    console.error("[AI] Friend chat error:", e);
     if (friendName === "ДанИИл") {
       const replies = [
         "Слишком много разговоров, Бабай. Иди работай.",
@@ -289,6 +294,7 @@ export async function generateLore(
   gender: string,
   style: string,
   extraData?: Record<string, string>,
+  telegramId?: number,
 ): Promise<string> {
   try {
     const settings = await loadAISettings("lore");
@@ -297,10 +303,11 @@ export async function generateLore(
       settings?.prompt ||
       "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Сделай историю атмосферной и жуткой.";
     const prompt = applyMacros(basePrompt, { name, gender, style, ...extraData });
-    const { text } = await callAI(service, prompt, getTelegramId());
+    console.log(`[AI] generateLore: service=${service}, tgId=${telegramId}`);
+    const { text } = await callAI(service, prompt, telegramId);
     return text.trim() || "";
   } catch (e) {
-    console.error("Lore gen error:", e);
+    console.error("[AI] Lore gen error:", e);
     return "";
   }
 }

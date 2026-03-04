@@ -25,6 +25,11 @@ export default function Settings() {
 
   const handleResetProgress = async () => {
     if (!window.confirm("Вы уверены? Весь прогресс, персонаж, очки и инвентарь будут удалены безвозвратно.")) return;
+    const word = window.prompt('Для подтверждения введите слово СБРОС:');
+    if (word?.trim().toUpperCase() !== "СБРОС") {
+      window.alert("Сброс отменён — слово не совпало.");
+      return;
+    }
     setResetting(true);
     try {
       const telegramId = profile?.telegram_id;
