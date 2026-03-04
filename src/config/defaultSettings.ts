@@ -12,6 +12,135 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
   energyRegenMinutes: 5,
 };
 
+// Базовые тексты страниц
+export const DEFAULT_TEXTS: Record<string, string> = {
+  // Главная
+  home_play_btn: "НАЧАТЬ",
+  home_continue_btn: "ПРОДОЛЖИТЬ",
+  home_profile_btn: "Профиль",
+  home_settings_btn: "Настройки",
+  home_version: "v1.0.0 © 2026 Bab-AI.ru",
+  home_logo_alt: "Бабай Bab-AI",
+
+  // Хаб
+  hub_play_btn: "ИГРАТЬ",
+  hub_shop_btn: "Магазин",
+  hub_friends_btn: "Друзья",
+  hub_leaderboard_btn: "Рейтинг",
+
+  // Магазин
+  shop_title: "Магазин",
+  shop_abilities_section: "Способности и Улучшения",
+  shop_fear_section: "Товары за Страх",
+  shop_boss_section: "Экипировка для Боссов",
+  shop_bought_label: "Куплено",
+  shop_telekinesis_name: "Телекинез",
+  shop_boss_upgrade_name: "Усиление Босса",
+  shop_logo_url: "https://i.ibb.co/pvJ73kxN/babai2.png",
+
+  // Профиль
+  profile_title: "Профиль",
+  profile_gallery_title: "Галерея",
+  profile_gallery_see_all: "СМОТРЕТЬ ВСЕ",
+  profile_lore_title: "История духа",
+  profile_lore_generating: "Дух вспоминает свое прошлое...",
+  profile_lore_empty: "История утеряна во мраке веков.",
+  profile_inventory_title: "Инвентарь",
+  profile_referral_title: "Пригласи друга",
+  profile_referral_desc: "Получи 100 энергии и 100 страха за каждого друга, который присоединится по твоей ссылке.",
+  profile_telekinesis_level: "Уровень Телекинеза",
+  profile_fear_label: "Страх",
+  profile_energy_label: "Энергия",
+  profile_watermelons_label: "Арбузы",
+
+  // Настройки
+  settings_title: "Настройки",
+  settings_btn_size_title: "Размер кнопок",
+  settings_btn_small: "Мелкие",
+  settings_btn_medium: "Средние",
+  settings_btn_large: "Крупные",
+  settings_theme_title: "Тема оформления",
+  settings_theme_normal: "Обычная",
+  settings_theme_cyberpunk: "Киберпанк",
+  settings_font_family_title: "Стиль шрифта",
+  settings_font_size_title: "Размер шрифта",
+  settings_font_brightness_title: "Яркость шрифта",
+  settings_tts_title: "Озвучка текста",
+  settings_tts_on: "ВКЛЮЧЕНА",
+  settings_tts_off: "ВЫКЛЮЧЕНА",
+  settings_music_title: "Громкость музыки",
+  settings_clear_gallery: "ОЧИСТИТЬ ГАЛЕРЕЮ",
+  settings_reset_progress: "СБРОСИТЬ ПРОГРЕСС",
+  settings_confirm_clear_gallery: "Очистить галерею? Это освободит место в памяти устройства.",
+  settings_confirm_reset: "Вы уверены, что хотите удалить персонажа и начать заново?",
+
+  // Создание персонажа
+  char_create_title: "Создать персонажа",
+  char_create_name_placeholder: "Введите имя...",
+  char_create_btn: "Создать Бабая",
+
+  // Друзья
+  friends_title: "Друзья",
+  friends_add_placeholder: "Введите имя...",
+  friends_add_btn: "Добавить",
+  friends_empty: "Нет друзей. Добавьте первого!",
+
+  // Чат
+  chat_title: "Чат",
+  chat_placeholder: "Введите сообщение...",
+  chat_send_btn: "Отправить",
+  chat_ai_typing: "ДанИИл печатает...",
+
+  // Игра
+  game_title: "Игра",
+  game_fear_label: "Страх",
+  game_energy_label: "Энергия",
+
+  // Лидерборд
+  leaderboard_title: "Таблица лидеров",
+  leaderboard_empty: "Пока никого нет...",
+  leaderboard_rank: "Место",
+  leaderboard_name: "Имя",
+  leaderboard_score: "Страх",
+
+  // События
+  events_title: "События",
+  events_empty: "Нет активных событий",
+
+  // Галерея
+  gallery_title: "Галерея",
+  gallery_empty: "Галерея пуста",
+
+  // Админка общее
+  admin_title: "Админ-панель",
+  admin_desc: "Добро пожаловать в панель администратора. Здесь вы можете управлять глобальными настройками приложения.",
+
+  // Роли
+  roles_super_babai_desc: "Полный доступ + добавление Ад-Бабаев",
+  roles_ad_babai_desc: "Полный доступ (кроме добавления Ад-Бабаев)",
+  roles_babai_desc: "Обычный пользователь (только игра)",
+  roles_super_babai_pages: "Все разделы админки и игры",
+  roles_ad_babai_pages: "Все разделы кроме управления ролями",
+  roles_babai_pages: "Только игровые страницы",
+};
+
+// Роли пользователей
+export const DEFAULT_USERS: Array<{
+  id: string;
+  name: string;
+  role: "Супер-Бабай" | "Ад-Бабай" | "Бабай";
+  access: string;
+  pages: string;
+}> = [
+  {
+    id: "169262990",
+    name: "Создатель",
+    role: "Супер-Бабай",
+    access: DEFAULT_TEXTS.roles_super_babai_desc || "Полный доступ + добавление Ад-Бабаев",
+    pages: DEFAULT_TEXTS.roles_super_babai_pages || "Все разделы админки и игры",
+  },
+];
+
 // Базовые изображения для галереи
 export const DEFAULT_GALLERY_IMAGES = [
   "https://images.unsplash.com/photo-1505635552518-3448ff116af3?q=80&w=1080&auto=format&fit=crop",
@@ -369,3 +498,14 @@ export const DEFAULT_PAGE_BACKGROUNDS: Record<string, { url: string; dimming: nu
 
 // Базовый глобальный фон (пусто по умолчанию)
 export const DEFAULT_GLOBAL_BACKGROUND: string | null = null;
+
+// Дефолтные настройки пользователя
+export const DEFAULT_SETTINGS = {
+  buttonSize: "medium" as const,
+  fontFamily: "JetBrains Mono" as const,
+  fontSize: 16,
+  fontBrightness: 100,
+  theme: "normal" as const,
+  musicVolume: 50,
+  ttsEnabled: false,
+};
