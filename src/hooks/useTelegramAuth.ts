@@ -33,31 +33,30 @@ export type EntryMode = "lovable" | "telegram" | "browser";
  * - "browser"  → plain browser, no special context
  */
 export function detectEntryMode(): EntryMode {
-  // Check if running inside Lovable editor iframe
+  const hostname = window.location.hostname;
+  const href = window.location.href;
+
+  // Lovable EDITOR iframe (preview inside editor)
   try {
     const isInIframe = window.self !== window.top;
-    if (isInIframe) {
-      // We're in an iframe — most likely Lovable editor
-      return "lovable";
-    }
+    if (isInIframe) return "lovable";
   } catch (_) {
-    // Cross-origin iframe, treat as lovable editor to be safe
     return "lovable";
   }
 
-  // Also check referrer / hostname for Lovable preview URLs
-  const href = window.location.href;
+  // Lovable preview/dev hostnames (NOT the published app)
   if (
-    href.includes("lovable.app") ||
-    href.includes("lovable.dev") ||
-    href.includes("id-preview--")
+    href.includes("id-preview--") ||
+    hostname.includes("lovable.dev") ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1"
   ) {
     return "lovable";
   }
 
-  // Check Telegram WebApp
+  // Check Telegram WebApp SDK
   const tg = (window as any).Telegram?.WebApp;
-  if (tg?.initDataUnsafe?.user || tg?.initData) {
+  if (tg?.initDataUnsafe?.user || (tg?.initData && tg.initData.length > 0)) {
     return "telegram";
   }
 

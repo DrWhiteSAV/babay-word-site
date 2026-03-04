@@ -1,32 +1,68 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Music, Save, Volume2 } from "lucide-react";
+import { Music, Save, Volume2, Loader2 } from "lucide-react";
 import Header from "../components/Header";
+import { supabase } from "../integrations/supabase/client";
+
+const DEFAULT_AUDIO: Record<string, string> = {
+  menuMusic: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+  bgMusic1: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+  bgMusic2: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+  bgMusic3: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+  bgMusic4: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+  bgMusic5: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+  click: "https://www.soundjay.com/buttons/button-16.mp3",
+  transition: "https://www.soundjay.com/free-music/whoosh-01.mp3",
+  scream: "https://www.soundjay.com/human/man-scream-01.mp3",
+  cat: "https://www.soundjay.com/mechanical/camera-shutter-click-01.mp3",
+  fear: "https://www.soundjay.com/human/heartbeat-01.mp3",
+};
+
+const AUDIO_LABELS: Record<string, string> = {
+  menuMusic: "Главное меню",
+  bgMusic1: "Фон в игре 1",
+  bgMusic2: "Фон в игре 2",
+  bgMusic3: "Фон в игре 3",
+  bgMusic4: "Фон в игре 4",
+  bgMusic5: "Фон в игре 5",
+  click: "Клик по кнопке",
+  transition: "Переход между страницами",
+  scream: "Крик (scream)",
+  cat: "Фото/Кот (cat)",
+  fear: "Страх/Сердцебиение",
+};
 
 export default function AdminAudio() {
-  const navigate = useNavigate();
+  const [audio, setAudio] = useState<Record<string, string>>({ ...DEFAULT_AUDIO });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const [audioLinks, setAudioLinks] = useState({
-    menuMusic: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-    bgMusics: [
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
-    ],
-    click: "https://www.soundjay.com/buttons/button-16.mp3",
-    transition: "https://www.soundjay.com/free-music/whoosh-01.mp3",
-    scream: "https://www.soundjay.com/human/man-scream-01.mp3",
-    cat: "https://www.soundjay.com/mechanical/camera-shutter-click-01.mp3",
-    fear: "https://www.soundjay.com/human/heartbeat-01.mp3"
-  });
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from("audio_settings").select("key, value");
+      if (data && data.length > 0) {
+        const merged = { ...DEFAULT_AUDIO };
+        data.forEach(r => { merged[r.key] = r.value; });
+        setAudio(merged);
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
 
-  const handleSave = () => {
-    // Save logic here
-    alert("Настройки аудио сохранены!");
+  const handleSave = async () => {
+    setSaving(true);
+    const rows = Object.entries(audio).map(([key, value]) => ({ key, value, label: AUDIO_LABELS[key] || key }));
+    const { error } = await supabase.from("audio_settings").upsert(rows, { onConflict: "key" });
+    setSaving(false);
+    if (error) { alert("Ошибка: " + error.message); return; }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
+
+  const musicKeys = Object.keys(DEFAULT_AUDIO).filter(k => k.toLowerCase().includes("music"));
+  const sfxKeys = Object.keys(DEFAULT_AUDIO).filter(k => !k.toLowerCase().includes("music"));
 
   return (
     <motion.div
@@ -35,125 +71,56 @@ export default function AdminAudio() {
       exit={{ opacity: 0, x: -50 }}
       className="flex-1 flex flex-col bg-transparent text-neutral-200 relative overflow-hidden"
     >
-      <div className="fog-container">
-        <div className="fog-layer"></div>
-        <div className="fog-layer-2"></div>
-      </div>
+      <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer-2"></div></div>
+      <Header title={<><Music size={20} /> Настройки Аудио</>} backUrl="/admin" />
 
-      <Header 
-        title={<><Music size={20} /> Настройки Аудио</>}
-        backUrl="/admin"
-      />
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800 text-sm text-neutral-400">
-          Управление ссылками на аудиофайлы, используемые в игре.
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="bg-neutral-900/50 p-3 rounded-xl border border-neutral-800 text-xs text-neutral-400">
+          Ссылки на аудиофайлы. Изменения синхронизируются с базой данных.
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white border-b border-neutral-800 pb-2">Музыка</h3>
-            
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold">Главное меню</label>
-              <input 
-                type="text"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                value={audioLinks.menuMusic}
-                onChange={(e) => setAudioLinks({...audioLinks, menuMusic: e.target.value})}
-              />
+        {loading ? (
+          <div className="flex items-center justify-center py-12"><Loader2 size={24} className="animate-spin text-red-500" /></div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
+              <h3 className="text-sm font-bold text-white border-b border-neutral-800 pb-2 flex items-center gap-2">
+                <Music size={14} className="text-red-500" /> Музыка
+              </h3>
+              {musicKeys.map(key => (
+                <div key={key} className="space-y-1">
+                  <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">{AUDIO_LABELS[key]}</label>
+                  <input type="text"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none"
+                    value={audio[key] || ""}
+                    onChange={e => setAudio(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold">Фоновая музыка в игре (плейлист)</label>
-              {audioLinks.bgMusics.map((music, index) => (
-                <div key={index} className="flex gap-2">
-                  <input 
-                    type="text"
-                    className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                    value={music}
-                    onChange={(e) => {
-                      const newBgMusics = [...audioLinks.bgMusics];
-                      newBgMusics[index] = e.target.value;
-                      setAudioLinks({...audioLinks, bgMusics: newBgMusics});
-                    }}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
+              <h3 className="text-sm font-bold text-white border-b border-neutral-800 pb-2 flex items-center gap-2">
+                <Volume2 size={14} className="text-red-500" /> Звуковые эффекты
+              </h3>
+              {sfxKeys.map(key => (
+                <div key={key} className="space-y-1">
+                  <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">{AUDIO_LABELS[key]}</label>
+                  <input type="text"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none"
+                    value={audio[key] || ""}
+                    onChange={e => setAudio(prev => ({ ...prev, [key]: e.target.value }))}
                   />
                 </div>
               ))}
             </div>
           </div>
+        )}
 
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-lg font-bold text-white border-b border-neutral-800 pb-2">Звуковые эффекты</h3>
-            
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-2">
-                <Volume2 size={14} /> Клик по кнопке
-              </label>
-              <input 
-                type="text"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                value={audioLinks.click}
-                onChange={(e) => setAudioLinks({...audioLinks, click: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-2">
-                <Volume2 size={14} /> Переход между страницами
-              </label>
-              <input 
-                type="text"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                value={audioLinks.transition}
-                onChange={(e) => setAudioLinks({...audioLinks, transition: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-2">
-                <Volume2 size={14} /> Крик (scream)
-              </label>
-              <input 
-                type="text"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                value={audioLinks.scream}
-                onChange={(e) => setAudioLinks({...audioLinks, scream: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-2">
-                <Volume2 size={14} /> Фото/Кот (cat)
-              </label>
-              <input 
-                type="text"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                value={audioLinks.cat}
-                onChange={(e) => setAudioLinks({...audioLinks, cat: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs text-neutral-500 uppercase tracking-wider font-bold flex items-center gap-2">
-                <Volume2 size={14} /> Страх/Сердцебиение (fear)
-              </label>
-              <input 
-                type="text"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-white focus:border-red-500 outline-none transition-colors"
-                value={audioLinks.fear}
-                onChange={(e) => setAudioLinks({...audioLinks, fear: e.target.value})}
-              />
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleSave}
-          className="w-full bg-red-900/80 hover:bg-red-800 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 border border-red-700"
-        >
-          <Save size={20} />
-          Сохранить настройки аудио
+        <button onClick={handleSave} disabled={saving}
+          className={`w-full font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 border mb-6 ${saved ? "bg-green-900/50 border-green-700 text-green-400" : "bg-red-900/80 hover:bg-red-800 text-white border-red-700"}`}>
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+          {saved ? "Сохранено!" : saving ? "Сохранение..." : "Сохранить настройки аудио"}
         </button>
       </div>
     </motion.div>
