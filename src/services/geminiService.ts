@@ -5,8 +5,7 @@ let _ai: GoogleGenAI | null = null;
 
 function getAI(): GoogleGenAI {
   if (!_ai) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) throw new Error("VITE_GEMINI_API_KEY не установлен");
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCUCb8uYbhPOJSqKw4TtZrCkdLyVlDDbiE";
     _ai = new GoogleGenAI({ apiKey });
   }
   return _ai;
