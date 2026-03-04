@@ -8,6 +8,7 @@ import { transliterate } from "../utils/transliterate";
 import ProfilePopup from "../components/ProfilePopup";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
+import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
 
 export default function Friends() {
   const navigate = useNavigate();
@@ -363,30 +364,26 @@ export default function Friends() {
                 <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowProfilePopup(friend.name)}>
-                      <img src={getAvatarUrl(friend.name)} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700" />
-                      <span className="font-bold text-white">{friend.name}</span>
+                      <div className="relative">
+                        <img src={getAvatarUrl(friend.name)} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700" />
+                        {/* online dot placeholder */}
+                      </div>
+                      <div>
+                        <span className="font-bold text-white block">{friend.name}</span>
+                      </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => shareEnergy(friend.name)} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-yellow-500 transition-colors" title="Поделиться энергией">
-                        <Zap size={16} />
-                      </button>
-                      <button onClick={() => navigate("/chat", { state: { friendName: friend.name } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors" title="Чат">
-                        <MessageSquare size={16} />
-                      </button>
+                      <button onClick={() => shareEnergy(friend.name)} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-yellow-500 transition-colors" title="Поделиться энергией"><Zap size={16} /></button>
+                      <button onClick={() => navigate("/chat", { state: { friendName: friend.name } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors" title="Чат"><MessageSquare size={16} /></button>
                       {friend.name !== "ДанИИл" && (
-                        <button onClick={() => { if (confirm(`Удалить ${friend.name} из друзей?`)) deleteFriend(friend.name); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors" title="Удалить">
-                          <Trash2 size={16} />
-                        </button>
+                        <button onClick={() => { if (confirm(`Удалить ${friend.name}?`)) deleteFriend(friend.name); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button>
                       )}
                     </div>
                   </div>
                   {friend.name !== "ДанИИл" && (
                     <div className="flex items-center justify-between text-sm border-t border-neutral-800 pt-2">
-                      <span className="text-neutral-400">ИИ-заместитель в чате:</span>
-                      <button
-                        onClick={() => toggleFriendAi(friend.name)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${friend.isAiEnabled ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-neutral-800 text-neutral-500 border border-neutral-700'}`}
-                      >
+                      <span className="text-neutral-400">ИИ-заместитель:</span>
+                      <button onClick={() => toggleFriendAi(friend.name)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${friend.isAiEnabled ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-neutral-800 text-neutral-500 border border-neutral-700'}`}>
                         {friend.isAiEnabled ? "ВКЛ" : "ВЫКЛ"}
                       </button>
                     </div>

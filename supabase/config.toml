@@ -2,3 +2,9 @@ project_id = "psuvnvqvspqibsezcrny"
 
 [functions.save-to-gallery]
 verify_jwt = false
+
+[functions.send-telegram-notification]
+verify_jwt = false
+
+[functions.send-notifications]
+verify_jwt = false

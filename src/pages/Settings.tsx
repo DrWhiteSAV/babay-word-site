@@ -9,6 +9,8 @@ import {
   VolumeX,
   Type,
   Square,
+  Bell,
+  ChevronRight,
 } from "lucide-react";
 
 import Header from "../components/Header";
@@ -239,6 +241,17 @@ export default function Settings() {
             className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-xl font-bold transition-colors"
           >
             СБРОСИТЬ ПРОГРЕСС
+          </button>
+        </section>
+
+        {/* Notifications settings link */}
+        <section>
+          <button
+            onClick={() => navigate("/settings/notifications")}
+            className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-neutral-800 text-white border border-neutral-800 rounded-xl font-bold transition-colors flex items-center justify-between px-4"
+          >
+            <span className="flex items-center gap-2"><Bell size={18} className="text-yellow-400" /> Настройки уведомлений</span>
+            <ChevronRight size={18} className="text-neutral-500" />
           </button>
         </section>
 

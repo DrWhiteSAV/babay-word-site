@@ -12,6 +12,10 @@ import { useAudio, menuMusic, bgMusics } from "./hooks/useAudio";
 import BottomNav from "./components/BottomNav";
 import { CutscenePlayer } from "./components/CutscenePlayer";
 import { supabase } from "./integrations/supabase/client";
+import { NotificationPopupProvider } from "./components/NotificationPopup";
+import { useOnlinePresence } from "./hooks/useOnlinePresence";
+import { useAchievements } from "./hooks/useAchievements";
+import { usePlayerStatsSync } from "./hooks/usePlayerStatsSync";
 
 // Pages
 import Home from "./pages/Home";
@@ -26,6 +30,7 @@ import Chat from "./pages/Chat";
 import Gallery from "./pages/Gallery";
 import Leaderboard from "./pages/Leaderboard";
 import Events from "./pages/Events";
+import Achievements from "./pages/Achievements";
 import Admin from "./pages/Admin";
 import AdminPic from "./pages/AdminPic";
 import AdminVideo from "./pages/AdminVideo";
@@ -35,6 +40,8 @@ import AdminAI from "./pages/AdminAI";
 import AdminAudio from "./pages/AdminAudio";
 import AdminText from "./pages/AdminText";
 import AdminStat from "./pages/AdminStat";
+import AdminNotifications from "./pages/AdminNotifications";
+import NotificationSettings from "./pages/NotificationSettings";
 import TelegramOnly from "./pages/TelegramOnly";
 import { useTelegram } from "./context/TelegramContext";
 
@@ -45,6 +52,12 @@ function AppContent() {
   const { playClick } = useAudio(settings.musicVolume);
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sync player stats and achievements
+  usePlayerStatsSync();
+  useOnlinePresence();
+  useAchievements();
+
 
   // Load page backgrounds and video cutscenes from Supabase on startup
   useEffect(() => {
@@ -187,6 +200,7 @@ function AppContent() {
         backgroundAttachment: 'fixed'
       } : {}}
     >
+      <NotificationPopupProvider />
       {!hasSeenInitialCutscene && (
         <CutscenePlayer onComplete={() => setHasSeenInitialCutscene(true)} />
       )}
@@ -207,10 +221,12 @@ function AppContent() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/notifications" element={<NotificationSettings />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/achievements" element={<Achievements />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/pic" element={<AdminPic />} />
           <Route path="/admin/video" element={<AdminVideo />} />
@@ -221,6 +237,7 @@ function AppContent() {
           <Route path="/admin/text" element={<AdminText />} />
           <Route path="/admin/role" element={<AdminUsers />} />
           <Route path="/admin/stat" element={<AdminStat />} />
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />
