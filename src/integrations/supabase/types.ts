@@ -347,6 +347,30 @@ export type Database = {
         }
         Relationships: []
       }
+      page_backgrounds: {
+        Row: {
+          dimming: number
+          id: string
+          page_path: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          dimming?: number
+          id?: string
+          page_path: string
+          updated_at?: string
+          url?: string
+        }
+        Update: {
+          dimming?: number
+          id?: string
+          page_path?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -628,6 +652,30 @@ export type Database = {
           label?: string | null
           updated_at?: string
           value?: number
+        }
+        Relationships: []
+      }
+      video_cutscenes: {
+        Row: {
+          created_at: string
+          id: string
+          orientation: string
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          orientation?: string
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          orientation?: string
+          sort_order?: number
+          url?: string
         }
         Relationships: []
       }
