@@ -41,6 +41,7 @@ import AdminAudio from "./pages/AdminAudio";
 import AdminText from "./pages/AdminText";
 import AdminStat from "./pages/AdminStat";
 import AdminNotifications from "./pages/AdminNotifications";
+import AdminImages from "./pages/AdminImages";
 import NotificationSettings from "./pages/NotificationSettings";
 import TelegramOnly from "./pages/TelegramOnly";
 import { useTelegram } from "./context/TelegramContext";
@@ -239,6 +240,7 @@ function AppContent() {
           <Route path="/admin/role" element={<AdminUsers />} />
           <Route path="/admin/stat" element={<AdminStat />} />
           <Route path="/admin/notifications" element={<AdminNotifications />} />
+          <Route path="/admin/images" element={<AdminImages />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />

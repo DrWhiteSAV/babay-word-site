@@ -142,19 +142,22 @@ export default function CharacterCreate() {
     }
   };
 
-  // STEP 3: Generate avatar using name + style + wishes
+  // STEP 3: Generate avatar using name + style + wishes + lore
   const handleGenerateAvatar = async () => {
     if (!gender || !style || isGeneratingAvatar) return;
     setIsGeneratingAvatar(true);
     setAvatarStatus("generating");
     setGeneratedAvatarUrl("");
     setSelectedDefaultImage(null);
+    // Scroll to top so user sees the loading state
+    window.scrollTo({ top: 0, behavior: "smooth" });
 
     const name = generatedName || "Бабай";
     const wishesStr = wishes.length > 0 ? wishes.join(", ") : "обычная внешность";
-    const prompt = `Нарисуй детализированный портрет духа-пугала по имени ${name} (${gender}). Одежда: старая пижама в полоску. Внешность: страшная но смешная, длинный язык больше метра, безумный взгляд. Особые приметы: ${wishesStr}. Художественный стиль: ${style}. Высокое качество, атмосферный портрет, тёмный фон.`;
+    const loreSnippet = generatedLore ? ` Лор персонажа: ${generatedLore.substring(0, 200)}.` : "";
+    const prompt = `Нарисуй детализированный портрет духа-пугала по имени ${name} (${gender}). Одежда: старая пижама в полоску. Внешность: страшная но смешная, длинный язык больше метра, безумный взгляд. Особые приметы: ${wishesStr}. Художественный стиль: ${style}.${loreSnippet} Высокое качество, атмосферный портрет, тёмный фон.`;
 
-    console.log(`[Create] generating avatar: tgId=${tgId}, name="${name}", style="${style}", wishes="${wishesStr}"`);
+    console.log(`[Create] generating avatar: tgId=${tgId}, name="${name}", style="${style}", wishes="${wishesStr}", lore="${loreSnippet.substring(0, 60)}"`);
 
     try {
       const data = await callProtalk("image", prompt, tgId);

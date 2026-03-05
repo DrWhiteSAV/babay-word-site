@@ -39,6 +39,7 @@ export default function Game() {
   const { character, fear, energy, useEnergy, addFear, settings, gallery, addToGallery, addWatermelons, inventory, watermelons, lastEnergyUpdate, bossLevel, globalBackgroundUrl, pageBackgrounds, storeConfig } =
     usePlayerStore();
   const { profile } = useTelegram();
+  const tgId = profile?.telegram_id;
     
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [stage, setStage] = useState(1);
@@ -113,9 +114,11 @@ export default function Game() {
   }, [chatMessages]);
 
   useEffect(() => {
+    // bossTimer=0 means "not started yet" — don't count down or fail until it's been set to >0
     if (isBossBattle && bossTimer > 0 && !isBossDefeated) {
       bossTimerRef.current = setTimeout(() => setBossTimer(t => t - 1), 1000);
-    } else if (bossTimer === 0 && !isBossDefeated) {
+    } else if (isBossBattle && bossTimer === 0 && !isBossDefeated && bossImage) {
+      // Only timeout if battle is active AND bossImage is loaded (timer was running)
       alert("Время вышло! Босс оказался сильнее...");
       setIsBossBattle(false);
       const nextStage = stage + 1;
@@ -125,7 +128,7 @@ export default function Game() {
     return () => {
       if (bossTimerRef.current) clearTimeout(bossTimerRef.current);
     };
-  }, [isBossBattle, bossTimer, isBossDefeated]);
+  }, [isBossBattle, bossTimer, isBossDefeated, bossImage]);
 
   const startGame = async (diff: Difficulty) => {
     const cost = diff === "Сложная" ? 1 : diff === "Невозможная" ? 5 : 25;
@@ -184,44 +187,60 @@ export default function Game() {
       telegram_id: String(profile?.telegram_id || ""),
     } : {};
 
-
-    const tgId = profile?.telegram_id;
+    // tgId available from top-level const
 
     // Boss Battle check (stages 16 and 46)
     if (currentStage === 16 || currentStage === 46) {
       setShowCutscene(true);
-      setIsBossBattle(true);
+      // Wait for cutscene to complete (at least 3s) then generate boss image
       setBossTaps(0);
-      setBossTimer(30 + getBossTimeBonus());
+      setBossTimer(0); // Timer not started yet
       setIsBossDefeated(false);
+      setBossImage(""); // Clear previous boss image
+      setIsLoading(true);
+
       if (character) {
-        const bResult = await generateBossImage(currentStage, character.style, charData, tgId);
-        setBossImage(bResult.url);
+        // Wait for cutscene + generate boss image in parallel
+        const [bResult] = await Promise.all([
+          generateBossImage(currentStage, character.style, charData, tgId),
+          new Promise(r => setTimeout(r, 3000)), // min cutscene wait
+        ]);
+        const typedResult = bResult as { url: string; prompt: string };
+        setBossImage(typedResult.url);
         // Save boss image to gallery via ImgBB/save-to-gallery
         if (tgId) {
-          saveImageToGallery(bResult.url, tgId, `Босс уровня ${bossLevel}`, bResult.prompt).catch(console.error);
+          saveImageToGallery(typedResult.url, tgId, `Босс уровня ${bossLevel}`, typedResult.prompt).catch(console.error);
         }
+        // Small delay for page to render the boss image before starting timer
+        await new Promise(r => setTimeout(r, 1000));
       }
+
+      setIsBossBattle(true);
+      setBossTimer(30 + getBossTimeBonus()); // Start timer AFTER image loaded
       setIsLoading(false);
       return;
     }
+
+    // Default background (always set first, then replace with generated one)
+    const DEFAULT_GAME_BG = "https://i.ibb.co/BVgY7XrT/babai.png";
+    if (!bgImage) setBgImage(globalBackgroundUrl || DEFAULT_GAME_BG);
 
     // Generate background image on stage 1 or every 5th stage
     if (currentStage === 1 || currentStage % 5 === 0) {
       if (character) {
         generateBackgroundImage(currentStage, character.style, charData, tgId).then((result) => {
-          if (result.url && !result.url.includes("picsum")) {
+          // Accept any URL including picsum - always set as bg
+          if (result.url) {
             setBgImage(result.url);
             addToGallery(result.url);
-            // Save background to gallery via ImgBB/save-to-gallery (fire & forget)
-            if (tgId) {
+            // Save to gallery via ImgBB/save-to-gallery (fire & forget) - only for non-picsum real images
+            if (tgId && !result.url.includes("picsum.photos")) {
               saveImageToGallery(result.url, tgId, `Фон этапа ${currentStage}`, result.prompt).catch(console.error);
             }
-          } else if (result.url) {
-            setBgImage(result.url);
-          } else if (gallery.length > 0) {
-            setBgImage(gallery[Math.floor(Math.random() * gallery.length)]);
           }
+        }).catch(err => {
+          console.warn("[Game] background gen failed:", err);
+          // Keep the default background
         });
       }
     }
@@ -820,7 +839,12 @@ export default function Game() {
                 <div className="mt-8 text-center space-y-4">
                   <p className="text-green-400 font-bold">Вы одолели босса и получили {storeConfig.bossRewardBase * Math.pow(storeConfig.bossRewardMultiplier, bossLevel - 1)} кг арбуза!</p>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      // Send boss defeat image to Telegram
+                      if (bossImage && tgId && !bossImage.includes("picsum.photos")) {
+                        saveImageToGallery(bossImage, tgId, `Победа над боссом ур. ${bossLevel}!`, undefined)
+                          .catch(console.error);
+                      }
                       setIsBossBattle(false);
                       const nextStage = stage + 1;
                       setStage(nextStage);

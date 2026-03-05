@@ -98,14 +98,16 @@ export async function generateAvatar(
 ): Promise<{ url: string; prompt: string }> {
   const settings = await loadAISettings("avatar");
   const service = settings?.service || "protalk-image";
+  const loreSnippet = extraData?.lore ? ` Лор персонажа: ${extraData.lore.substring(0, 200)}.` : "";
   const basePrompt =
     settings?.prompt ||
-    "Нарисуй портрет славянского кибернетического духа по имени {name} ({gender}). Наряд: пижама. Внешность: страшная и смешная, длинный язык больше метра. Стиль: {style}. Дополнительно: {wishes}. Высокое качество, детализированный, атмосферный.";
+    "Нарисуй портрет славянского кибернетического духа по имени {name} ({gender}). Наряд: пижама. Внешность: страшная и смешная, длинный язык больше метра. Стиль: {style}. Дополнительно: {wishes}.{lore_snippet} Высокое качество, детализированный, атмосферный.";
   const prompt = applyMacros(basePrompt, {
     gender,
     style,
     wishes: wishes.join(", "),
     name: extraData?.name || gender,
+    lore_snippet: loreSnippet,
     ...extraData,
   });
 
