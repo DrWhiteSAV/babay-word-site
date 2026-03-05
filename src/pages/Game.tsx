@@ -185,6 +185,8 @@ export default function Game() {
     } : {};
 
 
+    const tgId = profile?.telegram_id;
+
     // Boss Battle check (stages 16 and 46)
     if (currentStage === 16 || currentStage === 46) {
       setShowCutscene(true);
@@ -193,11 +195,11 @@ export default function Game() {
       setBossTimer(30 + getBossTimeBonus());
       setIsBossDefeated(false);
       if (character) {
-        const bResult = await generateBossImage(currentStage, character.style, charData);
+        const bResult = await generateBossImage(currentStage, character.style, charData, tgId);
         setBossImage(bResult.url);
-        // Save boss image to gallery
-        if (profile?.telegram_id) {
-          saveImageToGallery(bResult.url, profile.telegram_id, `Босс уровня ${bossLevel}`, bResult.prompt).catch(console.error);
+        // Save boss image to gallery via ImgBB/save-to-gallery
+        if (tgId) {
+          saveImageToGallery(bResult.url, tgId, `Босс уровня ${bossLevel}`, bResult.prompt).catch(console.error);
         }
       }
       setIsLoading(false);
@@ -207,22 +209,22 @@ export default function Game() {
     // Generate background image on stage 1 or every 5th stage
     if (currentStage === 1 || currentStage % 5 === 0) {
       if (character) {
-        generateBackgroundImage(currentStage, character.style, charData).then((result) => {
-          if (result.url) {
+        generateBackgroundImage(currentStage, character.style, charData, tgId).then((result) => {
+          if (result.url && !result.url.includes("picsum")) {
             setBgImage(result.url);
             addToGallery(result.url);
-            // Save background to gallery via Telegram
-            if (profile?.telegram_id) {
-              saveImageToGallery(result.url, profile.telegram_id, `Фон этапа ${currentStage}`, result.prompt).catch(console.error);
+            // Save background to gallery via ImgBB/save-to-gallery (fire & forget)
+            if (tgId) {
+              saveImageToGallery(result.url, tgId, `Фон этапа ${currentStage}`, result.prompt).catch(console.error);
             }
+          } else if (result.url) {
+            setBgImage(result.url);
           } else if (gallery.length > 0) {
-            const randomBg = gallery[Math.floor(Math.random() * gallery.length)];
-            setBgImage(randomBg);
+            setBgImage(gallery[Math.floor(Math.random() * gallery.length)]);
           }
         });
       }
     }
-
 
     // Check if it's Danil time (every 5th stage)
     if (currentStage > 1 && currentStage % 5 === 0) {
@@ -238,10 +240,12 @@ export default function Game() {
     }
 
     if (character) {
+      // Pre-generate next scenario before showing it
       const newScenario = await generateScenario(
         currentStage,
         difficulty || "Сложная",
         character.style,
+        tgId,
       );
       setScenario(newScenario);
 
@@ -352,7 +356,7 @@ export default function Game() {
     setIsDanilTyping(true);
 
     const recentMessages = chatMessages.slice(-10);
-    const danilReply = await generateFriendChat(userMsg, "ДанИИл", character, character.style, recentMessages);
+    const danilReply = await generateFriendChat(userMsg, "ДанИИл", character, character.style, recentMessages, undefined, profile?.telegram_id);
     setChatMessages((prev) => [...prev, { sender: "danil", text: danilReply }]);
     setIsDanilTyping(false);
 

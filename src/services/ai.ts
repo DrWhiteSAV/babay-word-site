@@ -1,5 +1,8 @@
 import { supabase } from "../integrations/supabase/client";
-import { protalkGenerateText, protalkGenerateImage } from "./protalk";
+
+// Hardcoded to avoid undefined env vars in preview
+const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
 
 // Load AI settings for a section from Supabase
 async function loadAISettings(sectionId: string): Promise<{ service: string; prompt: string } | null> {
@@ -20,27 +23,39 @@ function applyMacros(prompt: string, data: Record<string, string>): string {
   return prompt.replace(/\{(\w+)\}/g, (_, key) => data[key] ?? `{${key}}`);
 }
 
-// Determine if service is image type
-function isImageService(service: string): boolean {
-  return service === "protalk-image";
+// Direct ProTalk call — always works, hardcoded URL
+async function callProTalkDirect(
+  type: "text" | "image",
+  prompt: string,
+  telegramId?: number,
+): Promise<{ text: string; imageUrl?: string | null }> {
+  console.log(`[AI] ProTalk type=${type}, tgId=${telegramId}, prompt="${prompt.substring(0, 80)}..."`);
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/protalk-ai`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ type, prompt, telegramId }),
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`protalk-ai ${resp.status}: ${err}`);
+  }
+  const data = await resp.json();
+  if (!data.success) throw new Error(data.error || "ProTalk failed");
+  console.log(`[AI] ProTalk ok, text="${(data.text || "").substring(0, 60)}", imageUrl=${data.imageUrl}`);
+  return { text: data.text || "", imageUrl: data.imageUrl };
 }
 
-// Call ProTalk with correct type based on service field
+// Call AI (text or image) via ProTalk
 async function callAI(
   service: string,
   prompt: string,
   telegramId?: number,
 ): Promise<{ text: string; imageUrl?: string | null }> {
-  console.log(`[AI] callAI: service=${service}, telegramId=${telegramId}, promptLen=${prompt.length}`);
-  if (isImageService(service)) {
-    const result = await protalkGenerateImage(prompt, telegramId);
-    console.log(`[AI] image result url=${result.url}`);
-    return { text: result.url, imageUrl: result.url };
-  } else {
-    const text = await protalkGenerateText(prompt, telegramId);
-    console.log(`[AI] text result len=${text?.length}`);
-    return { text };
-  }
+  const type = service === "protalk-image" ? "image" : "text";
+  return callProTalkDirect(type, prompt, telegramId);
 }
 
 export async function generateSpookyVoice(_text: string): Promise<string> {
@@ -54,21 +69,18 @@ export async function generateCharacterName(
 ): Promise<string> {
   try {
     const settings = await loadAISettings("names");
-    const service = settings?.service || "protalk-text";
     const basePrompt =
       settings?.prompt ||
       "Сгенерируй одно уникальное, забавное имя для славянского кибернетического духа-Бабая. Пол: {gender}. Стиль: {style}. Имя должно состоять из одного или двух слов. Верни ТОЛЬКО само имя, без нумерации, без пояснений, без кавычек.";
     const prompt = applyMacros(basePrompt, { gender, style });
-    console.log(`[AI] generateCharacterName: service=${service}, tgId=${telegramId}`);
+    const service = settings?.service || "protalk-text";
     const { text } = await callAI(service, prompt, telegramId);
-    // Clean up: take first line, remove numbering like "1. Name" or "- Name"
     const cleaned = text
       .split("\n")[0]
       .replace(/^[\d]+[.)]\s*/, "")
       .replace(/^[-*•]\s*/, "")
-      .replace(/["""]/g, "")
+      .replace(/["""«»]/g, "")
       .trim();
-    console.log(`[AI] name cleaned: "${cleaned}" (raw: "${text.substring(0, 80)}")`);
     return cleaned || "Безымянный";
   } catch (e) {
     console.error("[AI] Name gen error:", e);
@@ -97,11 +109,9 @@ export async function generateAvatar(
     ...extraData,
   });
 
-  console.log(`[AI] generateAvatar: service=${service}, tgId=${telegramId}`);
   try {
     const { imageUrl } = await callAI(service, prompt, telegramId);
     const url = imageUrl && imageUrl.startsWith("http") ? imageUrl : null;
-    console.log(`[AI] avatar url=${url}`);
     return { url: url || "https://i.ibb.co/BVgY7XrT/babai.png", prompt };
   } catch (e) {
     console.error("[AI] Avatar gen error:", e);
@@ -146,17 +156,12 @@ export async function generateScenario(
   telegramId?: number,
 ): Promise<{ text: string; options: string[]; correctAnswer: number; successText: string; failureText: string }> {
   try {
-    const prompt = `Ты - ведущий текстовой ролевой игры "Бабай". Игрок - славянский кибер-дух (старик/старуха в пижаме с длинным языком и телекинезом).
-Цель: выгнать жильцов из многоквартирного дома. Стиль игры: ${style}. Этап: ${stage}. Сложность: ${difficulty}.
-
-Опиши текущую ситуацию (коротко, 2-3 предложения), где Бабай пугает очередного жильца.
-Предложи 3 варианта действий для игрока. Только один правильный.
-Напиши результат при успехе (successText) и провале (failureText).
-
-Ответь строго в формате JSON:
-{"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
-
-    const { text } = await callAI("protalk-text", prompt, telegramId);
+    const settings = await loadAISettings("scenario");
+    const basePrompt =
+      settings?.prompt ||
+      `Ты — ведущий текстовой ролевой игры "Бабай". Игрок — славянский кибер-дух в пижаме с длинным языком и телекинезом. Цель: выгнать жильцов из дома. Стиль: {style}. Этап: {stage}. Сложность: {difficulty}. Опиши ситуацию (2-3 предложения) и предложи 3 варианта действий. Только один правильный. Напиши successText и failureText. Ответь строго JSON: {"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
+    const prompt = applyMacros(basePrompt, { style, stage: String(stage), difficulty });
+    const { text } = await callAI(settings?.service || "protalk-text", prompt, telegramId);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
     throw new Error("No JSON in response");
@@ -199,9 +204,7 @@ export async function generateBackgroundImage(
     name: characterData?.name || "",
     gender: characterData?.gender || "",
     fear: characterData?.fear || "",
-    telekinesis: characterData?.telekinesis || "",
     boss_level: characterData?.boss_level || "",
-    watermelons: characterData?.watermelons || "",
     ...characterData,
   });
 
@@ -231,9 +234,6 @@ export async function generateBossImage(
     stage: String(stage),
     boss_level: characterData?.boss_level || String(stage),
     name: characterData?.name || "",
-    gender: characterData?.gender || "",
-    fear: characterData?.fear || "",
-    inventory: characterData?.inventory || "",
     ...characterData,
   });
 
@@ -260,12 +260,14 @@ export async function generateFriendChat(
     let historyText = "";
     if (chatHistory.length > 0) {
       historyText =
-        "\nИстория последних сообщений:\n" +
+        "\nИстория:\n" +
         chatHistory
           .map((m) => `${m.sender === "user" ? character?.name || "Бабай" : m.sender}: ${m.text}`)
           .join("\n") +
         "\n";
     }
+
+    const loreLine = character?.lore ? `\nЛор Бабая: ${character.lore}` : "";
 
     let promptText = "";
     if (friendName === "ДанИИл") {
@@ -274,11 +276,12 @@ export async function generateFriendChat(
       const basePrompt =
         settings?.prompt ||
         "Ты ДанИИл, дух-начальник (ИИ), который контролирует Бабаев. Стиль: строгий, саркастичный, требует отчётов о выселении жильцов.";
-      promptText = `${basePrompt} Стиль мира: ${style}. Бабай по имени ${character?.name || "Неизвестный"} пишет: "${message}".${historyText} Ответь коротко (1-2 предложения).`;
+      promptText = `${basePrompt} Стиль мира: ${style}.${loreLine} Бабай по имени ${character?.name || "Неизвестный"} пишет: "${message}".${historyText} Ответь коротко (1-2 предложения).`;
       const { text } = await callAI(service, promptText, telegramId);
       return text.trim() || "Продолжай работать.";
     } else {
-      promptText = `Ты - ИИ-заместитель друга по имени ${friendName}. Твой собеседник - Бабай ${character?.name || "Неизвестный"}. Стиль мира: ${style}. Игрок пишет: "${message}".${historyText} Ответь коротко (1-3 предложения).`;
+      // Friend AI — use lore as character context
+      promptText = `Ты — ИИ-заместитель друга по имени ${friendName}. Твой собеседник — Бабай ${character?.name || "Неизвестный"}.${loreLine} Стиль мира: ${style}. Игрок пишет: "${message}".${historyText} Ответь коротко (1-3 предложения).`;
       const { text } = await callAI("protalk-text", promptText, telegramId);
       return text.trim() || "Продолжай работать.";
     }
@@ -289,7 +292,6 @@ export async function generateFriendChat(
         "Слишком много разговоров, Бабай. Иди работай.",
         "Твои отчёты полны ошибок. Исправь это на следующем этаже.",
         "Я слежу за тобой. Не разочаруй систему.",
-        "Энергия не бесконечна. Поторопись с выселением.",
       ];
       return replies[Math.floor(Math.random() * replies.length)];
     }
@@ -311,7 +313,6 @@ export async function generateLore(
       settings?.prompt ||
       "Напиши короткую (3-4 предложения) мистическую историю происхождения для Бабая по имени {name}, пол: {gender}, стиль: {style}. Сделай историю атмосферной и жуткой.";
     const prompt = applyMacros(basePrompt, { name, gender, style, ...extraData });
-    console.log(`[AI] generateLore: service=${service}, tgId=${telegramId}`);
     const { text } = await callAI(service, prompt, telegramId);
     return text.trim() || "";
   } catch (e) {

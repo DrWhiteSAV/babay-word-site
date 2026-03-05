@@ -187,7 +187,10 @@ export default function Chat() {
       setIsAiTyping(true);
       try {
         const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-        const responseText = await generateFriendChat(userMessage, friend!.name, character!, character?.style || "Обычная", recentMessages, imageToSend || undefined);
+        const responseText = await generateFriendChat(
+          userMessage, friend!.name, character!, character?.style || "Обычная",
+          recentMessages, imageToSend || undefined, profile?.telegram_id
+        );
         const aiMsg: Message = { id: Date.now().toString(), sender: friend!.name, text: responseText, replyTo: newMsg.id };
         setMessages(prev => [...prev, aiMsg]);
         await saveMessageToDB(aiMsg, 'assistant', friend!.name);
@@ -213,7 +216,10 @@ export default function Chat() {
         for (const responder of responders) {
           try {
             const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-            const responseText = await generateFriendChat(userMessage, responder, character!, character?.style || "Обычная", recentMessages, imageToSend || undefined);
+            const responseText = await generateFriendChat(
+              userMessage, responder, character!, character?.style || "Обычная",
+              recentMessages, imageToSend || undefined, profile?.telegram_id
+            );
             const aiMsg: Message = { id: Date.now().toString() + responder, sender: responder, text: responseText, replyTo: newMsg.id };
             setMessages(prev => [...prev, aiMsg]);
           } catch (e) { console.error(e); }

@@ -176,9 +176,9 @@ export const usePlayerStore = create<PlayerState>()(
         { id: 'q4', type: 'global', title: 'Мастер телекинеза', description: 'Прокачай телекинез до 5 уровня', reward: { type: 'energy', amount: 100 }, completed: false, progress: 0, target: 5 }
       ],
       settings: {
-        buttonSize: "medium",
+        buttonSize: "small",
         fontFamily: "JetBrains Mono",
-        fontSize: 16,
+        fontSize: 12,
         fontBrightness: 100,
         theme: "normal",
         musicVolume: 50,
