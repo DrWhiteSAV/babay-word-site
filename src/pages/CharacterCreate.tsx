@@ -138,7 +138,8 @@ export default function CharacterCreate() {
     if (!gender || isGeneratingName || !nameHasDuplicate) return;
     setIsGeneratingName(true);
     try {
-      const prompt = `Придумай одно уникальное необычное имя для ${gender === "Бабай" ? "мужского" : "женского"} духа-Бабая. Имя должно быть оригинальным. Жутковатое и смешное. Только одно-два слова. Верни ТОЛЬКО само имя.`;
+      const genderDesc = gender === "Бабай" ? "мужской" : "женский";
+      const prompt = `Придумай одно уникальное имя для славянского духа. Пол: ${genderDesc}. Формат: необычное имя + прилагательное. Для ${genderDesc} рода используй правильное окончание. Запрещены слова: "Пижама", "Бабай", "Дух". Верни ТОЛЬКО имя (2 слова).`;
       const data = await callProtalk("text", prompt, tgId);
       const raw = data.text || "";
       const cleaned = raw.split("\n")[0]
