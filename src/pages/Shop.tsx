@@ -12,7 +12,8 @@ const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
 
 async function generateAvatarWithInventory(character: any, allOwnedItems: string[], newItemName: string, lore: string, telegramId?: number): Promise<string | null> {
-  const prompt = `Обнови портрет духа-Бабая по имени ${character.name} (${character.gender}), стиль: ${character.style}. Текущий аватар: ${character.avatarUrl}. Лор: ${lore}. Ранее купленные предметы: ${allOwnedItems.slice(0, -1).join(", ") || "нет"}. НОВЫЙ предмет: ${newItemName}. Нарисуй обновлённый детальный портрет персонажа с новым предметом. Особые приметы: ${(character.wishes || []).join(", ")}. Пижама, длинный язык, страшный и смешной. Высокое качество.`;
+  const genderDesc = character.gender === "Бабайка" ? "женский" : "мужской";
+  const prompt = `Обнови горизонтальный портрет славянского духа по имени ${character.name} (пол: ${genderDesc}), стиль: ${character.style}. Лор: ${lore}. Ранее купленные предметы: ${allOwnedItems.slice(0, -1).join(", ") || "нет"}. НОВЫЙ предмет: ${newItemName}. Нарисуй обновлённый детальный портрет персонажа с новым предметом. Особые приметы: ${(character.wishes || []).join(", ")}. Длинный язык, страшный и смешной. Горизонтальная ориентация. Высокое качество.`;
   
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/protalk-ai`, {
     method: "POST",
