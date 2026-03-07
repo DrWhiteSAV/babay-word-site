@@ -1,6 +1,5 @@
 import { supabase } from "../integrations/supabase/client";
 
-// Hardcoded to avoid undefined env vars in preview
 const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
 
@@ -58,6 +57,10 @@ export async function generateSpookyVoice(_text: string): Promise<string> {
   return "";
 }
 
+function genderWord(gender: string): string {
+  return gender === "Бабайка" ? "женский" : "мужской";
+}
+
 export async function generateCharacterName(
   gender: string,
   style: string,
@@ -65,11 +68,13 @@ export async function generateCharacterName(
 ): Promise<string> {
   try {
     const settings = await loadAISettings("names");
+    const genderDesc = genderWord(gender);
     const basePrompt =
       settings?.prompt ||
-      `Придумай одно уникальное, жутковатое и немного абсурдное имя для славянского духа-Бабая. Пол: {gender}. Стиль: {style}. 
+      `Придумай одно уникальное, жутковатое и немного абсурдное имя для славянского духа-Бабая. Пол: ${genderDesc} ({gender}). Стиль: {style}. 
 Формат: необычное имя + прилагательное. Например: "Дзяка Мокрая", "Журон Подвальный", "Хрыпач Чердачный", "Кряхта Ржавая", "Бурчала Трубная", "Скрыпач Ночной", "Гнилозуб Батарейный", "Хлюпа Канализационная". 
-Имя должно быть необычным, звучать по-славянски, вызывать одновременно страх и усмешку. Никаких обычных имен. Никаких слов "Пижама", "Бабай", "Дух". Верни ТОЛЬКО имя (2 слова), без пояснений, кавычек, нумерации.`;
+Для ${genderDesc} рода используй соответствующее окончание прилагательного.
+Имя должно быть необычным, звучать по-славянски, вызывать одновременно страх и усмешку. Никаких обычных имен. Запрещены слова: "Пижама", "Бабай", "Дух", "Пижамовий", "Пижамный". Верни ТОЛЬКО имя (2 слова), без пояснений, кавычек, нумерации.`;
     const prompt = applyMacros(basePrompt, { gender, style });
     const service = settings?.service || "protalk-text";
     const { text } = await callAI(service, prompt, telegramId);
@@ -79,10 +84,20 @@ export async function generateCharacterName(
       .replace(/^[-*•]\s*/, "")
       .replace(/["""«»]/g, "")
       .trim();
+    // Extra safety: reject if contains forbidden words
+    const lower = cleaned.toLowerCase();
+    if (lower.includes("пижам") || lower.includes("бабай")) {
+      const fallbacks = gender === "Бабайка" 
+        ? ["Кряхта Ржавая", "Хлюпа Канализационная", "Бурчала Трубная"]
+        : ["Хрыпач Чердачный", "Журон Подвальный", "Скрыпач Ночной"];
+      return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
     return cleaned || "Безымянный";
   } catch (e) {
     console.error("[AI] Name gen error:", e);
-    const names = ["Хрыпач Чердачный", "Кряхта Ржавая", "Бурчала Трубная", "Скрыпач Ночной", "Гнилозуб Батарейный"];
+    const names = gender === "Бабайка"
+      ? ["Кряхта Ржавая", "Хлюпа Канализационная", "Бурчала Трубная"]
+      : ["Хрыпач Чердачный", "Журон Подвальный", "Скрыпач Ночной"];
     return names[Math.floor(Math.random() * names.length)];
   }
 }
@@ -96,10 +111,11 @@ export async function generateAvatar(
 ): Promise<{ url: string; prompt: string }> {
   const settings = await loadAISettings("avatar");
   const service = settings?.service || "protalk-image";
+  const genderDesc = genderWord(gender);
   const loreSnippet = extraData?.lore ? ` Лор персонажа: ${extraData.lore.substring(0, 200)}.` : "";
   const basePrompt =
     settings?.prompt ||
-    "Нарисуй горизонтальный детализированный портрет славянского духа-пугала по имени {name} ({gender}). Одежда: старая пижама. Внешность: страшная и смешная, длинный язык больше метра. Стиль: {style}. Дополнительно: {wishes}.{lore_snippet} Высокое качество, атмосферный, горизонтальная ориентация изображения.";
+    `Нарисуй горизонтальный детализированный портрет славянского духа-пугала по имени {name} (пол: ${genderDesc}). Это ${genderDesc} дух. Внешность: страшная и смешная, длинный язык больше метра, безумный взгляд. Стиль: {style}. Особые приметы: {wishes}.{lore_snippet} Высокое качество, атмосферный, горизонтальная ориентация изображения. Тёмный фон.`;
   const prompt = applyMacros(basePrompt, {
     gender,
     style,
@@ -129,9 +145,10 @@ export async function generateAvatarWithItem(
   try {
     const settings = await loadAISettings("avatar_shop");
     const service = settings?.service || "protalk-image";
+    const genderDesc = genderWord(character.gender || "Бабай");
     const basePrompt =
       settings?.prompt ||
-      "Обнови горизонтальный портрет славянского духа по имени {name} ({gender}), стиль: {style}. Текущий аватар: {avatar_url}. Лор: {lore}. Ранее купленные предметы: {inventory}. НОВЫЙ предмет: {new_item}. Нарисуй обновлённый портрет с новым предметом. Особые приметы: {wishes}. Горизонтальная ориентация. Высокое качество.";
+      `Обнови горизонтальный портрет славянского духа по имени {name} (пол: ${genderDesc}), стиль: {style}. Лор: {lore}. Ранее купленные предметы: {inventory}. НОВЫЙ предмет: {new_item}. Нарисуй обновлённый портрет с новым предметом. Особые приметы: {wishes}. Горизонтальная ориентация. Высокое качество.`;
     const prompt = applyMacros(basePrompt, {
       name: character.name || "",
       gender: character.gender || "",
@@ -160,7 +177,7 @@ export async function generateScenario(
     const settings = await loadAISettings("scenario");
     const basePrompt =
       settings?.prompt ||
-      `Ты — ведущий текстовой ролевой игры "Бабай". Игрок — славянский кибер-дух в пижаме с длинным языком и телекинезом. Цель: выгнать жильцов из дома. Стиль: {style}. Этап: {stage}. Сложность: {difficulty}. Опиши ситуацию (2-3 предложения) и предложи 3 варианта действий. Только один правильный. Напиши successText и failureText. Ответь строго JSON: {"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
+      `Ты — ведущий текстовой ролевой игры "Бабай". Игрок — славянский дух с длинным языком и телекинезом. Цель: выгнать жильцов из дома. Стиль: {style}. Этап: {stage}. Сложность: {difficulty}. Опиши ситуацию (2-3 предложения) и предложи 3 варианта действий. Только один правильный. Напиши successText и failureText. Ответь строго JSON: {"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
     const prompt = applyMacros(basePrompt, { style, stage: String(stage), difficulty });
     const { text } = await callAI(settings?.service || "protalk-text", prompt, telegramId);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -178,7 +195,7 @@ export async function generateScenario(
       },
       {
         text: `Этаж ${stage}. Группа подростков вызывает духов в подъезде.`,
-        options: ["Явиться им в пижаме", "Выключить свет во всём доме", "Начать левитировать их телефоны"],
+        options: ["Явиться им во всей красе", "Выключить свет во всём доме", "Начать левитировать их телефоны"],
         correctAnswer: 2,
         successText: "Телефоны взмыли в воздух! Подростки разбежались, роняя кепки.",
         failureText: "Они приняли тебя за косплеера и начали делать селфи. Какой позор.",
@@ -310,9 +327,10 @@ export async function generateLore(
   try {
     const settings = await loadAISettings("lore");
     const service = settings?.service || "protalk-text";
+    const genderDesc = genderWord(gender);
     const basePrompt =
       settings?.prompt ||
-      `Напиши короткую (3-4 предложения) мистическую и абсурдную историю происхождения для духа-Бабая по имени {name} (это необычное имя с прилагательным). Пол: {gender}, стиль: {style}. Объясни, откуда взялось такое странное имя. История должна быть атмосферной, жуткой и немного абсурдной. Упомяни пижаму и длинный язык.`;
+      `Напиши короткую (3-4 предложения) мистическую и абсурдную историю происхождения для духа-Бабая по имени {name} (это необычное имя с прилагательным, пол: ${genderDesc}). Стиль: {style}. Объясни, откуда взялось такое странное имя. История должна быть атмосферной, жуткой и немного абсурдной. Упомяни длинный язык и телекинез.`;
     const prompt = applyMacros(basePrompt, { name, gender, style, ...extraData });
     const { text } = await callAI(service, prompt, telegramId);
     return text.trim() || "";

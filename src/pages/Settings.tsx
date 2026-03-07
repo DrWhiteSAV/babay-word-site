@@ -300,18 +300,6 @@ export default function Settings() {
         {/* Reset Data */}
         <section className="pt-4 space-y-4">
           <button
-            onClick={() => {
-              if (window.confirm("Очистить галерею? Это освободит место в памяти устройства.")) {
-                usePlayerStore.setState({ gallery: [] });
-                alert("Галерея очищена.");
-              }
-            }}
-            className="w-full py-3 bg-neutral-900/50 backdrop-blur-sm hover:bg-neutral-800 text-white border border-neutral-800 rounded-xl font-bold transition-colors text-sm"
-          >
-            ОЧИСТИТЬ ГАЛЕРЕЮ
-          </button>
-
-          <button
             onClick={handleResetProgress}
             disabled={resetting}
             className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"

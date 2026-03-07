@@ -7,12 +7,14 @@ import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
 import Header from "../components/Header";
 import { useTelegram } from "../context/TelegramContext";
 import { saveImageToGallery } from "../utils/galleryUtils";
+import { supabase } from "../integrations/supabase/client";
 
 const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
 
 async function generateAvatarWithInventory(character: any, allOwnedItems: string[], newItemName: string, lore: string, telegramId?: number): Promise<string | null> {
-  const prompt = `Обнови портрет духа-Бабая по имени ${character.name} (${character.gender}), стиль: ${character.style}. Текущий аватар: ${character.avatarUrl}. Лор: ${lore}. Ранее купленные предметы: ${allOwnedItems.slice(0, -1).join(", ") || "нет"}. НОВЫЙ предмет: ${newItemName}. Нарисуй обновлённый детальный портрет персонажа с новым предметом. Особые приметы: ${(character.wishes || []).join(", ")}. Пижама, длинный язык, страшный и смешной. Высокое качество.`;
+  const genderDesc = character.gender === "Бабайка" ? "женский" : "мужской";
+  const prompt = `Обнови горизонтальный портрет славянского духа по имени ${character.name} (пол: ${genderDesc}), стиль: ${character.style}. Лор: ${lore}. Ранее купленные предметы: ${allOwnedItems.slice(0, -1).join(", ") || "нет"}. НОВЫЙ предмет: ${newItemName}. Нарисуй обновлённый детальный портрет персонажа с новым предметом. Особые приметы: ${(character.wishes || []).join(", ")}. Длинный язык, страшный и смешной. Горизонтальная ориентация. Высокое качество.`;
   
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/protalk-ai`, {
     method: "POST",
@@ -93,10 +95,14 @@ export default function Shop() {
         );
         
         if (rawUrl && rawUrl.startsWith("http")) {
-          // Upload to ImgBB via save-to-gallery
-          const finalUrl = await saveImageToGallery(rawUrl, profile?.telegram_id!, `[avatars] Аватар: ${character.name} + ${item.name}`, undefined) || rawUrl;
+          // Upload to ImgBB via save-to-gallery and save to DB gallery
+          const imgbbUrl = await saveImageToGallery(rawUrl, profile?.telegram_id!, `[avatars] Аватар: ${character.name} + ${item.name}`, undefined);
+          const finalUrl = imgbbUrl || rawUrl;
           updateCharacter({ avatarUrl: finalUrl });
-          addToGallery(finalUrl);
+          // Update avatar in player_stats DB too
+          if (profile?.telegram_id) {
+            supabase.from("player_stats").update({ avatar_url: finalUrl }).eq("telegram_id", profile.telegram_id).then();
+          }
           setAvatarEvolvePopup(prev => prev ? { ...prev, newAvatar: finalUrl, isGenerating: false } : null);
         } else {
           setAvatarEvolvePopup(prev => prev ? { ...prev, isGenerating: false } : null);

@@ -1,18 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../store/playerStore";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
 
-const DEFAULT_FONT_SIZE = 12;
-const DEFAULT_BUTTON_SIZE = "small";
-
 export function usePlayerStatsSync() {
   const store = usePlayerStore();
   const { profile } = useTelegram();
+  const hasLoadedFromDB = useRef(false);
 
-  // Load from Supabase on first mount
+  // Load from Supabase on first mount — DB is the source of truth
   useEffect(() => {
     if (!profile?.telegram_id) return;
+    if (hasLoadedFromDB.current) return;
 
     const loadStats = async () => {
       const { data } = await supabase
@@ -22,17 +21,18 @@ export function usePlayerStatsSync() {
         .single();
 
       if (!data) return;
+      hasLoadedFromDB.current = true;
 
-      const state = usePlayerStore.getState();
+      // DB is source of truth for all numeric stats — always overwrite local
+      const updates: Record<string, any> = {};
+      updates.fear = data.fear;
+      updates.energy = data.energy;
+      updates.watermelons = data.watermelons;
+      updates.bossLevel = data.boss_level;
 
-      // Restore numeric stats only if DB has higher values
-      if (data.fear > state.fear) store.addFear(data.fear - state.fear);
-      if (data.energy > state.energy) store.addEnergy(data.energy - state.energy);
-      if (data.watermelons > state.watermelons) store.addWatermelons(data.watermelons - state.watermelons);
-
-      // Restore character if not set
-      if (!state.character && data.character_name) {
-        store.setCharacter({
+      // Restore character from DB
+      if (data.character_name) {
+        updates.character = {
           name: data.character_name,
           gender: (data.character_gender as any) || "Бабай",
           style: (data.character_style as any) || "Хоррор",
@@ -40,22 +40,12 @@ export function usePlayerStatsSync() {
           avatarUrl: data.avatar_url || "https://i.ibb.co/BVgY7XrT/babai.png",
           telekinesisLevel: data.telekinesis_level || 1,
           lore: data.lore || undefined,
-        });
-      } else if (state.character && data.lore && !state.character.lore) {
-        store.updateCharacter({ lore: data.lore });
+        };
       }
 
-      // Restore avatar URL from DB if it's an imgbb link (more reliable)
-      if (state.character && data.avatar_url && data.avatar_url.includes("i.ibb.co")) {
-        if (state.character.avatarUrl !== data.avatar_url) {
-          store.updateCharacter({ avatarUrl: data.avatar_url });
-        }
-      }
-
-      // Restore settings from DB - only override if DB has explicitly saved values
+      // Restore settings from DB — always use DB values when available
       if (data.custom_settings && typeof data.custom_settings === "object") {
         const cs = data.custom_settings as any;
-        // Only apply settings if they exist in DB custom_settings
         const settingsUpdate: Record<string, any> = {};
         if (cs.buttonSize !== undefined) settingsUpdate.buttonSize = cs.buttonSize;
         if (cs.fontFamily !== undefined) settingsUpdate.fontFamily = cs.fontFamily;
@@ -66,9 +56,17 @@ export function usePlayerStatsSync() {
         if (cs.ttsEnabled !== undefined) settingsUpdate.ttsEnabled = cs.ttsEnabled;
         
         if (Object.keys(settingsUpdate).length > 0) {
-          store.updateSettings(settingsUpdate);
+          updates.settings = { ...usePlayerStore.getState().settings, ...settingsUpdate };
+        }
+
+        // Restore inventory from DB
+        if (cs.inventory && Array.isArray(cs.inventory)) {
+          updates.inventory = cs.inventory;
         }
       }
+
+      // Apply all DB values at once
+      usePlayerStore.setState(updates);
     };
 
     loadStats();

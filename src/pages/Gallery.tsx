@@ -93,6 +93,26 @@ export default function Gallery() {
       <Header
         title={<><ImageIcon size={20} /> Галерея</>}
         backUrl="/profile"
+        rightContent={
+          <button
+            onClick={async () => {
+              setLoading(true);
+              const tgId = profile?.telegram_id;
+              if (tgId) {
+                const { data } = await supabase
+                  .from("gallery")
+                  .select("id, image_url, label, created_at")
+                  .eq("telegram_id", tgId)
+                  .order("created_at", { ascending: false });
+                if (data) setItems(data);
+              }
+              setLoading(false);
+            }}
+            className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-3 py-1.5 rounded-full font-bold transition-colors"
+          >
+            🔄 Обновить
+          </button>
+        }
       />
 
       {/* Section Tabs */}
