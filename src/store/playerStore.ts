@@ -202,7 +202,7 @@ export const usePlayerStore = create<PlayerState>()(
       bossItems: DEFAULT_BOSS_ITEMS,
       storeConfig: DEFAULT_STORE_CONFIG,
       dbLoaded: false,
-      gameStatus: "playing",
+      gameStatus: "loading", // Start as "loading" — NEVER "playing" before DB check
       setCharacter: (char) => {
         set({ character: char });
       },
