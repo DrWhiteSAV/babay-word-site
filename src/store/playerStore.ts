@@ -35,7 +35,10 @@ export type FontFamily =
   | "Rubik Glitch"
   | "Neucha"
   | "Ruslan Display"
-  | "Tektur";
+  | "Tektur"
+  | "Special Elite"
+  | "Cinzel Decorative"
+  | "Nunito";
 export type Theme = "normal" | "cyberpunk" | "horror" | "steampunk" | "anime" | "soviet" | "fairytale" | "cartoon" | "fantasy";
 
 export interface Character {
