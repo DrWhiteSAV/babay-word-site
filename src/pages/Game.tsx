@@ -382,19 +382,23 @@ export default function Game() {
           setBgImage(bgUrl);
           setBgGenRetry(false);
           // Save to gallery [backgrounds] via save-to-gallery (handles ImgBB + DB insert with telegram_id)
-          if (tgId) {
-            const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-            const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-            fetch(`${SUPABASE_URL}/functions/v1/save-to-gallery`, {
+          const activeTgId = tgId ?? profile?.telegram_id;
+          console.log(`[Game] 🖼 background ready, tgId=${activeTgId}, saving to gallery...`);
+          if (activeTgId) {
+            const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+            const SB_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+            fetch(`${SB_URL}/functions/v1/save-to-gallery`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${SB_KEY}` },
               body: JSON.stringify({
                 imageUrl: bgUrl,
-                telegramId: tgId,
+                telegramId: activeTgId,
                 label: `[backgrounds] Фон: ${diff}`,
                 prompt: (bgResult as any).prompt,
               }),
-            }).catch(console.error);
+            }).then(r => r.json()).then(d => console.log("[Game] 📦 bg gallery save:", d.success ? "ok" : d.error)).catch(console.error);
+          } else {
+            console.warn("[Game] ⚠️ no tgId — bg not saved to gallery");
           }
         } else {
           if (!bgGenResolvedRef.current) setBgGenRetry(true);
