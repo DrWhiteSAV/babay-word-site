@@ -177,6 +177,11 @@ function AppContent() {
     "Special Elite": "font-special-elite",
     "Cinzel Decorative": "font-cinzel-decorative",
     "Nunito": "font-nunito",
+    "Marck Script": "font-marck-script",
+    "Cuprum": "font-cuprum",
+    "Lobster": "font-lobster",
+    "Pacifico": "font-pacifico",
+    "Comfortaa": "font-comfortaa",
   };
 
   const fontClass = fontFamilyMap[settings.fontFamily] || "font-jetbrains";
