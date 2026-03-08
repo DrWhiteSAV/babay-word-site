@@ -106,10 +106,11 @@ export default function GameHub() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           onClick={() => navigate("/profile")}
+          data-theme-block="hub-avatar"
           className="w-full flex flex-col items-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl overflow-hidden hover:border-red-900/40 active:scale-[0.98] transition-all"
         >
-          {/* Mobile: tall (near full-screen), Desktop: half height */}
-          <div className="relative w-full aspect-[3/4] md:aspect-[16/7]">
+          {/* Mobile: tall portrait, Desktop: half height (16/9 aspect) */}
+          <div className="relative w-full aspect-[3/4] md:aspect-[16/9]">
             <img
               src={character.avatarUrl}
               alt={character.name}
@@ -119,7 +120,7 @@ export default function GameHub() {
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
             <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(220,38,38,0.25)] pointer-events-none" />
           </div>
-          <div className="w-full px-5 py-4">
+          <div className="w-full px-5 py-4 text-center">
             <h2 className="text-2xl font-black text-white uppercase tracking-wider">{character.name}</h2>
             <p className="text-red-500 text-xs mt-1 uppercase tracking-widest">
               {character.style} · Ур. Телекинеза: {character.telekinesisLevel}
@@ -134,7 +135,8 @@ export default function GameHub() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           onClick={() => navigate("/game")}
-          className="w-full py-5 bg-red-700 hover:bg-red-600 text-white rounded-2xl font-black text-xl transition-all active:scale-[0.97] flex items-center justify-center gap-3 shadow-[0_0_24px_rgba(220,38,38,0.35)] lightning-btn"
+          data-theme-block="hub-play"
+          className="hub-play-btn w-full py-5 bg-red-700 hover:bg-red-600 text-white rounded-2xl font-black text-xl transition-all active:scale-[0.97] flex items-center justify-center gap-3 shadow-[0_0_24px_rgba(220,38,38,0.35)] lightning-btn"
         >
           <Play fill="currentColor" size={22} />
           ИГРАТЬ
@@ -146,18 +148,14 @@ export default function GameHub() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
           onClick={() => navigate("/leaderboard")}
-          className="w-full flex items-center justify-between bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-5 py-4 hover:border-yellow-900/50 active:scale-[0.98] transition-all"
+          data-theme-block="hub-leaderboard"
+          className="w-full flex flex-col items-center justify-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-5 py-4 hover:border-yellow-900/50 active:scale-[0.98] transition-all gap-2"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
-              <Trophy size={18} className="text-yellow-500" />
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-white text-sm">Рейтинг</p>
-              <p className="text-xs text-neutral-500">Лучшие Бабаи мира</p>
-            </div>
+          <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
+            <Trophy size={18} className="text-yellow-500" />
           </div>
-          <span className="text-neutral-600 text-lg">›</span>
+          <p className="font-bold text-white text-sm">Рейтинг</p>
+          <p className="text-xs text-neutral-500">Лучшие Бабаи мира</p>
         </motion.button>
 
         {/* 4. Settings + Gallery row */}
@@ -166,26 +164,29 @@ export default function GameHub() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="grid grid-cols-2 gap-3"
+          data-theme-block="hub-grid-top"
         >
           <button
             onClick={() => navigate("/settings")}
-            className="flex flex-col items-start bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+            data-theme-block="hub-settings"
+            className="flex flex-col items-center justify-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-5 hover:border-neutral-700 active:scale-[0.98] transition-all gap-2"
           >
-            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center mb-3">
+            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
               <Settings size={18} className="text-neutral-400" />
             </div>
             <p className="font-bold text-white text-sm">Настройки</p>
-            <p className="text-[10px] text-neutral-500 mt-1">Персонаж, звук, интерфейс</p>
+            <p className="text-[10px] text-neutral-500">Персонаж, звук, интерфейс</p>
           </button>
           <button
             onClick={() => navigate("/gallery")}
-            className="flex flex-col items-start bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+            data-theme-block="hub-gallery"
+            className="flex flex-col items-center justify-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-5 hover:border-neutral-700 active:scale-[0.98] transition-all gap-2"
           >
-            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center mb-3">
+            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
               <ImageIcon size={18} className="text-neutral-400" />
             </div>
             <p className="font-bold text-white text-sm">Галерея</p>
-            <p className="text-[10px] text-neutral-500 mt-1">Аватары, фоны, боссы</p>
+            <p className="text-[10px] text-neutral-500">Аватары, фоны, боссы</p>
           </button>
         </motion.div>
 
@@ -195,26 +196,29 @@ export default function GameHub() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
           className="grid grid-cols-2 gap-3"
+          data-theme-block="hub-grid-bottom"
         >
           <button
             onClick={() => navigate("/shop")}
-            className="flex flex-col items-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-5 hover:border-neutral-700 active:scale-[0.98] transition-all"
+            data-theme-block="hub-shop"
+            className="flex flex-col items-center justify-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-5 hover:border-neutral-700 active:scale-[0.98] transition-all gap-2"
           >
-            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center mb-3">
+            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
               <ShoppingCart size={18} className="text-neutral-400" />
             </div>
             <p className="font-bold text-white text-sm">Магазин</p>
-            <p className="text-[10px] text-neutral-500 mt-1">Предметы и усиления</p>
+            <p className="text-[10px] text-neutral-500">Предметы и усиления</p>
           </button>
           <button
             onClick={() => navigate("/friends")}
-            className="flex flex-col items-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-5 hover:border-neutral-700 active:scale-[0.98] transition-all"
+            data-theme-block="hub-friends"
+            className="flex flex-col items-center justify-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-5 hover:border-neutral-700 active:scale-[0.98] transition-all gap-2"
           >
-            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center mb-3">
+            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
               <Users size={18} className="text-neutral-400" />
             </div>
             <p className="font-bold text-white text-sm">Друзья</p>
-            <p className="text-[10px] text-neutral-500 mt-1">Чаты и команда</p>
+            <p className="text-[10px] text-neutral-500">Чаты и команда</p>
           </button>
         </motion.div>
 
