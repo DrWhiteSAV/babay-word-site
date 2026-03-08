@@ -93,7 +93,7 @@ function withCountdown(
 
 export default function CharacterCreate() {
   const navigate = useNavigate();
-  const { setCharacter, addFear, addEnergy } = usePlayerStore();
+  const { setCharacter, addFear, addEnergy, updateSettings } = usePlayerStore();
   const { profile } = useTelegram();
 
   const [gender, setGender] = useState<Gender | null>(null);
