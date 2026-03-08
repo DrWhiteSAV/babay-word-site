@@ -104,6 +104,32 @@ export default function CharacterCreate() {
   const [dbTemplates, setDbTemplates] = useState<Array<{ id: string; image_url: string; label: string | null }>>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
+  // Load last 15 avatars for the selected gender from DB
+  useEffect(() => {
+    if (!gender) return;
+    setLoadingTemplates(true);
+    const genderLabel = gender === "Бабай" ? "Бабай" : "Бабайка";
+    supabase
+      .from("gallery")
+      .select("id, image_url, label")
+      .ilike("label", "%[avatars]%")
+      .order("created_at", { ascending: false })
+      .limit(60)
+      .then(({ data }) => {
+        const filtered = (data || [])
+          .filter(d => {
+            if (!d.label) return true;
+            // Match gender: check if label contains gender keyword (from lore or name)
+            // We use the gender tag stored in avatars table via label — just show all if no gender info
+            const lower = d.label.toLowerCase();
+            return lower.includes(genderLabel.toLowerCase()) || (!lower.includes("бабай") && !lower.includes("бабайка"));
+          })
+          .slice(0, 15);
+        setDbTemplates(filtered.length > 0 ? filtered : (data || []).slice(0, 15));
+        setLoadingTemplates(false);
+      });
+  }, [gender]);
+
   const [generatedName, setGeneratedName] = useState<string>("");
   const [generatedLore, setGeneratedLore] = useState<string>("");
   const [generatedAvatarUrl, setGeneratedAvatarUrl] = useState<string>("");
