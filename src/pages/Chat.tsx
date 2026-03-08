@@ -767,10 +767,14 @@ export default function Chat() {
               )}
 
               <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} max-w-[78%]`}>
-                {/* Sender name (group only) */}
-                {group && !isUser && showAvatar && (
+                {/* Sender name — shown above every bubble for all chat types */}
+                {isUser ? (
+                  <span className="text-[10px] text-neutral-500 mb-0.5 mr-1 opacity-70">
+                    {character?.name || "Я"}
+                  </span>
+                ) : (
                   <span
-                    className="text-[10px] text-neutral-400 mb-1 ml-1 cursor-pointer hover:text-white transition-colors"
+                    className="text-[10px] text-neutral-400 mb-0.5 ml-1 cursor-pointer hover:text-white transition-colors"
                     onClick={() => setShowProfilePopup({ name: msg.sender, telegramId: msg.sender_telegram_id ?? undefined })}
                   >{msg.sender}</span>
                 )}
