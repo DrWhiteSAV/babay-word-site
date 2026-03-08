@@ -99,6 +99,7 @@ export default function PvpRoom() {
     loadChat();
 
     // Realtime subscription for room + members + chat
+    // pvp_rooms: always re-fetch full row (REPLICA IDENTITY FULL now set, but loadRoom is safer)
     const channel = supabase
       .channel(`pvp-room-${roomId}`)
       .on("postgres_changes", {
@@ -106,8 +107,8 @@ export default function PvpRoom() {
         schema: "public",
         table: "pvp_rooms",
         filter: `id=eq.${roomId}`,
-      }, (payload) => {
-        if (payload.new) setRoom(payload.new as PvpRoom);
+      }, () => {
+        loadRoom();
       })
       .on("postgres_changes", {
         event: "*",
