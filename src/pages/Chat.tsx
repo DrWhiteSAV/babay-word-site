@@ -231,6 +231,7 @@ export default function Chat() {
             sender_telegram_id: senderId,
             read_at: (m as any).read_at,
             created_at: m.created_at,
+            isAiGenerated: !!(m as any).is_ai_reply,
           };
         }));
       }
