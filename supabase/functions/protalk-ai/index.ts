@@ -82,10 +82,10 @@ serve(async (req) => {
       });
     }
 
-    // Use chatKey-based stable chat_id if provided (prevents per-user LIMIT errors).
-    // Otherwise fall back to telegramId-based chat_id.
+    // Use chatKey-based stable chat_id if provided — same prefix as ai-substitute-worker
+    // so both online and offline paths share the same ProTalk session.
     const chatId = chatKey
-      ? `ck_${String(chatKey).replace(/[^a-z0-9_]/gi, "_")}`
+      ? `aisub_${String(chatKey).replace(/[^a-z0-9_]/gi, "_")}`
       : generateChatId(telegramId, PROTALK_BOT_ID);
     const socialId = generateSocialId(telegramId);
     const botIdNum = parseInt(PROTALK_BOT_ID);
