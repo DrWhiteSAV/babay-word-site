@@ -397,7 +397,7 @@ export const usePlayerStore = create<PlayerState>()(
       // DO NOT persist settings — they always come from DB (custom_settings in player_stats)
       // DO NOT persist character/stats — always loaded from DB on mount
       partialize: (state) => ({
-        // settings intentionally excluded — loaded exclusively from DB
+      // settings intentionally excluded — loaded exclusively from DB
         friends: state.friends,
         groupChats: state.groupChats,
         shopItems: state.shopItems,
@@ -408,6 +408,8 @@ export const usePlayerStore = create<PlayerState>()(
         pageBackgrounds: state.pageBackgrounds,
         globalBackgroundUrl: state.globalBackgroundUrl,
         quests: state.quests,
+        // dbLoaded intentionally NOT persisted — must reset to false on every app start
+        // so Home.tsx always waits for a fresh DB check
       }),
     },
   ),
