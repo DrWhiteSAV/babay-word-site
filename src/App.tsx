@@ -114,11 +114,15 @@ function AppContent() {
     const normalizedTarget = targetSrc.replace(window.location.origin, "");
 
     if (normalizedCurrent !== normalizedTarget) {
-      bgMusicRef.current.src = targetSrc;
-      const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
-      if (hasInteracted) {
-        bgMusicRef.current.play().catch(() => {});
-      }
+      // Use cached audio blob URL if available, otherwise direct URL
+      resolveUrl(targetSrc).then(resolved => {
+        if (!bgMusicRef.current) return;
+        bgMusicRef.current.src = resolved;
+        const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
+        if (hasInteracted) {
+          bgMusicRef.current.play().catch(() => {});
+        }
+      });
     }
 
     bgMusicRef.current.volume = (settings.musicVolume / 100) * 0.2;
