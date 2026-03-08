@@ -134,9 +134,16 @@ export default function Settings() {
     } catch (e) {
       console.error("Reset error:", e);
     }
+    // Preserve video cache before clearing localStorage (videos are expensive to re-download)
+    const videoCacheBackup = localStorage.getItem("babai_video_cache");
+    const videoCutscenesBackup = localStorage.getItem("babai-ui-prefs")
+      ? (() => { try { const p = JSON.parse(localStorage.getItem("babai-ui-prefs") || "{}"); return p?.state?.videoCutscenes; } catch { return null; } })()
+      : null;
     // Clear ALL localStorage/cache so nothing stale remains
     localStorage.clear();
     sessionStorage.clear();
+    // Restore video cache (never deleted on reset)
+    if (videoCacheBackup) localStorage.setItem("babai_video_cache", videoCacheBackup);
     // Reset store to defaults
     usePlayerStore.setState({
       character: null,
@@ -150,6 +157,7 @@ export default function Settings() {
       friends: [{ name: "ДанИИл", isAiEnabled: true }],
       quests: [],
       settings: { ...DEFAULT_SETTINGS },
+      ...(videoCutscenesBackup ? { videoCutscenes: videoCutscenesBackup } : {}),
       dbLoaded: false,
     });
     setResetting(false);
