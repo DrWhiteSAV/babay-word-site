@@ -97,6 +97,9 @@ export default function Chat() {
   const aiResolvedRef = useRef(false);
   const lastAutoRespondedIdRef = useRef<string | null>(null);
 
+  const [aiSubCountdown, setAiSubCountdown] = useState(0);
+  const aiSubIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
