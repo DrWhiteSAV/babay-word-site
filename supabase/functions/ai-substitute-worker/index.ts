@@ -149,24 +149,79 @@ ${lastMsgLine}
 Ответь коротко (1-3 предложения) в образе ${ownerStats?.character_name || owner_character_name}. Без кавычек, без пояснений.`;
 
     // 6. Generate reply via ProTalk
+    // Use stable chat_id based on chat_key — prevents "Dialog state: STARTED" on every new session.
+    // ProTalk initializes a new session on first call to any chat_id, returning empty.
+    // With a stable chat_id per chat pair, the session persists and responses are immediate.
     const botIdNum = parseInt(PROTALK_BOT_ID);
-    const chatId = `aisub_${owner_telegram_id}_${Date.now()}`;
-    const socialId = `from_user_id:${owner_telegram_id} message_id:${Date.now()}`;
+    const stableChatId = `aisub_${chat_key.replace(/[^a-z0-9_]/gi, "_")}`;
 
-    const ptResp = await fetch(`https://eu1.api.pro-talk.ru/api/v1.0/ask/${PROTALK_BOT_TOKEN}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bot_id: botIdNum, chat_id: chatId, message: prompt, social_id: socialId }),
-    });
+    async function askProTalkWithRetry(chatId: string, message: string, maxRetries = 2): Promise<string> {
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const socialId = `from_user_id:${owner_telegram_id} message_id:${Date.now()}`;
+        const ptResp = await fetch(`https://eu1.api.pro-talk.ru/api/v1.0/ask/${PROTALK_BOT_TOKEN}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bot_id: botIdNum, chat_id: chatId, message, social_id: socialId }),
+        });
 
-    let replyText = "";
-    if (ptResp.ok) {
-      const ptData = await ptResp.json();
-      replyText = ptData.done || ptData.message || ptData.text || ptData.response || "";
+        if (!ptResp.ok) {
+          console.warn(`[ai-sub] ProTalk HTTP ${ptResp.status} on attempt ${attempt + 1}`);
+          if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 1500));
+          continue;
+        }
+
+        const ptData = await ptResp.json();
+        const text = ptData.done || ptData.message || ptData.text || ptData.response || "";
+
+        // ProTalk returns "Dialog state: STARTED" or empty on first call to a new session.
+        // Retry once — second call always gets a real response.
+        const isInitResponse = !text || text.trim().length < 3 || text.includes("Dialog state:");
+        if (isInitResponse) {
+          console.log(`[ai-sub] ProTalk init response on attempt ${attempt + 1}, retrying...`);
+          if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 1500));
+          continue;
+        }
+
+        // Also skip LIMIT errors — they mean the session chat_id is rate-limited
+        if (text.includes("Try ask again LIMIT")) {
+          console.warn(`[ai-sub] ProTalk LIMIT hit, using timestamped fallback chat_id`);
+          // Fallback: unique chat_id bypasses the limit
+          const fallbackId = `aisub_${owner_telegram_id}_${Date.now()}`;
+          const fbResp = await fetch(`https://eu1.api.pro-talk.ru/api/v1.0/ask/${PROTALK_BOT_TOKEN}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bot_id: botIdNum, chat_id: fallbackId, message, social_id: `from_user_id:${owner_telegram_id} message_id:${Date.now()}` }),
+          });
+          if (fbResp.ok) {
+            const fbData = await fbResp.json();
+            const fbText = fbData.done || fbData.message || fbData.text || fbData.response || "";
+            // Wait for init then retry fallback
+            if (!fbText || fbText.includes("Dialog state:") || fbText.includes("LIMIT")) {
+              await new Promise(r => setTimeout(r, 2000));
+              const fb2Resp = await fetch(`https://eu1.api.pro-talk.ru/api/v1.0/ask/${PROTALK_BOT_TOKEN}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bot_id: botIdNum, chat_id: fallbackId, message, social_id: `from_user_id:${owner_telegram_id} message_id:${Date.now()}` }),
+              });
+              if (fb2Resp.ok) {
+                const fb2Data = await fb2Resp.json();
+                return fb2Data.done || fb2Data.message || fb2Data.text || fb2Data.response || "";
+              }
+            }
+            return fbText;
+          }
+          return "";
+        }
+
+        return text;
+      }
+      return "";
     }
 
+    const replyText = await askProTalkWithRetry(stableChatId, prompt);
+
     if (!replyText || replyText.trim().length < 2) {
-      console.warn("[ai-sub] Empty reply from ProTalk");
+      console.warn("[ai-sub] Empty reply from ProTalk after retries");
       return new Response(JSON.stringify({ skipped: "empty ai reply" }), { headers: corsHeaders });
     }
 
