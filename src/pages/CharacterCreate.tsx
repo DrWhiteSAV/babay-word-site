@@ -216,6 +216,9 @@ export default function CharacterCreate() {
           characterName: name,
           prompt,
           lore: generatedLore || null,
+          wishes,
+          style,
+          gender,
         }),
       });
 
