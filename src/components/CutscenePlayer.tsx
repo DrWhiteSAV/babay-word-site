@@ -40,7 +40,6 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   const [isLoading, setIsLoading] = useState(true);
   const [needsInteraction, setNeedsInteraction] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-
   const videosLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -50,29 +49,9 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     if (videos && videos.length > 0) {
       videosLoadedRef.current = true;
       const raw = videos[Math.floor(Math.random() * videos.length)];
-
-      // Try to load from Cache API fresh (blob URLs don't persist across sessions)
-      const tryCache = async () => {
-        try {
-          if ("caches" in window) {
-            const cache = await caches.open("babai-assets-v2");
-            const response = await cache.match(raw);
-            if (response) {
-              const blob = await response.blob();
-              if (blob.size > 0) {
-                setVideoUrl(URL.createObjectURL(blob));
-                return;
-              }
-            }
-          }
-        } catch { /**/ }
-        // Fallback: direct URL
-        setVideoUrl(raw);
-      };
-
-      tryCache();
+      // Use direct URL — no cache resolution needed
+      setVideoUrl(raw);
     } else if (!videosLoadedRef.current) {
-      // Videos not yet loaded from DB — wait up to 3s before falling back
       const fallbackTimer = setTimeout(() => {
         if (!videosLoadedRef.current) onComplete();
       }, 3000);
@@ -81,48 +60,30 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   }, [videoCutscenes, onComplete]);
 
   useEffect(() => {
-    // Fallback: if video doesn't trigger onCanPlay within 2 seconds (e.g. due to mobile data saving or autoplay blocking),
-    // show the interaction button.
     const timeout = setTimeout(() => {
       if (isLoading) {
         setIsLoading(false);
         setNeedsInteraction(true);
       }
     }, 2000);
-
     return () => clearTimeout(timeout);
   }, [isLoading]);
 
   const handleCanPlay = () => {
     setIsLoading(false);
     if (videoRef.current) {
-      // Check if user has interacted to avoid browser console error
-      const hasInteracted = 
+      const hasInteracted =
         (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
-
-      if (!hasInteracted) {
-        setNeedsInteraction(true);
-        return;
-      }
-
+      if (!hasInteracted) { setNeedsInteraction(true); return; }
       const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          setNeedsInteraction(true);
-        });
-      }
+      if (playPromise !== undefined) playPromise.catch(() => setNeedsInteraction(true));
     }
   };
 
   const handleManualPlay = () => {
     setNeedsInteraction(false);
     if (videoRef.current) {
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Ignore manual play errors
-        });
-      }
+      videoRef.current.play().catch(() => {});
     }
   };
 
@@ -130,8 +91,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center">
       {isLoading && !needsInteraction && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-neutral-950 overflow-hidden">
-          {/* Fog Background */}
-          <div 
+          <div
             className="absolute inset-0 w-full h-full opacity-30 animate-zoom-pulse pointer-events-none origin-center"
             style={{
               backgroundImage: 'url("https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=2000&auto=format&fit=crop")',
@@ -140,28 +100,21 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
               filter: 'grayscale(100%) contrast(150%) brightness(0.5)',
             }}
           />
-          
-          {/* Vignette */}
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
-
-          {/* Content */}
           <div className="relative z-20 flex flex-col items-center">
-            <img 
-              src="https://i.ibb.co/BVgY7XrT/babai.png" 
-              alt="Babai Logo" 
+            <img
+              src="https://i.ibb.co/BVgY7XrT/babai.png"
+              alt="Babai Logo"
               className="w-48 h-48 object-contain mb-8 drop-shadow-[0_0_25px_rgba(220,38,38,0.6)] animate-pulse"
               referrerPolicy="no-referrer"
             />
-            
             <div className="relative w-16 h-16 mb-6">
               <div className="absolute inset-0 border-4 border-red-900/30 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-red-600 rounded-full border-t-transparent animate-spin"></div>
             </div>
-            
             <p className="text-red-500 font-black tracking-[0.3em] uppercase text-sm drop-shadow-[0_0_10px_rgba(220,38,38,0.8)] animate-pulse">
               Загрузка...
             </p>
-            
             <GameDescription />
           </div>
         </div>
@@ -169,8 +122,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
 
       {needsInteraction && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 overflow-hidden">
-          {/* Fog Background */}
-          <div 
+          <div
             className="absolute inset-0 w-full h-full opacity-30 animate-zoom-pulse pointer-events-none origin-center"
             style={{
               backgroundImage: 'url("https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=2000&auto=format&fit=crop")',
@@ -179,18 +131,12 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
               filter: 'grayscale(100%) contrast(150%) brightness(0.5)',
             }}
           />
-          
-          {/* Vignette */}
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
-
           <div className="relative z-20 flex flex-col items-center">
-            <button
-              onClick={handleManualPlay}
-              className="transition-transform hover:scale-110 active:scale-95"
-            >
-              <img 
-                src="https://i.ibb.co/BVgY7XrT/babai.png" 
-                alt="Babai Logo" 
+            <button onClick={handleManualPlay} className="transition-transform hover:scale-110 active:scale-95">
+              <img
+                src="https://i.ibb.co/BVgY7XrT/babai.png"
+                alt="Babai Logo"
                 className="w-48 h-48 object-contain drop-shadow-[0_0_25px_rgba(220,38,38,0.6)] animate-pulse"
                 referrerPolicy="no-referrer"
               />
@@ -198,12 +144,11 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
             <p className="text-red-500 font-black mt-6 tracking-[0.3em] uppercase text-sm drop-shadow-[0_0_10px_rgba(220,38,38,0.8)] animate-pulse">
               Нажмите чтобы начать
             </p>
-
             <GameDescription />
           </div>
         </div>
       )}
-      
+
       {videoUrl && (
         <video
           ref={videoRef}
@@ -217,7 +162,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
         />
       )}
 
-      {/* Skip button — pushed down 4 rows (top-32) to avoid Telegram close/back buttons */}
+      {/* Skip button */}
       <button
         onClick={onComplete}
         className="absolute top-32 right-4 z-20 text-white/50 hover:text-white/90 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors text-xs"
