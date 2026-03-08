@@ -355,35 +355,38 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* Inventory */}
+        {/* Inventory — only show purchased items */}
         <section>
           <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
             <Trophy size={18} /> Инвентарь ({inventory.length}/{shopItems.length + bossItems.length})
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {[...shopItems, ...bossItems].map((item, i) => {
-              const isOwned = inventory.includes(item.id);
-              return (
-                <motion.div
-                  layout
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  key={i}
-                  onClick={(e) => setSelectedItem({item, y: e.clientY})}
-                  className={`border rounded-xl p-3 flex flex-col items-center text-center gap-2 transition-colors cursor-pointer ${isOwned ? 'bg-neutral-900 border-neutral-600 hover:border-red-500' : 'bg-neutral-950 border-neutral-800 opacity-50 hover:opacity-80'}`}
-                >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${isOwned ? 'bg-neutral-800' : 'bg-neutral-900 grayscale'}`}>
-                    {item.icon}
-                  </div>
-                  <div>
-                    <h4 className={`font-bold text-xs line-clamp-1 ${isOwned ? 'text-white' : 'text-neutral-500'}`}>{item.name}</h4>
-                    <p className="text-[10px] text-neutral-500 uppercase tracking-wider">{item.type}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+          {inventory.length === 0 ? (
+            <p className="text-center text-neutral-500 py-6 text-sm">Нет купленных предметов</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {[...shopItems, ...bossItems]
+                .filter(item => inventory.includes(item.id))
+                .map((item, i) => (
+                  <motion.div
+                    layout
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    key={item.id}
+                    onClick={(e) => setSelectedItem({item, y: e.clientY})}
+                    className="bg-neutral-900 border border-neutral-600 hover:border-red-500 rounded-xl p-3 flex flex-col items-center text-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-neutral-800 flex items-center justify-center text-2xl">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-white line-clamp-1">{item.name}</h4>
+                      <p className="text-[10px] text-neutral-500 uppercase tracking-wider">{item.type}</p>
+                    </div>
+                  </motion.div>
+                ))}
+            </div>
+          )}
         </section>
 
         {/* Referral */}
