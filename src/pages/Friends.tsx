@@ -462,10 +462,11 @@ export default function Friends() {
           ) : (
             <div className="space-y-3">
               {friends.map((friend) => {
-                const meta = friendsMeta[friend.name] || {};
+                  const meta = friendsMeta[friend.name] || {};
                 const isDanil = friend.name === "ДанИИл";
                 const avatarSrc = isDanil ? "https://i.ibb.co/rKGSq544/image.png" : (meta.avatar_url || `https://picsum.photos/seed/${friend.name}/100/100`);
                 const tgLink = meta.username ? `https://t.me/${meta.username}` : null;
+                const isOnline = meta.telegram_id ? !!onlineMap[meta.telegram_id] : false;
 
                 return (
                   <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-xl border border-neutral-800 flex flex-col gap-2">
