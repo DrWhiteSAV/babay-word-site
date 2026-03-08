@@ -46,7 +46,8 @@ serve(async (req) => {
         data = await resp2.json();
       }
     } else {
-      const text = `*${title}*\n\n${message}`;
+      // Use caption if provided, otherwise build from title+message
+      const text = caption || (title ? `*${title}*\n\n${message || ''}` : message || '');
       const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
