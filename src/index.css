@@ -261,8 +261,8 @@ body {
 .theme-horror {
   background-color: #080508 !important;
   color: #d4a0a0 !important;
-  /* Special Elite — чёткий, зловещий стиль печатной машинки */
   font-family: "Special Elite", cursive !important;
+  animation: horror-flicker 8s ease-in-out infinite;
 }
 .theme-horror [class*="bg-neutral-900"],
 .theme-horror [class*="bg-neutral-950"],
@@ -270,6 +270,7 @@ body {
   background-color: rgba(20, 5, 5, 0.9) !important;
   border-color: rgba(180, 30, 30, 0.35) !important;
   box-shadow: inset 0 0 20px rgba(180, 0, 0, 0.06);
+  animation: block-appear 0.4s ease-out both;
 }
 .theme-horror .border,
 .theme-horror [class*="border-neutral"],
@@ -296,18 +297,39 @@ body {
 }
 .theme-horror button:not(.cutscene-skip-btn) {
   font-family: "Special Elite", cursive !important;
+  transition: all 0.2s ease;
 }
 .theme-horror button:not(.cutscene-skip-btn):hover {
   background-color: rgba(180, 0, 0, 0.2) !important;
   box-shadow: 0 0 12px rgba(200, 0, 0, 0.3) !important;
+  transform: scale(1.02);
 }
+/* Horror: vignette + blood drips overlay */
 .theme-horror::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(100, 0, 0, 0.25) 100%);
+  background: 
+    radial-gradient(ellipse at center, transparent 40%, rgba(100, 0, 0, 0.3) 100%),
+    repeating-linear-gradient(180deg, transparent 0px, transparent 98px, rgba(180, 0, 0, 0.04) 100px);
   pointer-events: none;
   z-index: 0;
+}
+/* Horror: red blood drip decoration via after */
+.theme-horror::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, 
+    transparent 5%, #8b0000 8%, #cc0000 10%, transparent 12%,
+    transparent 30%, #6b0000 33%, #990000 35%, transparent 37%,
+    transparent 55%, #7b0000 58%, #bb0000 60%, transparent 62%,
+    transparent 80%, #5b0000 83%, #880000 85%, transparent 87%
+  );
+  box-shadow: 0 2px 8px rgba(200, 0, 0, 0.4);
+  z-index: 100;
+  pointer-events: none;
 }
 
 /* ── STEAMPUNK THEME ── */
@@ -321,6 +343,13 @@ body {
   background-color: rgba(35, 22, 8, 0.92) !important;
   border-color: rgba(180, 130, 60, 0.35) !important;
   box-shadow: inset 0 0 16px rgba(180, 130, 60, 0.05);
+  animation: block-appear 0.4s ease-out both;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.theme-steampunk [class*="bg-neutral-900"]:hover,
+.theme-steampunk [class*="bg-neutral-950"]:hover,
+.theme-steampunk [class*="bg-neutral-800"]:hover {
+  box-shadow: inset 0 0 24px rgba(180, 130, 60, 0.12), 0 0 12px rgba(180, 130, 30, 0.15) !important;
 }
 .theme-steampunk .border,
 .theme-steampunk [class*="border-neutral"],
@@ -344,19 +373,26 @@ body {
   box-shadow: 0 0 15px rgba(180, 130, 30, 0.5) !important;
   color: #1a1005 !important;
 }
+.theme-steampunk button:not(.cutscene-skip-btn) {
+  transition: all 0.2s ease;
+}
 .theme-steampunk button:not(.cutscene-skip-btn):hover {
   background-color: rgba(180, 130, 30, 0.15) !important;
   border-color: rgba(180, 130, 60, 0.5) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(180, 130, 30, 0.25) !important;
 }
+/* Steampunk: gear grid pattern + steam glow */
 .theme-steampunk::before {
   content: "";
   position: fixed;
   inset: 0;
   background-image:
-    repeating-linear-gradient(45deg, rgba(180, 130, 30, 0.03) 0px, rgba(180, 130, 30, 0.03) 1px, transparent 1px, transparent 12px),
-    repeating-linear-gradient(-45deg, rgba(180, 130, 30, 0.03) 0px, rgba(180, 130, 30, 0.03) 1px, transparent 1px, transparent 12px);
+    repeating-linear-gradient(45deg, rgba(180, 130, 30, 0.04) 0px, rgba(180, 130, 30, 0.04) 1px, transparent 1px, transparent 12px),
+    repeating-linear-gradient(-45deg, rgba(180, 130, 30, 0.04) 0px, rgba(180, 130, 30, 0.04) 1px, transparent 1px, transparent 12px);
   pointer-events: none;
   z-index: 0;
+  animation: soviet-march 6s ease-in-out infinite;
 }
 .theme-steampunk .fog-layer,
 .theme-steampunk .fog-layer-2 {
@@ -374,6 +410,14 @@ body {
   background-color: rgba(45, 15, 45, 0.82) !important;
   border-color: rgba(255, 160, 220, 0.35) !important;
   box-shadow: inset 0 0 20px rgba(255, 120, 200, 0.07);
+  animation: block-appear 0.35s ease-out both;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.theme-anime [class*="bg-neutral-900"]:hover,
+.theme-anime [class*="bg-neutral-950"]:hover,
+.theme-anime [class*="bg-neutral-800"]:hover {
+  box-shadow: inset 0 0 28px rgba(255, 120, 200, 0.15), 0 0 18px rgba(255, 140, 210, 0.2) !important;
+  border-color: rgba(255, 180, 230, 0.5) !important;
 }
 .theme-anime .border,
 .theme-anime [class*="border-neutral"],
@@ -402,20 +446,39 @@ body {
   box-shadow: 0 0 20px rgba(255, 100, 180, 0.55) !important;
   color: #fff !important;
 }
+.theme-anime button:not(.cutscene-skip-btn) {
+  transition: all 0.2s ease;
+}
 .theme-anime button:not(.cutscene-skip-btn):hover {
   background-color: rgba(255, 140, 200, 0.2) !important;
   box-shadow: 0 0 14px rgba(255, 120, 190, 0.35) !important;
+  transform: translateY(-2px) scale(1.02);
 }
-/* Pastel sakura gradient bg */
+/* Anime: sakura petals via pseudo-elements + gradient */
 .theme-anime::before {
   content: "";
   position: fixed;
   inset: 0;
   background:
     radial-gradient(ellipse at top left, rgba(255, 100, 180, 0.18) 0%, transparent 55%),
-    radial-gradient(ellipse at bottom right, rgba(200, 80, 160, 0.14) 0%, transparent 60%);
+    radial-gradient(ellipse at bottom right, rgba(200, 80, 160, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse at center, rgba(255, 180, 230, 0.06) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+}
+.theme-anime::after {
+  content: "🌸 ✿ 🌸 ✿ 🌸 ✿ 🌸 ✿ 🌸 ✿";
+  position: fixed;
+  top: -30px;
+  left: 0;
+  width: 100%;
+  font-size: 16px;
+  letter-spacing: 40px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.25;
+  animation: anime-float-petal 12s linear infinite;
+  white-space: nowrap;
 }
 .theme-anime .fog-layer,
 .theme-anime .fog-layer-2 {
@@ -432,6 +495,7 @@ body {
 .theme-soviet [class*="bg-neutral-800"] {
   background-color: rgba(20, 18, 12, 0.92) !important;
   border-color: rgba(180, 160, 60, 0.3) !important;
+  animation: block-appear 0.5s ease-out both;
 }
 .theme-soviet .border,
 .theme-soviet [class*="border-neutral"],
@@ -459,18 +523,34 @@ body {
 .theme-soviet button:not(.cutscene-skip-btn) {
   text-transform: uppercase;
   letter-spacing: 1px;
+  transition: all 0.15s ease;
 }
 .theme-soviet button:not(.cutscene-skip-btn):hover {
   background-color: rgba(160, 30, 30, 0.15) !important;
+  border-color: rgba(180, 30, 30, 0.5) !important;
 }
+/* Soviet: horizontal stripes + slow march animation */
 .theme-soviet::before {
   content: "";
   position: fixed;
   inset: 0;
   background-image:
-    repeating-linear-gradient(0deg, rgba(180, 160, 60, 0.03) 0px, rgba(180, 160, 60, 0.03) 1px, transparent 1px, transparent 30px);
+    repeating-linear-gradient(0deg, rgba(180, 160, 60, 0.04) 0px, rgba(180, 160, 60, 0.04) 1px, transparent 1px, transparent 30px);
   pointer-events: none;
   z-index: 0;
+  animation: soviet-march 8s ease-in-out infinite;
+}
+/* Soviet: red star watermark */
+.theme-soviet::after {
+  content: "★";
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  font-size: 80px;
+  color: rgba(180, 30, 30, 0.04);
+  pointer-events: none;
+  z-index: 0;
+  animation: soviet-march 5s ease-in-out infinite;
 }
 
 /* ── FAIRYTALE THEME ── */
@@ -484,6 +564,13 @@ body {
   background-color: rgba(8, 20, 10, 0.9) !important;
   border-color: rgba(80, 160, 80, 0.3) !important;
   box-shadow: inset 0 0 16px rgba(40, 120, 40, 0.05);
+  animation: block-appear 0.4s ease-out both;
+  transition: box-shadow 0.3s ease;
+}
+.theme-fairytale [class*="bg-neutral-900"]:hover,
+.theme-fairytale [class*="bg-neutral-950"]:hover,
+.theme-fairytale [class*="bg-neutral-800"]:hover {
+  box-shadow: inset 0 0 24px rgba(80, 160, 60, 0.12), 0 0 16px rgba(60, 160, 40, 0.15) !important;
 }
 .theme-fairytale .border,
 .theme-fairytale [class*="border-neutral"],
@@ -506,20 +593,43 @@ body {
   border-color: #70c040 !important;
   box-shadow: 0 0 15px rgba(60, 160, 40, 0.4) !important;
 }
+.theme-fairytale button:not(.cutscene-skip-btn) {
+  transition: all 0.2s ease;
+}
 .theme-fairytale button:not(.cutscene-skip-btn):hover {
   background-color: rgba(50, 140, 30, 0.15) !important;
+  transform: scale(1.02);
+  box-shadow: 0 0 14px rgba(60, 180, 40, 0.2) !important;
 }
 .theme-fairytale .fog-layer,
 .theme-fairytale .fog-layer-2 {
   filter: brightness(0) sepia(1) hue-rotate(90deg) saturate(1.5) opacity(0.35);
 }
+/* Fairytale: sparkles + forest glow */
 .theme-fairytale::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at bottom, rgba(20, 80, 20, 0.2) 0%, transparent 60%);
+  background: 
+    radial-gradient(ellipse at bottom, rgba(20, 80, 20, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse at top left, rgba(40, 100, 20, 0.12) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+}
+/* Fairytale: firefly sparkle emoji trail */
+.theme-fairytale::after {
+  content: "✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧";
+  position: fixed;
+  bottom: 120px;
+  left: 0;
+  width: 100%;
+  font-size: 10px;
+  letter-spacing: 28px;
+  pointer-events: none;
+  z-index: 1;
+  color: rgba(120, 220, 80, 0.3);
+  animation: fairy-sparkle 4s ease-in-out infinite;
+  white-space: nowrap;
 }
 
 /* ── CARTOON THEME — яркие детские цвета ── */
@@ -528,6 +638,16 @@ body {
   color: #fff8e0 !important;
   font-family: "Nunito", sans-serif !important;
 }
+.theme-cartoon select,
+.theme-cartoon select option,
+.theme-cartoon option {
+  background-color: #1a2a4a !important;
+  color: #fff8e0 !important;
+  border-color: rgba(255, 220, 50, 0.5) !important;
+}
+.theme-cartoon select:focus {
+  outline: 2px solid rgba(255, 200, 50, 0.6) !important;
+}
 .theme-cartoon [class*="bg-neutral-900"],
 .theme-cartoon [class*="bg-neutral-950"],
 .theme-cartoon [class*="bg-neutral-800"] {
@@ -535,6 +655,14 @@ body {
   border: 2px solid !important;
   border-color: rgba(255, 220, 50, 0.5) !important;
   box-shadow: inset 0 0 16px rgba(255, 200, 50, 0.06), 3px 3px 0 rgba(0,0,0,0.4) !important;
+  animation: block-appear 0.3s ease-out both;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.theme-cartoon [class*="bg-neutral-900"]:hover,
+.theme-cartoon [class*="bg-neutral-950"]:hover,
+.theme-cartoon [class*="bg-neutral-800"]:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 16px rgba(255, 200, 50, 0.1), 5px 5px 0 rgba(0,0,0,0.5) !important;
 }
 .theme-cartoon .border,
 .theme-cartoon [class*="border-neutral"],
@@ -573,12 +701,17 @@ body {
   border-radius: 14px !important;
   font-family: "Nunito", sans-serif !important;
   font-weight: 700 !important;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .theme-cartoon button:not(.cutscene-skip-btn):hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 0 rgba(0,0,0,0.5) !important;
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 0 16px rgba(255, 200, 0, 0.3) !important;
 }
-/* Радужный фон — детские цвета */
+.theme-cartoon button:not(.cutscene-skip-btn):active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.5) !important;
+}
+/* Cartoon: rainbow radial gradients */
 .theme-cartoon::before {
   content: "";
   position: fixed;
@@ -591,6 +724,21 @@ body {
     radial-gradient(ellipse at center,     rgba(200, 80, 255, 0.08) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+}
+/* Cartoon: floating stars */
+.theme-cartoon::after {
+  content: "⭐ 🌟 ✨ 💫 ⭐ 🌟 ✨ 💫 ⭐";
+  position: fixed;
+  top: 40px;
+  left: 0;
+  width: 100%;
+  font-size: 14px;
+  letter-spacing: 24px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.2;
+  animation: cartoon-star-spin 6s linear infinite;
+  white-space: nowrap;
 }
 .theme-cartoon .fog-layer,
 .theme-cartoon .fog-layer-2 {
@@ -609,6 +757,7 @@ body {
   background-color: rgba(18, 12, 28, 0.9) !important;
   border-color: rgba(160, 120, 200, 0.3) !important;
   box-shadow: inset 0 0 16px rgba(130, 80, 180, 0.05);
+  animation: block-appear 0.45s ease-out both, fantasy-pulse-glow 4s ease-in-out infinite;
 }
 .theme-fantasy .border,
 .theme-fantasy [class*="border-neutral"],
@@ -619,6 +768,7 @@ body {
 .theme-fantasy .text-neutral-200,
 .theme-fantasy .text-neutral-300 {
   color: #ede0f8 !important;
+  font-family: "Cinzel Decorative", cursive !important;
 }
 .theme-fantasy .text-red-500,
 .theme-fantasy .text-red-400,
@@ -634,28 +784,41 @@ body {
 }
 .theme-fantasy button:not(.cutscene-skip-btn) {
   font-family: "Cinzel Decorative", cursive !important;
+  transition: all 0.2s ease;
 }
 .theme-fantasy button:not(.cutscene-skip-btn):hover {
   background-color: rgba(120, 60, 180, 0.18) !important;
-  box-shadow: 0 0 12px rgba(140, 80, 200, 0.3) !important;
-}
-.theme-fantasy .text-white,
-.theme-fantasy .text-neutral-200,
-.theme-fantasy .text-neutral-300 {
-  color: #ede0f8 !important;
-  font-family: "Cinzel Decorative", cursive !important;
+  box-shadow: 0 0 18px rgba(160, 100, 255, 0.4) !important;
+  transform: translateY(-1px);
 }
 .theme-fantasy .fog-layer,
 .theme-fantasy .fog-layer-2 {
   filter: brightness(0) sepia(1) hue-rotate(260deg) saturate(1.5) opacity(0.3);
 }
+/* Fantasy: purple starfield glow */
 .theme-fantasy::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at top right, rgba(80, 30, 140, 0.2) 0%, transparent 60%);
+  background: 
+    radial-gradient(ellipse at top right, rgba(80, 30, 140, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(60, 20, 120, 0.15) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+}
+/* Fantasy: magical rune symbols */
+.theme-fantasy::after {
+  content: "✦ ᚱ ✦ ᚷ ✦ ᚨ ✦ ᚾ ✦";
+  position: fixed;
+  bottom: 90px;
+  right: 8px;
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  letter-spacing: 8px;
+  pointer-events: none;
+  z-index: 1;
+  color: rgba(160, 100, 255, 0.2);
+  animation: fantasy-pulse-glow 6s ease-in-out infinite;
 }
 
 /* Cutscene overlay — never affected by theme transforms */

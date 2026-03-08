@@ -38,7 +38,12 @@ export type FontFamily =
   | "Tektur"
   | "Special Elite"
   | "Cinzel Decorative"
-  | "Nunito";
+  | "Nunito"
+  | "Marck Script"
+  | "Cuprum"
+  | "Lobster"
+  | "Pacifico"
+  | "Comfortaa";
 export type Theme = "normal" | "cyberpunk" | "horror" | "steampunk" | "anime" | "soviet" | "fairytale" | "cartoon" | "fantasy";
 
 export interface Character {
