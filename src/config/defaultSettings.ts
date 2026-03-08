@@ -142,20 +142,18 @@ export const DEFAULT_USERS: Array<{
 ];
 
 // Базовые изображения для галереи — только проверенные рабочие ссылки
-export const DEFAULT_GALLERY_IMAGES = [
-  "https://i.ibb.co/BVgY7XrT/babai.png",
-];
+export const DEFAULT_GALLERY_IMAGES = ["https://i.ibb.co/BVgY7XrT/babai.png"];
 
 // Базовые вертикальные видео (для мобильных/шортсов)
 export const DEFAULT_VERTICAL_VIDEOS = [
   "https://cdn.pixabay.com/video/2020/05/25/40130-424823521_large.mp4",
-  "https://cdn.pixabay.com/video/2023/10/22/186008-876824401_large.mp4"
+  "https://cdn.pixabay.com/video/2023/10/22/186008-876824401_large.mp4",
 ];
 
 // Базовые горизонтальные видео (для десктопа)
 export const DEFAULT_HORIZONTAL_VIDEOS = [
   "https://cdn.pixabay.com/video/2022/11/01/137394-766524330_large.mp4",
-  "https://cdn.pixabay.com/video/2021/08/11/84687-587842605_large.mp4"
+  "https://cdn.pixabay.com/video/2021/08/11/84687-587842605_large.mp4",
 ];
 
 // Базовые товары за Страх
@@ -498,9 +496,9 @@ export const DEFAULT_GLOBAL_BACKGROUND: string | null = null;
 
 // Дефолтные настройки пользователя
 export const DEFAULT_SETTINGS = {
-  buttonSize: "medium" as const,
+  buttonSize: "small" as const,
   fontFamily: "JetBrains Mono" as const,
-  fontSize: 16,
+  fontSize: 12,
   fontBrightness: 100,
   theme: "normal" as const,
   musicVolume: 50,
