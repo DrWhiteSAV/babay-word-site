@@ -11,6 +11,7 @@ import {
   Loader2,
   Skull,
   Zap,
+  Image as ImageIcon,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
 
@@ -99,25 +100,34 @@ export default function GameHub() {
         {/* Background glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/10 via-neutral-950/0 to-neutral-950/0 pointer-events-none" />
 
-        {/* Settings block */}
-        <motion.button
+        {/* Settings + Gallery row */}
+        <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          onClick={() => navigate("/settings")}
-          className="w-full flex items-center justify-between bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-5 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+          className="grid grid-cols-2 gap-3"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
+          <button
+            onClick={() => navigate("/settings")}
+            className="flex flex-col items-start bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+          >
+            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center mb-3">
               <Settings size={18} className="text-neutral-400" />
             </div>
-            <div className="text-left">
-              <p className="font-bold text-white text-sm">Настройки</p>
-              <p className="text-xs text-neutral-500">Персонаж, звук, интерфейс</p>
+            <p className="font-bold text-white text-sm">Настройки</p>
+            <p className="text-[10px] text-neutral-500 mt-1">Персонаж, звук, интерфейс</p>
+          </button>
+          <button
+            onClick={() => navigate("/gallery")}
+            className="flex flex-col items-start bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+          >
+            <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center mb-3">
+              <ImageIcon size={18} className="text-neutral-400" />
             </div>
-          </div>
-          <span className="text-neutral-600 text-lg">›</span>
-        </motion.button>
+            <p className="font-bold text-white text-sm">Галерея</p>
+            <p className="text-[10px] text-neutral-500 mt-1">Аватары, фоны, боссы</p>
+          </button>
+        </motion.div>
 
         {/* Avatar / Profile block — full-width card with large shadow */}
         <motion.button
