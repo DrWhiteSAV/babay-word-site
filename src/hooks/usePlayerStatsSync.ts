@@ -25,19 +25,9 @@ const DEFAULT_SETTINGS: {
 
 const BUTTON_SIZES: ButtonSize[] = ["small", "medium", "large"];
 const FONT_FAMILIES: FontFamily[] = [
-  "Inter",
-  "Roboto",
-  "Montserrat",
-  "Playfair Display",
-  "JetBrains Mono",
-  "Press Start 2P",
-  "Russo One",
-  "Rubik Beastly",
-  "Rubik Burned",
-  "Rubik Glitch",
-  "Neucha",
-  "Ruslan Display",
-  "Tektur",
+  "Inter", "Roboto", "Montserrat", "Playfair Display", "JetBrains Mono",
+  "Press Start 2P", "Russo One", "Rubik Beastly", "Rubik Burned", "Rubik Glitch",
+  "Neucha", "Ruslan Display", "Tektur",
 ];
 const THEMES: Theme[] = ["normal", "cyberpunk"];
 
@@ -55,7 +45,9 @@ const normalizeSettings = (raw: unknown) => {
     ? (cs.fontFamily as FontFamily)
     : DEFAULT_SETTINGS.fontFamily;
 
-  const fontSize = typeof cs.fontSize === "number" ? cs.fontSize : DEFAULT_SETTINGS.fontSize;
+  const fontSize = typeof cs.fontSize === "number" && cs.fontSize >= 5 && cs.fontSize <= 24
+    ? cs.fontSize
+    : DEFAULT_SETTINGS.fontSize;
   const fontBrightness =
     typeof cs.fontBrightness === "number" ? cs.fontBrightness : DEFAULT_SETTINGS.fontBrightness;
   const theme = THEMES.includes(cs.theme as Theme) ? (cs.theme as Theme) : DEFAULT_SETTINGS.theme;
@@ -63,15 +55,7 @@ const normalizeSettings = (raw: unknown) => {
     typeof cs.musicVolume === "number" ? cs.musicVolume : DEFAULT_SETTINGS.musicVolume;
   const ttsEnabled = typeof cs.ttsEnabled === "boolean" ? cs.ttsEnabled : DEFAULT_SETTINGS.ttsEnabled;
 
-  return {
-    buttonSize,
-    fontFamily,
-    fontSize,
-    fontBrightness,
-    theme,
-    musicVolume,
-    ttsEnabled,
-  };
+  return { buttonSize, fontFamily, fontSize, fontBrightness, theme, musicVolume, ttsEnabled };
 };
 
 export function usePlayerStatsSync() {
@@ -81,11 +65,12 @@ export function usePlayerStatsSync() {
   const activeTelegramId = useRef<number | null>(null);
   const lastKnownAvatarUrl = useRef<string>(FALLBACK_AVATAR);
 
-  // Load from Supabase on first mount — DB is the source of truth
+  // ─── LOAD FROM DB — always overwrites localStorage/cache ───────────────────
   useEffect(() => {
     const telegramId = profile?.telegram_id;
     if (!telegramId) return;
 
+    // Reset on user change
     hasLoadedFromDB.current = false;
     activeTelegramId.current = telegramId;
 
@@ -101,16 +86,16 @@ export function usePlayerStatsSync() {
             .from("gallery")
             .select("image_url, label, created_at")
             .eq("telegram_id", telegramId)
-            .order("created_at", { ascending: false }),
+            .order("created_at", { ascending: false })
+            .limit(12),
         ]);
 
         if (activeTelegramId.current !== telegramId) return;
 
         const updates: Record<string, any> = {};
 
-        if (galleryError) {
-          console.error("[usePlayerStatsSync] gallery load error:", galleryError.message);
-        } else if (galleryRows && galleryRows.length > 0) {
+        // Gallery URLs for profile preview
+        if (!galleryError && galleryRows && galleryRows.length > 0) {
           const galleryUrls = Array.from(
             new Set(
               galleryRows
@@ -118,12 +103,12 @@ export function usePlayerStatsSync() {
                 .filter((url) => isHttpUrl(url))
             )
           );
-
           if (galleryUrls.length > 0) {
             updates.gallery = galleryUrls;
+            // Find most recent avatar
             const latestAvatar = galleryRows.find((row) => {
               const label = (row.label || "").toLowerCase();
-              return label.includes("[avatars]") || label.includes("аватар") || label.includes("avatar");
+              return label.includes("[avatars]") || label.includes("[avatar]") || label.includes("аватар");
             });
             if (latestAvatar?.image_url && isHttpUrl(latestAvatar.image_url)) {
               lastKnownAvatarUrl.current = latestAvatar.image_url;
@@ -137,7 +122,7 @@ export function usePlayerStatsSync() {
         }
 
         if (!data) {
-          // New user: force clean defaults (never keep stale cache as source of truth)
+          // Brand new user — clean defaults, no character
           updates.character = null;
           updates.fear = 0;
           updates.energy = 100;
@@ -145,20 +130,23 @@ export function usePlayerStatsSync() {
           updates.bossLevel = 0;
           updates.inventory = [];
           updates.settings = { ...DEFAULT_SETTINGS };
+          updates.dbLoaded = true;
           usePlayerStore.setState(updates);
           return;
         }
 
-        updates.fear = data.fear ?? 0;
-        updates.energy = data.energy ?? 100;
-        updates.watermelons = data.watermelons ?? 0;
-        updates.bossLevel = data.boss_level ?? 0;
+        // ── DB is the source of truth — overwrite everything ──────────────────
+        updates.fear = typeof data.fear === "number" ? data.fear : 0;
+        updates.energy = typeof data.energy === "number" ? data.energy : 100;
+        updates.watermelons = typeof data.watermelons === "number" ? data.watermelons : 0;
+        updates.bossLevel = typeof data.boss_level === "number" ? data.boss_level : 0;
 
         const customSettings =
           data.custom_settings && typeof data.custom_settings === "object"
             ? (data.custom_settings as Record<string, unknown>)
             : {};
 
+        // Settings from DB always win
         updates.settings = normalizeSettings(customSettings);
         updates.inventory = Array.isArray(customSettings.inventory)
           ? customSettings.inventory.filter((item): item is string => typeof item === "string")
@@ -169,9 +157,13 @@ export function usePlayerStatsSync() {
             ? customSettings.wishes.filter((wish): wish is string => typeof wish === "string")
             : [];
 
-          const resolvedAvatar = isHttpUrl(data.avatar_url)
-            ? data.avatar_url
-            : lastKnownAvatarUrl.current || FALLBACK_AVATAR;
+          // Avatar: prefer DB avatar_url (if valid http), then gallery fallback
+          let resolvedAvatar = FALLBACK_AVATAR;
+          if (isHttpUrl(data.avatar_url)) {
+            resolvedAvatar = data.avatar_url;
+          } else if (isHttpUrl(lastKnownAvatarUrl.current)) {
+            resolvedAvatar = lastKnownAvatarUrl.current;
+          }
 
           lastKnownAvatarUrl.current = resolvedAvatar;
 
@@ -181,14 +173,27 @@ export function usePlayerStatsSync() {
             style: (data.character_style as any) || "Хоррор",
             wishes,
             avatarUrl: resolvedAvatar,
-            telekinesisLevel: data.telekinesis_level || 1,
+            telekinesisLevel: typeof data.telekinesis_level === "number" ? data.telekinesis_level : 1,
             lore: data.lore || undefined,
           };
         } else {
           updates.character = null;
         }
 
+        updates.dbLoaded = true;
         usePlayerStore.setState(updates);
+
+        console.log("[usePlayerStatsSync] Loaded from DB:", {
+          character: updates.character?.name,
+          avatar: updates.character?.avatarUrl,
+          settings: updates.settings,
+        });
+      } catch (err) {
+        console.error("[usePlayerStatsSync] Unexpected error:", err);
+        if (activeTelegramId.current === telegramId) {
+          hasLoadedFromDB.current = true;
+          usePlayerStore.setState({ dbLoaded: true });
+        }
       } finally {
         if (activeTelegramId.current === telegramId) {
           hasLoadedFromDB.current = true;
@@ -199,7 +204,7 @@ export function usePlayerStatsSync() {
     loadStats();
   }, [profile?.telegram_id]);
 
-  // Sync to Supabase on state changes (debounced) AFTER DB hydration
+  // ─── SYNC TO DB (debounced, only after DB hydration) ──────────────────────
   useEffect(() => {
     if (!profile?.telegram_id || !store.character) return;
     if (!hasLoadedFromDB.current) return;
@@ -224,6 +229,7 @@ export function usePlayerStatsSync() {
       character_style: store.character.style,
       avatar_url: currentAvatar || FALLBACK_AVATAR,
       lore: store.character.lore || null,
+      game_status: "playing",
       custom_settings: {
         buttonSize: store.settings.buttonSize,
         fontFamily: store.settings.fontFamily,
@@ -253,7 +259,7 @@ export function usePlayerStatsSync() {
         },
         { onConflict: "telegram_id" }
       );
-    }, 1200);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [
