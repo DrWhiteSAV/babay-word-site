@@ -19,7 +19,7 @@ import { usePlayerStatsSync } from "./hooks/usePlayerStatsSync";
 import { useIncomingMessageNotifier } from "./hooks/useIncomingMessageNotifier";
 import { useGroupChatsSync } from "./hooks/useGroupChatsSync";
 import { useTelegram } from "./context/TelegramContext";
-import { protalkGenerateText } from "./services/protalk";
+
 
 // Pages
 import Home from "./pages/Home";
@@ -71,15 +71,6 @@ function AppContent() {
   const { playClick } = useAudio(settings.musicVolume);
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
-  const restartSentRef = useRef(false);
-
-  // Send /restart to ProTalk once when profile is loaded — skip in Lovable editor
-  useEffect(() => {
-    if (!isLoading && profile && !restartSentRef.current && entryMode !== "lovable") {
-      restartSentRef.current = true;
-      protalkGenerateText("/restart", profile.telegram_id).catch(() => {});
-    }
-  }, [isLoading, profile, entryMode]);
 
   // Sync player stats and achievements
   usePlayerStatsSync();
