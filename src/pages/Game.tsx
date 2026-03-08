@@ -89,7 +89,9 @@ export default function Game() {
   const [localFear, setLocalFear] = useState(0);
   const [localWatermelons, setLocalWatermelons] = useState(0);
   const [exitedEarly, setExitedEarly] = useState(false);
-  const [pvpResults, setPvpResults] = useState<{name: string, fear: number, watermelons: number, isLocal: boolean, exited?: boolean}[] | null>(null);
+
+  interface PvpResult { name: string; fear: number; watermelons: number; isLocal: boolean; exited?: boolean; }
+  const [pvpResults, setPvpResults] = useState<PvpResult[] | null>(null);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
