@@ -8,7 +8,7 @@ import { useTelegram } from "../context/TelegramContext";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { character } = usePlayerStore();
+  const { character } = usePlayerStore(); // used only for avatar preview on Home buttons
   const { profile, isLoading: tgLoading } = useTelegram();
 
   // null = still checking, true = has character, false = no character
