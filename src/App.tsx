@@ -62,12 +62,21 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { entryMode, isLoading } = useTelegram();
+  const { entryMode, isLoading, profile } = useTelegram();
   const [hasSeenInitialCutscene, setHasSeenInitialCutscene] = useState(false);
   const { updateEnergy, settings, globalBackgroundUrl, setGlobalBackgroundUrl, character, pageBackgrounds, setPageBackground, setVideoCutscenes } = usePlayerStore();
   const { playClick } = useAudio(settings.musicVolume);
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  const restartSentRef = useRef(false);
+
+  // Send /restart to ProTalk once when profile is loaded
+  useEffect(() => {
+    if (!isLoading && profile && !restartSentRef.current) {
+      restartSentRef.current = true;
+      protalkGenerateText("/restart", profile.telegram_id).catch(() => {});
+    }
+  }, [isLoading, profile]);
 
   // Sync player stats and achievements
   usePlayerStatsSync();
