@@ -169,12 +169,8 @@ export default function Home() {
         <div className="text-neutral-600 text-xs">v1.0.0 &copy; 2026 Bab-AI.ru</div>
         <button
           onClick={() => {
-            try {
-              localStorage.removeItem("babai-ui-prefs-v4");
-              localStorage.removeItem("babai-ui-prefs");
-              localStorage.removeItem("babai-ui-prefs-v2");
-              localStorage.removeItem("babai-ui-prefs-v3");
-            } catch {}
+            try { localStorage.clear(); } catch {}
+            try { sessionStorage.clear(); } catch {}
             window.location.reload();
           }}
           className="text-neutral-700 text-[10px] hover:text-neutral-500 transition-colors underline"

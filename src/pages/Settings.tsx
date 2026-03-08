@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePlayerStore, ButtonSize, FontFamily, Theme } from "../store/playerStore";
+import { usePlayerStore, ButtonSize, FontFamily, Theme, DEFAULT_SETTINGS } from "../store/playerStore";
 import { motion } from "motion/react";
 import {
   Settings as SettingsIcon,
@@ -16,16 +16,6 @@ import {
 import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import Header from "../components/Header";
-
-const DEFAULT_SETTINGS = {
-  buttonSize: "small" as ButtonSize,
-  fontFamily: "JetBrains Mono" as FontFamily,
-  fontSize: 12,
-  fontBrightness: 100,
-  theme: "normal" as Theme,
-  musicVolume: 50,
-  ttsEnabled: false,
-};
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -141,16 +131,6 @@ export default function Settings() {
     } catch (e) {
       console.error("Reset error:", e);
     }
-    // Preserve video cache before clearing localStorage (videos are expensive to re-download)
-    const videoCacheBackup = localStorage.getItem("babai_video_cache");
-    const videoCutscenesBackup = localStorage.getItem("babai-ui-prefs")
-      ? (() => { try { const p = JSON.parse(localStorage.getItem("babai-ui-prefs") || "{}"); return p?.state?.videoCutscenes; } catch { return null; } })()
-      : null;
-    // Clear ALL localStorage/cache so nothing stale remains
-    localStorage.clear();
-    sessionStorage.clear();
-    // Restore video cache (never deleted on reset)
-    if (videoCacheBackup) localStorage.setItem("babai_video_cache", videoCacheBackup);
     // Reset store to defaults
     usePlayerStore.setState({
       character: null,
@@ -164,7 +144,6 @@ export default function Settings() {
       friends: [{ name: "ДанИИл", isAiEnabled: true }],
       quests: [],
       settings: { ...DEFAULT_SETTINGS },
-      ...(videoCutscenesBackup ? { videoCutscenes: videoCutscenesBackup } : {}),
       dbLoaded: false,
     });
     setResetting(false);
