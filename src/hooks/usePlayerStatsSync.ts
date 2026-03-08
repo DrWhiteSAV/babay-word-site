@@ -210,9 +210,10 @@ export function usePlayerStatsSync() {
   }, [profile?.telegram_id]);
 
   // ─── AUTO-SYNC TO DB ─────────────────────────────────────────────────────────
-  // CRITICAL: This effect ONLY writes safe gameplay fields + custom_settings.
-  // It NEVER touches: avatar_url, character_name, character_gender, character_style, lore.
-  // Those fields are written ONLY by explicit user actions (CharacterCreate, Gallery, Settings reset).
+  // CRITICAL: This effect ONLY writes gameplay stats (fear, watermelons, boss_level, telekinesis_level).
+  // It NEVER touches: avatar_url, character_name, character_gender, character_style, lore, custom_settings.
+  // custom_settings is written ONLY via the "Сохранить настройки" button in Settings.
+  // Identity fields are written ONLY by CharacterCreate, Gallery, or explicit save actions.
   const lastWrittenRef = useRef<string | null>(null);
   const loadedRef = useRef(false);
 
@@ -230,12 +231,12 @@ export function usePlayerStatsSync() {
     if (!store.character) return;
     if (store.gameStatus !== "playing") return;
 
-    const snapshot = buildSafeSnapshot(store);
+    const snapshot = buildGameplaySnapshot(store);
 
     if (!loadedRef.current) {
       loadedRef.current = true;
       lastWrittenRef.current = snapshot;
-      console.log("[sync] 📌 baseline saved, no write");
+      console.log("[sync] 📌 baseline saved (gameplay only), no write on load");
       return;
     }
 
@@ -249,22 +250,21 @@ export function usePlayerStatsSync() {
         const p = JSON.parse(prev) as Record<string, unknown>;
         const c = JSON.parse(snapshot) as Record<string, unknown>;
         const changed = Object.keys(c).filter(k => JSON.stringify(p[k]) !== JSON.stringify(c[k]));
-        console.log("[sync] 📝 writing safe fields to DB:", changed);
+        console.log("[sync] 📝 gameplay fields changed:", changed);
       } catch { /**/ }
     }
 
     const payload = JSON.parse(snapshot);
     const timer = setTimeout(async () => {
-      console.log(`[DB WRITE] 📝 player_stats UPDATE for telegram_id=${telegramId}`, {
+      // UPDATE only gameplay stats — custom_settings and identity fields are NOT touched here
+      console.log(`[DB WRITE] 📝 player_stats UPDATE (gameplay only) for telegram_id=${telegramId}`, {
         fear: payload.fear,
         watermelons: payload.watermelons,
         boss_level: payload.boss_level,
         telekinesis_level: payload.telekinesis_level,
-        custom_settings: payload.custom_settings,
         timestamp: new Date().toISOString(),
       });
 
-      // UPDATE only safe fields — no character/avatar fields touched
       const { error } = await supabase
         .from("player_stats")
         .update({
@@ -272,28 +272,21 @@ export function usePlayerStatsSync() {
           watermelons: payload.watermelons,
           boss_level: payload.boss_level,
           telekinesis_level: payload.telekinesis_level,
-          custom_settings: payload.custom_settings,
+          // custom_settings intentionally excluded — saved only via Settings page
         })
         .eq("telegram_id", telegramId);
 
       if (error) {
         console.error("[DB WRITE] ❌ player_stats UPDATE error:", error.message);
       } else {
-        console.log("[DB WRITE] ✅ player_stats UPDATE success");
+        console.log("[DB WRITE] ✅ player_stats UPDATE success (gameplay)");
       }
 
-      // Leaderboard cache — uses current store values
+      // Leaderboard cache — read-only for display, uses current store values
       const storeNow = usePlayerStore.getState();
       const avatarForLeader = isRealAvatar(storeNow.character?.avatarUrl)
         ? storeNow.character!.avatarUrl
         : FALLBACK_AVATAR;
-
-      console.log(`[DB WRITE] 📝 leaderboard_cache UPSERT for telegram_id=${telegramId}`, {
-        display_name: storeNow.character?.name,
-        fear: storeNow.fear,
-        telekinesis_level: storeNow.character?.telekinesisLevel,
-        avatar_url: avatarForLeader?.substring(0, 60),
-      });
 
       const { error: lbError } = await supabase.from("leaderboard_cache").upsert({
         telegram_id: telegramId,
@@ -315,40 +308,23 @@ export function usePlayerStatsSync() {
     profile?.telegram_id,
     store.dbLoaded,
     store.gameStatus,
+    store.fear,
+    store.watermelons,
     store.bossLevel,
     store.character?.telekinesisLevel,
-    store.character?.wishes?.join(","),
-    store.settings.buttonSize,
-    store.settings.fontFamily,
-    store.settings.fontSize,
-    store.settings.fontBrightness,
-    store.settings.theme,
-    store.settings.musicVolume,
-    store.settings.ttsEnabled,
-    store.inventory?.join(","),
   ]);
 }
 
 /**
- * Snapshot of ONLY safe fields — no avatar_url, no character_name/gender/style/lore.
- * These character identity fields must only be written by explicit user actions.
+ * Snapshot of ONLY gameplay stats.
+ * Does NOT include custom_settings (saved via Settings button only).
+ * Does NOT include character identity fields (saved via CharacterCreate/Gallery only).
  */
-function buildSafeSnapshot(store: ReturnType<typeof usePlayerStore.getState>): string {
+function buildGameplaySnapshot(store: ReturnType<typeof usePlayerStore.getState>): string {
   return JSON.stringify({
     fear: store.fear,
     watermelons: store.watermelons,
     boss_level: store.bossLevel,
     telekinesis_level: store.character?.telekinesisLevel ?? 1,
-    custom_settings: {
-      buttonSize: store.settings.buttonSize,
-      fontFamily: store.settings.fontFamily,
-      fontSize: store.settings.fontSize,
-      fontBrightness: store.settings.fontBrightness,
-      theme: store.settings.theme,
-      musicVolume: store.settings.musicVolume,
-      ttsEnabled: store.settings.ttsEnabled,
-      wishes: store.character?.wishes ?? [],
-      inventory: store.inventory ?? [],
-    },
   });
 }
