@@ -101,6 +101,8 @@ export default function CharacterCreate() {
   const [wishes, setWishes] = useState<string[]>([]);
   const [selectedDefaultImage, setSelectedDefaultImage] = useState<string | null>(null);
   const [step, setStep] = useState(1);
+  const [dbTemplates, setDbTemplates] = useState<Array<{ id: string; image_url: string; label: string | null }>>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   const [generatedName, setGeneratedName] = useState<string>("");
   const [generatedLore, setGeneratedLore] = useState<string>("");
