@@ -1,0 +1,2 @@
+ALTER TABLE public.pvp_rooms REPLICA IDENTITY FULL;
+ALTER TABLE public.pvp_room_members REPLICA IDENTITY FULL;
