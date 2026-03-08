@@ -475,7 +475,7 @@ export default function Chat() {
               "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
             },
             body: JSON.stringify({
-              chat_key: chatKey,
+              chat_key: effectiveChatKey,
               sender_name: myName,
               sender_telegram_id: profile?.telegram_id,
               message_content: content,
