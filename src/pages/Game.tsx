@@ -414,7 +414,7 @@ export default function Game() {
       difficulty: diff,
     };
 
-    let countdown = 60;
+    let countdown = 120;
     if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
     bgGenIntervalRef.current = setInterval(() => {
       countdown -= 1;
