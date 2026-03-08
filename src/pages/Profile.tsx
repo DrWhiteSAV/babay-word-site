@@ -250,35 +250,39 @@ export default function Profile() {
           </section>
         )}
 
-        {/* Avatar & Info */}
-        <section className="flex flex-col items-center text-center">
-          <div className="w-32 h-32 rounded-full border-4 border-red-900/50 overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.2)] bg-neutral-900 mb-4 relative">
+        {/* Avatar & Info — hub-style horizontal card */}
+        <section className="bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl overflow-hidden">
+          <div className="relative w-full aspect-[16/9] md:w-1/2 md:mx-auto">
             <img
               src={character.avatarUrl}
               alt={character.name}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
               referrerPolicy="no-referrer"
               crossOrigin="anonymous"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+            <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(220,38,38,0.25)] pointer-events-none" />
           </div>
-          <h2
-            className="text-3xl font-black text-white uppercase tracking-wider"
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            {character.name}
-          </h2>
-          <p className="text-red-500 text-sm mt-1 uppercase tracking-widest">
-            {character.gender} • {character.style}
-          </p>
-          <div className="flex gap-2 mt-4 flex-wrap justify-center">
-            {character.wishes.map((w, i) => (
-              <span
-                key={i}
-                className="px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-full text-xs text-neutral-400"
-              >
-                {w}
-              </span>
-            ))}
+          <div className="px-5 py-4 text-center">
+            <h2
+              className="text-3xl font-black text-white uppercase tracking-wider"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              {character.name}
+            </h2>
+            <p className="text-red-500 text-sm mt-1 uppercase tracking-widest">
+              {character.gender} • {character.style}
+            </p>
+            <div className="flex gap-2 mt-4 flex-wrap justify-center">
+              {character.wishes.map((w, i) => (
+                <span
+                  key={i}
+                  className="px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-full text-xs text-neutral-400"
+                >
+                  {w}
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 
