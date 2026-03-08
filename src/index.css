@@ -54,33 +54,41 @@ body {
   transition: font-family 0.3s ease;
 }
 
-/* Cyberpunk Theme Overrides */
+/* ============================================================
+   THEME BLOCK SYSTEM
+   To add a new theme: copy a .theme-X block below and change colors.
+   All UI blocks have data-theme-block="..." attributes for targeted overrides.
+   ============================================================ */
+
+/* ── Cyberpunk Theme ── */
 .theme-cyberpunk {
   --tw-bg-opacity: 1;
   background-color: #050510 !important;
   color: #00ffcc !important;
 }
 
+/* Borders */
 .theme-cyberpunk .border,
 .theme-cyberpunk .border-b,
 .theme-cyberpunk .border-t,
 .theme-cyberpunk .border-l,
-.theme-cyberpunk .border-r {
+.theme-cyberpunk .border-r,
+.theme-cyberpunk [class*="border-neutral"],
+.theme-cyberpunk [class*="border-red"] {
   border-color: rgba(0, 255, 204, 0.3) !important;
 }
 
-.theme-cyberpunk .bg-neutral-900,
-.theme-cyberpunk .bg-neutral-900\/80,
-.theme-cyberpunk .bg-neutral-900\/90,
-.theme-cyberpunk .bg-neutral-950,
-.theme-cyberpunk .bg-neutral-950\/80,
-.theme-cyberpunk .bg-neutral-800 {
-  background-color: rgba(10, 10, 30, 0.8) !important;
+/* Dark backgrounds */
+.theme-cyberpunk [class*="bg-neutral-900"],
+.theme-cyberpunk [class*="bg-neutral-950"],
+.theme-cyberpunk [class*="bg-neutral-800"] {
+  background-color: rgba(10, 10, 30, 0.85) !important;
   backdrop-filter: blur(4px);
   border-color: rgba(0, 255, 204, 0.2) !important;
   box-shadow: inset 0 0 20px rgba(0, 255, 204, 0.05);
 }
 
+/* Text colours */
 .theme-cyberpunk .text-white,
 .theme-cyberpunk .text-neutral-200,
 .theme-cyberpunk .text-neutral-300 {
@@ -89,23 +97,32 @@ body {
 }
 
 .theme-cyberpunk .text-red-500,
-.theme-cyberpunk .text-red-400 {
+.theme-cyberpunk .text-red-400,
+.theme-cyberpunk .text-red-600 {
   color: #ff0055 !important;
   text-shadow: 0 0 8px rgba(255, 0, 85, 0.6);
 }
 
-.theme-cyberpunk .bg-red-700,
-.theme-cyberpunk .bg-red-600 {
+/* Red buttons — only the hub play button gets clip-path skew */
+.theme-cyberpunk .hub-play-btn {
   background-color: #ff0055 !important;
   color: #fff !important;
   box-shadow: 0 0 15px #ff0055 !important;
   border: 1px solid #ff88aa !important;
   text-transform: uppercase;
   letter-spacing: 2px;
-  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+  clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%) !important;
   border-radius: 0 !important;
 }
 
+/* Other red bg elements (non-button, non-play) */
+.theme-cyberpunk .bg-red-700:not(.hub-play-btn),
+.theme-cyberpunk .bg-red-600:not(.hub-play-btn) {
+  background-color: #ff0055 !important;
+  box-shadow: 0 0 10px rgba(255, 0, 85, 0.4) !important;
+}
+
+/* Green accents */
 .theme-cyberpunk .bg-green-500,
 .theme-cyberpunk .text-green-500 {
   color: #00ffcc !important;
@@ -114,22 +131,23 @@ body {
   box-shadow: 0 0 10px rgba(0, 255, 204, 0.4) !important;
 }
 
+/* Generic buttons — NO clip-path by default (preserves layout);
+   Only decorative skew on hub play button above */
 .theme-cyberpunk button {
-  border-radius: 0 !important;
-  clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
   text-transform: uppercase;
   letter-spacing: 1px;
   position: relative;
 }
 
 .theme-cyberpunk button:hover {
-  background-color: rgba(0, 255, 204, 0.2) !important;
-  box-shadow: 0 0 15px rgba(0, 255, 204, 0.5) !important;
+  background-color: rgba(0, 255, 204, 0.15) !important;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.4) !important;
 }
 
+/* Hide fog in cyberpunk */
 .theme-cyberpunk .fog-layer,
 .theme-cyberpunk .fog-layer-2 {
-  display: none; /* Hide fog in cyberpunk */
+  display: none;
 }
 
 /* Cyberpunk Grid Background */
@@ -138,19 +156,12 @@ body {
   position: fixed;
   inset: 0;
   background-image: 
-    linear-gradient(rgba(0, 255, 204, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 204, 0.1) 1px, transparent 1px);
+    linear-gradient(rgba(0, 255, 204, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 204, 0.07) 1px, transparent 1px);
   background-size: 30px 30px;
   pointer-events: none;
   z-index: 0;
-  transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
-  animation: gridMove 20s linear infinite;
-  opacity: 0.3;
-}
-
-@keyframes gridMove {
-  0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
-  100% { transform: perspective(500px) rotateX(60deg) translateY(30px) translateZ(-200px); }
+  opacity: 0.4;
 }
 
 /* Cyberpunk Scanline */
@@ -158,11 +169,42 @@ body {
   content: "";
   position: fixed;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 204, 0.05) 51%, transparent 51%);
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 204, 0.04) 51%, transparent 51%);
   background-size: 100% 4px;
   pointer-events: none;
   z-index: 50;
   animation: scanline 8s linear infinite;
+}
+
+/* ── Per-block overrides (data-theme-block) ──
+   Example for future themes:
+   .theme-horror [data-theme-block="hub-avatar"] { border-color: crimson; }
+   .theme-steampunk [data-theme-block="hub-play"]  { background: goldenrod; }
+*/
+.theme-cyberpunk [data-theme-block="hub-leaderboard"],
+.theme-cyberpunk [data-theme-block="hub-settings"],
+.theme-cyberpunk [data-theme-block="hub-gallery"],
+.theme-cyberpunk [data-theme-block="hub-shop"],
+.theme-cyberpunk [data-theme-block="hub-friends"] {
+  border-color: rgba(0, 255, 204, 0.25) !important;
+  box-shadow: inset 0 0 12px rgba(0, 255, 204, 0.04);
+}
+
+/* Cutscene overlay — never affected by theme transforms */
+.cutscene-overlay {
+  clip-path: none !important;
+  border-radius: 0 !important;
+}
+.theme-cyberpunk .cutscene-overlay button {
+  clip-path: none !important;
+  border-radius: 8px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+@keyframes gridMove {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 30px; }
 }
 
 /* ============================================================

@@ -103,7 +103,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center">
+    <div className="cutscene-overlay fixed inset-0 z-[9999] bg-black flex items-center justify-center">
       {isLoading && !needsInteraction && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-neutral-950 overflow-hidden">
           <div
@@ -148,7 +148,11 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
           />
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
           <div className="relative z-20 flex flex-col items-center">
-            <button onClick={handleManualPlay} className="transition-transform hover:scale-110 active:scale-95">
+            <button
+              onClick={handleManualPlay}
+              style={{ clipPath: 'none', borderRadius: '50%', letterSpacing: 'normal', textTransform: 'none' }}
+              className="transition-transform hover:scale-110 active:scale-95"
+            >
               <img
                 src="https://i.ibb.co/BVgY7XrT/babai.png"
                 alt="Babai Logo"
@@ -177,15 +181,19 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
         />
       )}
 
-      {/* Skip button */}
+      {/* Skip button — always readable regardless of theme */}
       <button
         onClick={onComplete}
-        className="absolute top-32 right-4 z-20 text-white/50 hover:text-white/90 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors text-xs"
         style={{
-          background: "rgba(0,0,0,0.25)",
+          clipPath: 'none',
+          borderRadius: '9999px',
+          textTransform: 'none',
+          letterSpacing: 'normal',
+          background: "rgba(0,0,0,0.35)",
           backdropFilter: "blur(4px)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.12)",
         }}
+        className="absolute top-32 right-4 z-30 text-white/60 hover:text-white/90 px-3 py-1.5 flex items-center gap-1.5 transition-colors text-xs"
       >
         <span>Пропустить</span>
         <SkipForward size={13} />
