@@ -946,8 +946,14 @@ export default function Game() {
       <header className="relative z-10 flex justify-between items-center p-4 bg-neutral-950/50 backdrop-blur-sm border-b border-neutral-800">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              if (pvpRoomId || pvpParticipants.length > 0) {
+            onClick={async () => {
+              if (pvpRoomId && tgId) {
+                // PVP real room: write timeout immediately then go to lobby
+                exitedEarlyRef.current = true;
+                pvpSavedRef.current = true;
+                await writePvpTimeout(pvpRoomId, tgId);
+                navigate(`/pvp/room/${pvpRoomId}`, { replace: true });
+              } else if (pvpParticipants.length > 0) {
                 exitedEarlyRef.current = true;
                 setExitedEarly(true);
                 setIsGameOver(true);
