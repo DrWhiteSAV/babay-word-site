@@ -46,13 +46,15 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [showProfilePopup, setShowProfilePopup] = useState<string | null>(null);
+  const [showProfilePopup, setShowProfilePopup] = useState<{ name: string; telegramId?: number } | null>(null);
   const [replyToMsg, setReplyToMsg] = useState<Message | null>(null);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [selectedFriends, setSelectedFriends] = useState<string[]>(group?.members || []);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  // avatar_url cache: characterName -> url
+  const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
 
   const [aiCountdown, setAiCountdown] = useState(0);
   const [aiTimedOut, setAiTimedOut] = useState(false);
@@ -73,9 +75,31 @@ export default function Chat() {
   const [friendTelegramId, setFriendTelegramId] = useState<number | null>(null);
   useEffect(() => {
     if (!friendName) return;
-    supabase.from("player_stats").select("telegram_id").ilike("character_name", friendName).single()
-      .then(({ data }) => { if (data) setFriendTelegramId(data.telegram_id); });
+    supabase.from("player_stats").select("telegram_id, avatar_url").ilike("character_name", friendName).maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setFriendTelegramId(data.telegram_id);
+          if (data.avatar_url) setAvatarCache(p => ({ ...p, [friendName]: data.avatar_url! }));
+        }
+      });
   }, [friendName]);
+
+  // Load avatars for group members
+  useEffect(() => {
+    if (!group || group.members.length === 0) return;
+    const names = group.members.filter(m => m !== "ДанИИл");
+    if (names.length === 0) return;
+    supabase.from("player_stats").select("character_name, avatar_url")
+      .in("character_name", names)
+      .then(({ data }) => {
+        if (!data) return;
+        const entries: Record<string, string> = {};
+        for (const row of data) {
+          if (row.character_name && row.avatar_url) entries[row.character_name] = row.avatar_url;
+        }
+        if (Object.keys(entries).length > 0) setAvatarCache(p => ({ ...p, ...entries }));
+      });
+  }, [group?.id]);
 
   const onlineMap = useFriendOnlineStatus(friendTelegramId ? [friendTelegramId] : []);
   const isFriendOnline = friendTelegramId ? onlineMap[friendTelegramId] : false;
