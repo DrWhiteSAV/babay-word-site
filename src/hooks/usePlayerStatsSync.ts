@@ -175,6 +175,7 @@ export function usePlayerStatsSync() {
           bossLevel: typeof data.boss_level === "number" ? data.boss_level : 0,
           settings,
           inventory,
+          friends: friendsList,
           gameStatus,
           dbLoaded: true,
         });
