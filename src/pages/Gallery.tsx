@@ -25,6 +25,7 @@ export default function Gallery() {
   const { playClick } = useAudio(settings.musicVolume);
   const { profile, isLoading: tgLoading } = useTelegram();
   const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+  const [selectedLore, setSelectedLore] = useState<string | null>(null);
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<Section>("all");
