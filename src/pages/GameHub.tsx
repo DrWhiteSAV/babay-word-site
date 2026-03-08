@@ -109,8 +109,8 @@ export default function GameHub() {
           data-theme-block="hub-avatar"
           className="w-full flex flex-col items-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl overflow-hidden hover:border-red-900/40 active:scale-[0.98] transition-all"
         >
-          {/* Mobile: tall portrait, Desktop: half height (16/9 aspect) */}
-          <div className="relative w-full aspect-[16/9]">
+          {/* Horizontal 16:9 — full width mobile, half width on desktop */}
+          <div className="relative w-full md:w-1/2 md:self-center aspect-[16/9]">
             <img
               src={character.avatarUrl}
               alt={character.name}

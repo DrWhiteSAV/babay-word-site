@@ -51,13 +51,17 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
       videosLoadedRef.current = true;
       const raw = videos[Math.floor(Math.random() * videos.length)];
       setVideoUrl(raw);
-    } else if (!videosLoadedRef.current) {
-      const fallbackTimer = setTimeout(() => {
-        if (!videosLoadedRef.current) onComplete();
-      }, 3000);
-      return () => clearTimeout(fallbackTimer);
     }
-  }, [videoCutscenes, onComplete]);
+    // Don't skip if empty — wait for async load from Supabase (handled by separate timer below)
+  }, [videoCutscenes]);
+
+  // Fallback: if after 6s still no video loaded from DB, skip cutscene
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      if (!videosLoadedRef.current) onComplete();
+    }, 6000);
+    return () => clearTimeout(fallbackTimer);
+  }, [onComplete]);
 
   // Show "tap to start" immediately — don't wait for canplay
   useEffect(() => {
@@ -193,7 +197,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
           backdropFilter: "blur(4px)",
           border: "1px solid rgba(255,255,255,0.12)",
         }}
-        className="absolute top-32 right-4 z-30 text-white/60 hover:text-white/90 px-3 py-1.5 flex items-center gap-1.5 transition-colors text-xs"
+        className="cutscene-skip-btn absolute top-4 right-4 z-30 text-white/60 hover:text-white/90 px-3 py-1.5 flex items-center gap-1.5 transition-colors text-xs"
       >
         <span>Пропустить</span>
         <SkipForward size={13} />
