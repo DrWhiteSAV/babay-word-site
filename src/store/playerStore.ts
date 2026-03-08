@@ -126,6 +126,8 @@ export interface PlayerState {
   storeConfig: StoreConfig;
   // Flag: DB has been loaded - prevents stale localStorage from overwriting
   dbLoaded: boolean;
+  // game_status from DB — if 'reset', sync-to-DB is blocked to prevent old data overwriting
+  gameStatus: string;
   setCharacter: (char: Character) => void;
   updateCharacter: (updates: Partial<Character>) => void;
   addFear: (amount: number) => void;
