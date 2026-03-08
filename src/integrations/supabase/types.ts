@@ -164,6 +164,60 @@ export type Database = {
         }
         Relationships: []
       }
+      avatars: {
+        Row: {
+          created_at: string
+          gallery_item_id: string | null
+          gender: string | null
+          id: string
+          image_url: string
+          lore: string | null
+          name: string
+          style: string | null
+          telegram_id: number
+          wishes: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          gallery_item_id?: string | null
+          gender?: string | null
+          id?: string
+          image_url: string
+          lore?: string | null
+          name?: string
+          style?: string | null
+          telegram_id: number
+          wishes?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          gallery_item_id?: string | null
+          gender?: string | null
+          id?: string
+          image_url?: string
+          lore?: string | null
+          name?: string
+          style?: string | null
+          telegram_id?: number
+          wishes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatars_gallery_item_id_fkey"
+            columns: ["gallery_item_id"]
+            isOneToOne: false
+            referencedRelation: "gallery"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatars_telegram_id_fkey"
+            columns: ["telegram_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["telegram_id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           chat_key: string | null
