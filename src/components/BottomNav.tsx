@@ -93,12 +93,11 @@ export default function BottomNav() {
       ),
       label: "Профиль",
     },
-    { path: "/settings", icon: <Settings size={24} />, label: "Настройки" },
     {
-      path: "/friends",
+      path: "/chats",
       icon: (
         <div className="relative">
-          <Users size={24} />
+          <MessageSquare size={24} />
           {unreadCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -106,6 +105,11 @@ export default function BottomNav() {
           )}
         </div>
       ),
+      label: "Чаты",
+    },
+    {
+      path: "/friends",
+      icon: <Users size={24} />,
       label: "Друзья",
     },
   ];

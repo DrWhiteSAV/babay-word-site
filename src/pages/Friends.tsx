@@ -665,40 +665,6 @@ export default function Friends() {
 
       </div>
 
-      {/* Create Group Modal */}
-      {showGroupModal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-white">Создать групповой чат</h3>
-              <button onClick={() => setShowGroupModal(false)} className="text-neutral-500 hover:text-white"><X size={22} /></button>
-            </div>
-            <input
-              value={newGroupName}
-              onChange={e => setNewGroupName(e.target.value)}
-              placeholder="Название группы..."
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-900"
-            />
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {friends.filter(f => f.name !== "ДанИИл").map(f => (
-                <label key={f.name} className="flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-neutral-800 transition-colors">
-                  <input type="checkbox" checked={selectedFriends.includes(f.name)} onChange={() => toggleFriendSelection(f.name)} className="accent-red-600" />
-                  <span className="text-white text-sm">{f.name}</span>
-                </label>
-              ))}
-            </div>
-            <button
-              onClick={handleCreateGroup}
-              disabled={!newGroupName.trim() || selectedFriends.length === 0}
-              className="w-full py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 rounded-xl text-white font-bold transition-colors"
-            >
-              Создать
-            </button>
-          </motion.div>
-        </div>
-      )}
-
       {/* Energy Gift Modal */}
       <AnimatePresence>
         {energyModal && (
