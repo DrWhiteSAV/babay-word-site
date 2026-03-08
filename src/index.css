@@ -15,6 +15,9 @@
   --font-neucha: "Neucha", cursive;
   --font-ruslan-display: "Ruslan Display", cursive;
   --font-tektur: "Tektur", sans-serif;
+  --font-special-elite: "Special Elite", cursive;
+  --font-cinzel-decorative: "Cinzel Decorative", cursive;
+  --font-nunito: "Nunito", sans-serif;
 
   --animate-fog: fog 60s linear infinite;
   --animate-zoom-pulse: zoom-pulse 30s ease-in-out infinite;
