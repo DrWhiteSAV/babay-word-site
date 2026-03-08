@@ -27,7 +27,7 @@ async function generateAndSaveAvatar(
   const genderDesc = character.gender === "Бабайка" ? "женский" : "мужской";
   const wishesStr = (character.wishes || []).join(", ") || "обычная внешность";
   const loreSnippet = character.lore ? ` Лор: ${character.lore.substring(0, 150)}.` : "";
-  const prompt = `Нарисуй обновлённый портрет славянского духа по имени ${character.name} (пол: ${genderDesc}). Стиль: ${character.style}. Особые приметы: ${wishesStr}.${loreSnippet} Ранее купленные предметы: ${allOwnedItems.slice(0, -1).join(", ") || "нет"}. НОВЫЙ предмет: ${newItemName} — должен быть заметно виден. Высокое качество.`;
+  const prompt = `Нарисуй обновлённый горизонтальный портрет славянского духа по имени ${character.name} (пол: ${genderDesc}). Стиль: ${character.style}. Особые приметы: ${wishesStr}.${loreSnippet} Ранее купленные предметы: ${allOwnedItems.slice(0, -1).join(", ") || "нет"}. НОВЫЙ предмет: ${newItemName} — должен быть заметно виден. Горизонтальная ориентация (landscape, 16:9). Высокое качество. Тёмный фон.`;
 
   // Step 1: Generate via ProTalk
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/protalk-ai`, {
