@@ -328,6 +328,7 @@ export async function generateMyAiReply(
   character: any,
   chatHistory: { sender: string; text: string }[] = [],
   telegramId?: number,
+  chatKey?: string,
 ): Promise<string> {
   try {
     // Only last 4 messages for context
@@ -345,7 +346,12 @@ export async function generateMyAiReply(
     const lastMsgLine = lastFriendMsg ? `\nПоследнее сообщение от ${friendName}: «${lastFriendMsg.text}» — ответь ИМЕННО на него.` : "";
     const loreLine = character?.lore ? `\nЛор Бабая: ${character.lore}` : "";
     const prompt = `Ты — ИИ-заместитель игрока по имени ${character?.name || "Бабай"} (пол: ${character?.gender || "Бабай"}, стиль мира: ${character?.style || "Хоррор"}).${loreLine} Твой друг — ${friendName}.${historyText}${lastMsgLine}\nНапиши короткий (1-3 предложения) ответ от лица ${character?.name || "Бабай"} другу ${friendName}. В стиле персонажа, без кавычек, без пояснений.`;
-    const { text } = await callAI("protalk-text", prompt, telegramId);
+    // Use a stable chat_id based on chatKey (per-pair) to avoid ProTalk session LIMIT errors.
+    // telegramId-based chat_id (tb<id>_<botId>) gets rate-limited when reused across many sessions.
+    const stableTelegramId = chatKey
+      ? undefined // will be ignored in protalk-ai when we pass chatKey
+      : telegramId;
+    const { text } = await callAI("protalk-text", prompt, stableTelegramId, chatKey);
     return text.trim() || "Привет!";
   } catch (e) {
     console.error("[AI] My reply gen error:", e);
