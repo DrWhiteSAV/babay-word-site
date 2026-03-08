@@ -104,20 +104,15 @@ export default function PvpSetup() {
       await supabase.from("pvp_room_members").insert(invites);
     }
 
-    // Send PVP invite via in-app chat message to each invited friend
-    // ONE row per chat — chat_key is shared and Chat.tsx loads ALL messages by chat_key
-    // sender_telegram_id determines isUser: organizer sees "Открыть комнату", friend sees "Войти в комнату"
+    // Send PVP invite via in-app chat message + Telegram notification
     const organizerName = character.name || profile?.first_name || "Бабай";
     const diffLabel = difficulty === "Сложная" ? "Сложная (15 этапов + Босс)" : "Невозможная (45 этапов + Босс ×2)";
+    const appLink = "https://t.me/Bab_AIbot/app";
 
     for (const tid of selected) {
       const chatKey = [tgId, tid].map(String).sort().join('_');
       const pvpContent = `[pvp]:${roomId}\n⚔️ ${organizerName} приглашает тебя в PVP!\n🎮 Режим: ${diffLabel}`;
       try {
-        // Single row — visible to both participants via shared chat_key
-        // role: "user" + sender_telegram_id = organizer's tgId
-        // In Chat.tsx: isUser = (sender_telegram_id === myTid)
-        // → organizer sees "Открыть комнату", invited friend sees "Войти в комнату PVP"
         await supabase.from("chat_messages").insert({
           chat_key: chatKey,
           telegram_id: tgId,
@@ -129,6 +124,22 @@ export default function PvpSetup() {
         } as any);
       } catch (e) {
         console.error("[PvpSetup] chat notify error", e);
+      }
+
+      // Send Telegram push notification with app link button
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await supabase.functions.invoke("send-telegram-notification", {
+          body: {
+            telegram_id: tid,
+            caption: `⚔️ *${organizerName}* вызывает тебя на PVP-битву!\n\n🎮 Режим: ${diffLabel}\n🏠 Комната: \`${roomId}\`\n\nПрими вызов — покажи кто настоящий Бабай! 👻`,
+            inline_keyboard: [[
+              { text: "⚔️ Принять вызов!", url: appLink },
+            ]],
+          },
+        });
+      } catch (e) {
+        console.error("[PvpSetup] telegram notify error", e);
       }
     }
 
