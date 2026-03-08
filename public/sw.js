@@ -1,5 +1,5 @@
-const CACHE_NAME = 'babai-v1';
-const ASSET_CACHE = 'babai-assets-v1';
+const CACHE_NAME = 'babai-v2';
+const ASSET_CACHE = 'babai-assets-v2';
 
 // URLs to cache on install
 const PRECACHE_URLS = ['/'];
@@ -23,7 +23,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Cache images, videos and audio from external CDNs
+  // Cache ONLY static media files — NEVER supabase.co (API responses must always be fresh)
   const isAsset =
     event.request.destination === 'image' ||
     event.request.destination === 'video' ||
@@ -31,8 +31,8 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('ibb.co') ||
     url.hostname.includes('pixabay.com') ||
     url.hostname.includes('unsplash.com') ||
-    url.hostname.includes('picsum.photos') ||
-    url.hostname.includes('supabase.co');
+    url.hostname.includes('picsum.photos');
+    // supabase.co intentionally excluded — DB/API calls must never be cached
 
   if (isAsset) {
     event.respondWith(

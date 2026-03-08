@@ -36,7 +36,14 @@ export function detectEntryMode(): EntryMode {
   const hostname = window.location.hostname;
   const href = window.location.href;
 
-  // Lovable EDITOR iframe (preview inside editor)
+  // 1. FIRST: check for real Telegram WebApp data — Telegram Mini App runs in an iframe too,
+  //    so we must check SDK BEFORE any iframe detection to avoid false "lovable" detection.
+  const tg = (window as any).Telegram?.WebApp;
+  if (tg?.initDataUnsafe?.user || (tg?.initData && tg.initData.length > 0)) {
+    return "telegram";
+  }
+
+  // 2. Lovable EDITOR iframe (preview inside editor) — only if no Telegram SDK data
   try {
     const isInIframe = window.self !== window.top;
     if (isInIframe) return "lovable";
@@ -44,7 +51,7 @@ export function detectEntryMode(): EntryMode {
     return "lovable";
   }
 
-  // Lovable preview/dev hostnames (NOT the published app)
+  // 3. Lovable preview/dev hostnames (NOT the published app)
   if (
     href.includes("id-preview--") ||
     hostname.includes("lovable.dev") ||
@@ -52,12 +59,6 @@ export function detectEntryMode(): EntryMode {
     hostname === "127.0.0.1"
   ) {
     return "lovable";
-  }
-
-  // Check Telegram WebApp SDK
-  const tg = (window as any).Telegram?.WebApp;
-  if (tg?.initDataUnsafe?.user || (tg?.initData && tg.initData.length > 0)) {
-    return "telegram";
   }
 
   return "browser";
