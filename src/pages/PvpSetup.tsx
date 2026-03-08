@@ -200,6 +200,50 @@ export default function PvpSetup() {
 
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
 
+        {/* Connection Test */}
+        <section className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-xl">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {connStatus === "ok" ? (
+                <Wifi size={18} className="text-green-400" />
+              ) : connStatus === "error" ? (
+                <WifiOff size={18} className="text-red-400" />
+              ) : (
+                <Wifi size={18} className="text-neutral-500" />
+              )}
+              <div>
+                <p className="text-sm font-bold text-white">Тест связи с ИИ</p>
+                <p className="text-xs text-neutral-500">
+                  {connStatus === "idle" && "Проверьте связь перед началом"}
+                  {connStatus === "checking" && "Проверка..."}
+                  {connStatus === "ok" && `ИИ отвечает: «${connMessage}»`}
+                  {connStatus === "error" && `Ошибка: ${connMessage}`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={checkConnection}
+              disabled={connStatus === "checking"}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                connStatus === "ok"
+                  ? "bg-green-700/40 border border-green-600 text-green-300"
+                  : connStatus === "error"
+                  ? "bg-red-700/40 border border-red-600 text-red-300 hover:bg-red-700/60"
+                  : "bg-neutral-800 border border-neutral-700 text-white hover:bg-neutral-700"
+              }`}
+            >
+              {connStatus === "checking" ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : connStatus === "ok" ? (
+                <Check size={13} />
+              ) : (
+                <RefreshCw size={13} />
+              )}
+              {connStatus === "ok" ? "Готово" : connStatus === "error" ? "Повторить" : "Проверить"}
+            </button>
+          </div>
+        </section>
+
         {/* Step 1 — Select friends */}
         <section>
           <div className="flex items-center gap-2 mb-3">
