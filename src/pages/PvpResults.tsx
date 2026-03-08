@@ -208,9 +208,16 @@ export default function PvpResults() {
         {/* Bank */}
         <div className="p-3 bg-neutral-900/60 border border-neutral-800 rounded-xl flex justify-between items-center">
           <span className="text-neutral-400 text-sm">Общий банк</span>
-          <span className="font-black text-red-400 flex items-center gap-1.5">
-            <Skull size={14} />{totalFear} Страха
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-black text-red-400 flex items-center gap-1">
+              <Skull size={14} />{totalFear}
+            </span>
+            {totalWatermelons > 0 && (
+              <span className="font-black text-green-400 flex items-center gap-1">
+                🍉{totalWatermelons}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* All ranked members */}
