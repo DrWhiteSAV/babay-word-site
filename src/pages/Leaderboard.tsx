@@ -9,6 +9,19 @@ import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import { notifyFriendAdded } from "../services/friendNotify";
 
+interface AchievementRow {
+  id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  icon: string | null;
+  condition_type: string;
+  condition_value: number | null;
+  reward_fear: number | null;
+  reward_watermelons: number | null;
+  is_active: boolean;
+}
+
 type SortKey = "fear" | "watermelons" | "boss_level" | "energy" | "telekinesis_level";
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: any; color: string }[] = [
