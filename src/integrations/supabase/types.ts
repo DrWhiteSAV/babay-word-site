@@ -166,27 +166,36 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          chat_key: string | null
           content: string
           created_at: string
           friend_name: string
           id: string
+          read_at: string | null
           role: string
+          sender_telegram_id: number | null
           telegram_id: number
         }
         Insert: {
+          chat_key?: string | null
           content: string
           created_at?: string
           friend_name: string
           id?: string
+          read_at?: string | null
           role: string
+          sender_telegram_id?: number | null
           telegram_id: number
         }
         Update: {
+          chat_key?: string | null
           content?: string
           created_at?: string
           friend_name?: string
           id?: string
+          read_at?: string | null
           role?: string
+          sender_telegram_id?: number | null
           telegram_id?: number
         }
         Relationships: [
