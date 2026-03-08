@@ -65,10 +65,10 @@ export function detectEntryMode(): EntryMode {
 
 const LOVABLE_SUPER_USER: TelegramProfile = {
   id: "lovable-dev",
-  telegram_id: 169262991,
-  first_name: "Создатель",
-  last_name: null,
-  username: null,
+  telegram_id: 0,
+  first_name: "Lovable",
+  last_name: "Dev",
+  username: "lovable_dev",
   profile_url: null,
   photo_url: null,
   referral_code: null,
@@ -92,9 +92,15 @@ export function useTelegramAuth() {
       const mode = detectEntryMode();
       setEntryMode(mode);
 
-      // Lovable editor or browser → give super admin access (tgId=169262990 for testing)
-      if (mode === "lovable" || mode === "browser") {
+      // Lovable editor → give super admin access immediately, no DB call
+      if (mode === "lovable") {
         setProfile(LOVABLE_SUPER_USER);
+        setIsLoading(false);
+        return;
+      }
+
+      // Browser (not Telegram, not Lovable) → show warning page, no registration
+      if (mode === "browser") {
         setIsLoading(false);
         return;
       }

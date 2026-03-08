@@ -11,7 +11,3 @@ verify_jwt = false
 
 [functions.protalk-ai]
 verify_jwt = false
-
-[functions.upload-to-imgbb]
-verify_jwt = false
-

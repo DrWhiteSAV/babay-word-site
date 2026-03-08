@@ -8,6 +8,7 @@ import { transliterate } from "../utils/transliterate";
 import ProfilePopup from "../components/ProfilePopup";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
+import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
 
 export default function Friends() {
   const navigate = useNavigate();
@@ -23,72 +24,45 @@ export default function Friends() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [referralCount, setReferralCount] = useState(0);
-  const [referralFriends, setReferralFriends] = useState<Array<{first_name: string; username: string | null; character_name?: string | null}>>([]);
+  const [referralFriends, setReferralFriends] = useState<Array<{first_name: string; username: string | null}>>([]);
   const [showReferralList, setShowReferralList] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
   useEffect(() => {
-    if (!profile?.telegram_id) return;
-    // Count referrals by looking for profiles with this telegram_id as referral_code
+    if (!character) return;
+    const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
     supabase
       .from("profiles")
-      .select("first_name, username, telegram_id")
-      .eq("referral_code", String(profile.telegram_id))
-      .then(async ({ data }) => {
-        if (data && data.length > 0) {
+      .select("first_name, username")
+      .eq("referral_code", latinName)
+      .then(({ data }) => {
+        if (data) {
           setReferralCount(data.length);
-          // Get character names for each referral
-          const telegramIds = data.map(d => d.telegram_id);
-          const { data: statsData } = await supabase
-            .from("player_stats")
-            .select("telegram_id, character_name")
-            .in("telegram_id", telegramIds);
-          const statsMap = Object.fromEntries((statsData || []).map(s => [s.telegram_id, s.character_name]));
-          setReferralFriends(data.map(d => ({
-            first_name: d.first_name,
-            username: d.username,
-            character_name: statsMap[d.telegram_id] || null,
-          })));
+          setReferralFriends(data);
         }
       });
-  }, [profile?.telegram_id]);
-
-  // Wait for DB before redirecting — character is null until loadStats completes
-  const { dbLoaded } = usePlayerStore();
-
-  useEffect(() => {
-    if (dbLoaded && !character) {
-      navigate("/");
-    }
-  }, [dbLoaded, character]);
-
-  if (!dbLoaded) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
-        <Loader2 size={28} className="animate-spin text-red-700" />
-        <span className="text-sm">Загрузка друзей...</span>
-      </div>
-    );
-  }
+  }, [character]);
 
   if (!character) {
+    navigate("/");
     return null;
   }
 
-  // Referral link uses telegram_id instead of transliterated name
-  const referralLink = `https://t.me/Bab_AIbot/app?startapp=${profile?.telegram_id || ""}`;
+  const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
+  const referralLink = `https://t.me/Bab_AIbot/app?startapp=${latinName}`;
   const tkBonus = Math.max(1, character.telekinesisLevel);
   const fearBonus = 100 * tkBonus;
   const energyBonus = 100 * tkBonus;
 
-  const inviteText = `👻 Привет! Я — ${character.name}, бессмертный кибер-дух Бабай!\n\n🔥 Приглашаю тебя в игру «Бабай» — стань своим Бабаем, пугай жильцов и собирай арбузы!\n\n⚡ Если зайдёшь по моей ссылке — получишь бонус ${energyBonus} энергии и ${fearBonus} страха!\n\n👇 Жми сюда:\n${referralLink}`;
+  const inviteText = `👻 Привет! Я — ${character.name}, бессмертный кибер-дух Бабай!\n\n🔥 Приглашаю тебя в игру «Бабай» — стань своим Бабаем, пугай жильцов и собирай арбузы!\n\n⚡ Если зайдёшь по моей ссылке — получишь бонус ${energyBonus} энергии!\n\n👇 Жми сюда:\n${referralLink}`;
 
   const handleSearchFriend = async () => {
     if (!newFriendInput.trim()) return;
     setSearchStatus("searching");
     setFoundUser(null);
 
-    const query = newFriendInput.trim().toLowerCase().replace(/^@/, "");
+    const query = newFriendInput.trim().toLowerCase();
+    // Search in player_stats by character_name and profiles by username
     const [statsRes, profileRes] = await Promise.all([
       supabase.from("player_stats").select("character_name, telegram_id").ilike("character_name", query).limit(1),
       supabase.from("profiles").select("first_name, username, telegram_id").ilike("username", query).limit(1),
@@ -97,15 +71,16 @@ export default function Friends() {
     const byName = statsRes.data?.[0];
     const byUsername = profileRes.data?.[0];
 
-    if (byName || byUsername) {
+      if (byName || byUsername) {
       const telegramId = (byName?.telegram_id ?? byUsername?.telegram_id)!;
+      // Get full profile
       const { data: prof } = await supabase.from("profiles").select("first_name, username, telegram_id").eq("telegram_id", telegramId).single();
       const { data: stats } = await supabase.from("player_stats").select("character_name").eq("telegram_id", telegramId).single();
       setFoundUser({
         first_name: prof?.first_name || "",
         username: prof?.username || null,
         character_name: stats?.character_name || null,
-        telegram_id: telegramId,
+        telegram_id: telegramId!,
       });
       setSearchStatus("found");
     } else {
@@ -117,6 +92,7 @@ export default function Friends() {
     if (!foundUser) return;
     const nameToAdd = foundUser.character_name || foundUser.first_name;
     addFriend(nameToAdd);
+    // Also persist to DB
     if (profile?.telegram_id) {
       supabase.from("friends").upsert({
         telegram_id: profile.telegram_id,
@@ -176,7 +152,7 @@ export default function Friends() {
   };
 
   const getAvatarUrl = (name: string) => {
-    if (name === "ДанИИл") return "https://i.ibb.co/rKGSq544/image.png";
+    if (name === "ДанИИл") return "https://picsum.photos/seed/danil/100/100";
     return `https://picsum.photos/seed/${name}/100/100`;
   };
 
@@ -192,7 +168,10 @@ export default function Friends() {
         <div className="fog-layer-2"></div>
       </div>
 
-      <Header title={<><Users size={20} /> Друзья</>} backUrl="/hub" />
+      <Header
+        title={<><Users size={20} /> Друзья</>}
+        backUrl="/hub"
+      />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8 relative z-10">
 
@@ -201,7 +180,9 @@ export default function Friends() {
           <h2 className="text-lg font-bold flex items-center gap-2 text-white">
             <Link size={18} className="text-red-500" /> Реферальная программа
           </h2>
-          <p className="text-sm text-neutral-400">Приглашайте друзей и получайте бонусы за каждого нового игрока:</p>
+          <p className="text-sm text-neutral-400">
+            Приглашайте друзей и получайте бонусы за каждого:
+          </p>
           <div className="grid grid-cols-2 gap-2 text-center text-sm">
             <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3">
               <div className="text-2xl font-black text-yellow-400">+{energyBonus}</div>
@@ -216,6 +197,7 @@ export default function Friends() {
             <p className="text-[11px] text-purple-400 text-center">✨ ×{tkBonus} бонус телекинеза уровня {character.telekinesisLevel}!</p>
           )}
 
+          {/* Referral counter */}
           <button
             onClick={() => setShowReferralList(!showReferralList)}
             className="w-full flex items-center justify-between bg-neutral-950 border border-neutral-800 hover:border-red-900/50 rounded-xl px-4 py-3 transition-colors"
@@ -230,10 +212,10 @@ export default function Friends() {
               {referralFriends.map((f, i) => (
                 <div key={i} className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2">
                   <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-bold text-red-400">
-                    {(f.character_name || f.first_name)[0]}
+                    {f.first_name[0]}
                   </div>
                   <div>
-                    <p className="text-white text-sm font-bold">{f.character_name || f.first_name}</p>
+                    <p className="text-white text-sm font-bold">{f.first_name}</p>
                     {f.username && <p className="text-neutral-500 text-xs">@{f.username}</p>}
                   </div>
                 </div>
@@ -241,6 +223,7 @@ export default function Friends() {
             </div>
           )}
 
+          {/* Beautiful invite text block */}
           <div className="bg-neutral-950 border border-neutral-700 rounded-xl p-4 text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap font-mono">
             {inviteText}
           </div>
@@ -329,7 +312,13 @@ export default function Friends() {
                 <div key={chat.id} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800 flex items-center justify-between">
                   {editingGroupId === chat.id ? (
                     <div className="flex-1 flex gap-2 mr-2">
-                      <input type="text" value={editGroupName} onChange={(e) => setEditGroupName(e.target.value)} className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-red-900 text-white" autoFocus />
+                      <input
+                        type="text"
+                        value={editGroupName}
+                        onChange={(e) => setEditGroupName(e.target.value)}
+                        className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-red-900 text-white"
+                        autoFocus
+                      />
                       <button onClick={saveGroupName} className="text-green-500 text-sm font-bold">OK</button>
                       <button onClick={() => setEditingGroupId(null)} className="text-neutral-500 text-sm">Отмена</button>
                     </div>
@@ -337,14 +326,26 @@ export default function Friends() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white block">{chat.name}</span>
-                        <button onClick={() => handleEditGroup(chat.id, chat.name)} className="text-neutral-500 hover:text-white"><Edit2 size={12} /></button>
+                        <button onClick={() => handleEditGroup(chat.id, chat.name)} className="text-neutral-500 hover:text-white">
+                          <Edit2 size={12} />
+                        </button>
                       </div>
                       <span className="text-xs text-neutral-500">{chat.members.length} участников</span>
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <button onClick={() => navigate("/chat", { state: { groupId: chat.id } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"><MessageSquare size={16} /></button>
-                    <button onClick={() => { if (confirm('Удалить группу?')) deleteGroupChat(chat.id); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button>
+                    <button
+                      onClick={() => navigate("/chat", { state: { groupId: chat.id } })}
+                      className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
+                    >
+                      <MessageSquare size={16} />
+                    </button>
+                    <button
+                      onClick={() => { if (confirm('Удалить группу?')) deleteGroupChat(chat.id); }}
+                      className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -363,10 +364,12 @@ export default function Friends() {
                 <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowProfilePopup(friend.name)}>
-                      <img src={getAvatarUrl(friend.name)} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700" />
+                      <div className="relative">
+                        <img src={getAvatarUrl(friend.name)} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700" />
+                        {/* online dot placeholder */}
+                      </div>
                       <div>
                         <span className="font-bold text-white block">{friend.name}</span>
-                        {friend.name === "ДанИИл" && <span className="text-xs text-green-400">ИИ-куратор</span>}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -404,7 +407,13 @@ export default function Friends() {
               <h2 className="text-xl font-bold text-white uppercase tracking-wider">Новая группа</h2>
               <button onClick={() => setShowGroupModal(false)} className="text-neutral-500 hover:text-white"><X size={24} /></button>
             </div>
-            <input type="text" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="Название группы..." className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-900 transition-colors mb-4 text-white" />
+            <input
+              type="text"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="Название группы..."
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-900 transition-colors mb-4 text-white"
+            />
             <h3 className="text-sm font-bold text-neutral-400 mb-2">Выберите участников:</h3>
             <div className="max-h-48 overflow-y-auto space-y-2 mb-4 pr-2">
               {friends.filter(f => f.name !== "ДанИИл").map(friend => (
@@ -414,7 +423,11 @@ export default function Friends() {
                 </label>
               ))}
             </div>
-            <button onClick={handleCreateGroup} disabled={!newGroupName.trim() || selectedFriends.length === 0} className="w-full py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold transition-colors disabled:opacity-50">
+            <button
+              onClick={handleCreateGroup}
+              disabled={!newGroupName.trim() || selectedFriends.length === 0}
+              className="w-full py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold transition-colors disabled:opacity-50"
+            >
               Создать
             </button>
           </motion.div>

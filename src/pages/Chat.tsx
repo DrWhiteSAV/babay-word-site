@@ -146,27 +146,7 @@ export default function Chat() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        // Upload to ImgBB for a shareable direct link
-        try {
-          const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
-          const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
-          const resp = await fetch(`${SUPABASE_URL}/functions/v1/upload-to-imgbb`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({ imageBase64: base64 }),
-          });
-          const data = await resp.json();
-          if (data.url) {
-            setSelectedImage(data.url);
-            return;
-          }
-        } catch (e) {
-          console.warn("[Chat] ImgBB upload failed, using base64 fallback:", e);
-        }
-        setSelectedImage(base64);
-      };
+      reader.onloadend = () => setSelectedImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -207,10 +187,7 @@ export default function Chat() {
       setIsAiTyping(true);
       try {
         const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-        const responseText = await generateFriendChat(
-          userMessage, friend!.name, character!, character?.style || "Обычная",
-          recentMessages, imageToSend || undefined, profile?.telegram_id
-        );
+        const responseText = await generateFriendChat(userMessage, friend!.name, character!, character?.style || "Обычная", recentMessages, imageToSend || undefined);
         const aiMsg: Message = { id: Date.now().toString(), sender: friend!.name, text: responseText, replyTo: newMsg.id };
         setMessages(prev => [...prev, aiMsg]);
         await saveMessageToDB(aiMsg, 'assistant', friend!.name);
@@ -236,10 +213,7 @@ export default function Chat() {
         for (const responder of responders) {
           try {
             const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-            const responseText = await generateFriendChat(
-              userMessage, responder, character!, character?.style || "Обычная",
-              recentMessages, imageToSend || undefined, profile?.telegram_id
-            );
+            const responseText = await generateFriendChat(userMessage, responder, character!, character?.style || "Обычная", recentMessages, imageToSend || undefined);
             const aiMsg: Message = { id: Date.now().toString() + responder, sender: responder, text: responseText, replyTo: newMsg.id };
             setMessages(prev => [...prev, aiMsg]);
           } catch (e) { console.error(e); }
@@ -274,8 +248,8 @@ export default function Chat() {
   };
 
   const getAvatarUrl = (sender: string) => {
-    if (sender === "user") return character?.avatarUrl || "https://i.ibb.co/BVgY7XrT/babai.png";
-    if (sender === "ДанИИл") return "https://i.ibb.co/rKGSq544/image.png";
+    if (sender === "user") return character?.avatarUrl || "https://picsum.photos/seed/user/100/100";
+    if (sender === "ДанИИл") return "https://picsum.photos/seed/danil/100/100";
     return `https://picsum.photos/seed/${sender}/100/100`;
   };
 

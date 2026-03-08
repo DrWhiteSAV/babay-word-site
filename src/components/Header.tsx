@@ -42,7 +42,7 @@ export default function Header({ title, backUrl, onInfoClick, rightContent }: He
     >
       {/* Back Button (absolute top-left, with 1 row padding equivalent) */}
       {backUrl && (
-        <div className="absolute left-4 top-14">
+        <div className="absolute left-4 top-10">
           <div
             role="button"
             onClick={() => navigate(backUrl)}

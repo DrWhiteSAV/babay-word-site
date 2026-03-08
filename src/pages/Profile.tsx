@@ -47,57 +47,38 @@ export default function Profile() {
   // Load referral stats
   useEffect(() => {
     if (!profile) return;
+    const latinName = transliterate(character?.name || "").replace(/\s+/g, "").toLowerCase();
     const loadReferrals = async () => {
-      // Referrals are tracked by telegram_id (the referral_code field contains the inviter's telegram_id)
-      const myTgIdStr = String(profile.telegram_id);
       const { data } = await supabase
         .from("profiles")
         .select("first_name, username, telegram_id")
-        .eq("referral_code", myTgIdStr);
+        .eq("referral_code", latinName);
       if (data) {
         setReferralCount(data.length);
         setReferralFriends(data);
       }
-      // Load who invited the current user: referral_code stores inviter's telegram_id
-      if (profile.referral_code && /^\d+$/.test(profile.referral_code)) {
-        const inviterTgId = parseInt(profile.referral_code, 10);
-        const [{ data: inviterStats }, { data: inviterProf }] = await Promise.all([
-          supabase.from("player_stats").select("character_name").eq("telegram_id", inviterTgId).single(),
-          supabase.from("profiles").select("first_name, username").eq("telegram_id", inviterTgId).single(),
-        ]);
-        if (inviterProf) {
-          setInvitedByProfile({
-            first_name: inviterStats?.character_name || inviterProf.first_name,
-            username: inviterProf.username,
-          });
+      // Load who invited the current user: referral_code = latin name of inviter's babay
+      if (profile.referral_code) {
+        const { data: inviterStats } = await supabase
+          .from("player_stats")
+          .select("character_name, telegram_id")
+          .ilike("character_name", profile.referral_code.replace(/-/g, " "))
+          .limit(1);
+        if (inviterStats?.[0]) {
+          const { data: inviterProf } = await supabase
+            .from("profiles")
+            .select("first_name, username")
+            .eq("telegram_id", inviterStats[0].telegram_id)
+            .single();
+          if (inviterProf) setInvitedByProfile(inviterProf);
         }
-      } else if (profile.referral_code) {
-        // Legacy: referral_code was the babay name (transliterated) — keep backwards compat
-        setInvitedByProfile({ first_name: profile.referral_code, username: null });
       }
     };
     loadReferrals();
-  }, [profile]);
-
-  // Wait for DB to load before redirecting — character is null until loadStats completes
-  const { dbLoaded } = usePlayerStore();
-
-  useEffect(() => {
-    if (dbLoaded && !character) {
-      navigate("/");
-    }
-  }, [dbLoaded, character]);
-
-  if (!dbLoaded) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
-        <Loader2 size={28} className="animate-spin text-red-700" />
-        <span className="text-sm">Загрузка профиля...</span>
-      </div>
-    );
-  }
+  }, [profile, character?.name]);
 
   if (!character) {
+    navigate("/");
     return null;
   }
 
@@ -108,8 +89,8 @@ export default function Profile() {
     setIsGeneratingLore(false);
   };
 
-  const referralLink = `https://t.me/Bab_AIbot/app?startapp=${profile?.telegram_id || ""}`;
-
+  const latinName = transliterate(character.name).replace(/\s+/g, "").toLowerCase();
+  const referralLink = `https://t.me/Bab_AIbot/app?startapp=${latinName}`;
 
   const handleCopyRef = () => {
     navigator.clipboard.writeText(referralLink);

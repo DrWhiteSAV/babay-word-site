@@ -41,7 +41,6 @@ import AdminAudio from "./pages/AdminAudio";
 import AdminText from "./pages/AdminText";
 import AdminStat from "./pages/AdminStat";
 import AdminNotifications from "./pages/AdminNotifications";
-import AdminImages from "./pages/AdminImages";
 import NotificationSettings from "./pages/NotificationSettings";
 import TelegramOnly from "./pages/TelegramOnly";
 import { useTelegram } from "./context/TelegramContext";
@@ -187,10 +186,9 @@ function AppContent() {
   const dimmingBottom = customBg ? Math.min(1, (customBg.dimming + 15) / 100) : 0.95;
 
   // Show warning page for plain browser access (not Lovable editor, not Telegram)
-  // NOTE: browser mode is allowed for testing — in production Telegram enforces auth
-  // if (!isLoading && entryMode === "browser") {
-  //   return <TelegramOnly />;
-  // }
+  if (!isLoading && entryMode === "browser") {
+    return <TelegramOnly />;
+  }
 
   return (
     <div 
@@ -240,7 +238,6 @@ function AppContent() {
           <Route path="/admin/role" element={<AdminUsers />} />
           <Route path="/admin/stat" element={<AdminStat />} />
           <Route path="/admin/notifications" element={<AdminNotifications />} />
-          <Route path="/admin/images" element={<AdminImages />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />

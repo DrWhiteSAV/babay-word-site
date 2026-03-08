@@ -1,197 +1,48 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, ButtonSize, FontFamily, Theme } from "../store/playerStore";
 import { motion } from "motion/react";
 import {
   Settings as SettingsIcon,
+  ArrowLeft,
   Volume2,
   VolumeX,
   Type,
   Square,
   Bell,
   ChevronRight,
-  Loader2,
-  Save,
 } from "lucide-react";
-import { supabase } from "../integrations/supabase/client";
-import { useTelegram } from "../context/TelegramContext";
-import Header from "../components/Header";
 
-const DEFAULT_SETTINGS = {
-  buttonSize: "small" as ButtonSize,
-  fontFamily: "JetBrains Mono" as FontFamily,
-  fontSize: 12,
-  fontBrightness: 100,
-  theme: "normal" as Theme,
-  musicVolume: 50,
-  ttsEnabled: false,
-};
+import Header from "../components/Header";
 
 export default function Settings() {
   const navigate = useNavigate();
   const { settings, updateSettings, character } = usePlayerStore();
-  const { profile } = useTelegram();
-  const [resetting, setResetting] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [savedOk, setSavedOk] = useState(false);
-
-  const handleSaveSettings = async () => {
-    setSaving(true);
-    try {
-      const telegramId = profile?.telegram_id;
-      if (telegramId) {
-        // Re-read FULL row from DB first to never accidentally overwrite character fields
-        const { data: existing } = await supabase
-          .from("player_stats")
-          .select("custom_settings, character_name, character_gender, character_style, avatar_url, lore")
-          .eq("telegram_id", telegramId)
-          .single();
-
-        const existingCs = (existing?.custom_settings as any) || {};
-        // Only update settings keys — preserve wishes/inventory and character fields untouched
-        await supabase.from("player_stats").upsert({
-          telegram_id: telegramId,
-          // Preserve character fields from DB (not from store) to avoid race overwrite
-          ...(existing?.character_name ? { character_name: existing.character_name } : {}),
-          ...(existing?.character_gender ? { character_gender: existing.character_gender } : {}),
-          ...(existing?.character_style ? { character_style: existing.character_style } : {}),
-          ...(existing?.avatar_url ? { avatar_url: existing.avatar_url } : {}),
-          ...(existing?.lore ? { lore: existing.lore } : {}),
-          custom_settings: {
-            ...existingCs,
-            buttonSize: settings.buttonSize,
-            fontFamily: settings.fontFamily,
-            fontSize: settings.fontSize,
-            fontBrightness: settings.fontBrightness,
-            theme: settings.theme,
-            musicVolume: settings.musicVolume,
-            ttsEnabled: settings.ttsEnabled,
-          },
-        }, { onConflict: "telegram_id" });
-      }
-      setSavedOk(true);
-      setTimeout(() => setSavedOk(false), 2000);
-    } catch (e) {
-      console.error("Save settings error:", e);
-    }
-    setSaving(false);
-  };
-
-  const handleResetProgress = async () => {
-    if (!window.confirm("Вы уверены? Весь прогресс, персонаж, очки и инвентарь будут удалены безвозвратно.")) return;
-    const word = window.prompt('Для подтверждения введите слово СБРОС:');
-    if (word?.trim().toUpperCase() !== "СБРОС") {
-      window.alert("Сброс отменён — слово не совпало.");
-      return;
-    }
-    setResetting(true);
-    try {
-      const telegramId = profile?.telegram_id;
-      if (telegramId) {
-        // Save snapshot before reset for rollback
-        const { data: current } = await supabase
-          .from("player_stats")
-          .select("*")
-          .eq("telegram_id", telegramId)
-          .single();
-
-        if (current) {
-          await supabase.from("player_stats_history").insert({
-            telegram_id: telegramId,
-            character_name: current.character_name,
-            character_gender: current.character_gender,
-            character_style: current.character_style,
-            avatar_url: current.avatar_url,
-            lore: current.lore,
-            fear: current.fear,
-            watermelons: current.watermelons,
-            energy: current.energy,
-            boss_level: current.boss_level,
-            telekinesis_level: current.telekinesis_level,
-            custom_settings: current.custom_settings,
-            snapshot_reason: "reset",
-          });
-        }
-
-        await Promise.all([
-          supabase.from("player_stats").update({
-            fear: 0, watermelons: 0, energy: 100, boss_level: 0,
-            telekinesis_level: 1, total_clicks: 0,
-            character_name: null, character_gender: null, character_style: null,
-            avatar_url: null, lore: null,
-            game_status: "reset",
-            referral_bonus_claimed: false,
-            custom_settings: {
-              buttonSize: DEFAULT_SETTINGS.buttonSize,
-              fontFamily: DEFAULT_SETTINGS.fontFamily,
-              fontSize: DEFAULT_SETTINGS.fontSize,
-              fontBrightness: DEFAULT_SETTINGS.fontBrightness,
-              theme: DEFAULT_SETTINGS.theme,
-              musicVolume: DEFAULT_SETTINGS.musicVolume,
-              ttsEnabled: DEFAULT_SETTINGS.ttsEnabled,
-              wishes: [],
-              inventory: [],
-            },
-          }).eq("telegram_id", telegramId),
-          supabase.from("player_inventory").delete().eq("telegram_id", telegramId),
-          supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
-          supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
-        ]);
-      }
-    } catch (e) {
-      console.error("Reset error:", e);
-    }
-    // Preserve video cache before clearing localStorage (videos are expensive to re-download)
-    const videoCacheBackup = localStorage.getItem("babai_video_cache");
-    const videoCutscenesBackup = localStorage.getItem("babai-ui-prefs")
-      ? (() => { try { const p = JSON.parse(localStorage.getItem("babai-ui-prefs") || "{}"); return p?.state?.videoCutscenes; } catch { return null; } })()
-      : null;
-    // Clear ALL localStorage/cache so nothing stale remains
-    localStorage.clear();
-    sessionStorage.clear();
-    // Restore video cache (never deleted on reset)
-    if (videoCacheBackup) localStorage.setItem("babai_video_cache", videoCacheBackup);
-    // Reset store to defaults
-    usePlayerStore.setState({
-      character: null,
-      fear: 0,
-      energy: 100,
-      watermelons: 0,
-      bossLevel: 0,
-      lastEnergyUpdate: Date.now(),
-      inventory: [],
-      achievements: [],
-      friends: [{ name: "ДанИИл", isAiEnabled: true }],
-      quests: [],
-      settings: { ...DEFAULT_SETTINGS },
-      ...(videoCutscenesBackup ? { videoCutscenes: videoCutscenesBackup } : {}),
-      dbLoaded: false,
-    });
-    setResetting(false);
-    navigate("/create");
-  };
-
-  // Wait for DB before redirecting — character is null until loadStats completes
-  const { dbLoaded } = usePlayerStore();
-
-  useEffect(() => {
-    if (dbLoaded && !character) {
-      navigate("/");
-    }
-  }, [dbLoaded, character]);
-
-  if (!dbLoaded) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
-        <Loader2 size={28} className="animate-spin text-red-700" />
-        <span className="text-sm">Загрузка настроек...</span>
-      </div>
-    );
-  }
 
   if (!character) {
+    navigate("/");
     return null;
   }
+
+  const handleButtonSizeChange = (size: ButtonSize) => {
+    updateSettings({ buttonSize: size });
+  };
+
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateSettings({ fontSize: parseInt(e.target.value, 10) });
+  };
+
+  const handleFontFamilyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateSettings({ fontFamily: e.target.value as FontFamily });
+  };
+
+  const handleThemeChange = (theme: Theme) => {
+    updateSettings({ theme });
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateSettings({ musicVolume: parseInt(e.target.value) });
+  };
 
   return (
     <motion.div
@@ -220,16 +71,20 @@ export default function Settings() {
             {(["small", "medium", "large"] as ButtonSize[]).map((size) => (
               <button
                 key={size}
-                onClick={() => updateSettings({ buttonSize: size })}
+                onClick={() => handleButtonSizeChange(size)}
                 className={`p-3 rounded-xl border font-medium transition-all ${settings.buttonSize === size ? "border-red-600 bg-red-900/30 text-white" : "border-neutral-800 bg-neutral-900/50 backdrop-blur-sm text-white hover:bg-neutral-800"}`}
               >
-                {size === "small" ? "Мелкие" : size === "medium" ? "Средние" : "Крупные"}
+                {size === "small"
+                  ? "Мелкие"
+                  : size === "medium"
+                    ? "Средние"
+                    : "Крупные"}
               </button>
             ))}
           </div>
         </section>
 
-        {/* Theme */}
+        {/* Theme Selection */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
             <Square size={18} /> Тема оформления
@@ -238,7 +93,7 @@ export default function Settings() {
             {(["normal", "cyberpunk"] as Theme[]).map((theme) => (
               <button
                 key={theme}
-                onClick={() => updateSettings({ theme })}
+                onClick={() => handleThemeChange(theme)}
                 className={`p-3 rounded-xl border font-bold transition-all uppercase tracking-wider ${settings.theme === theme ? "border-red-600 bg-red-900/30 text-white" : "border-neutral-800 bg-neutral-900/50 backdrop-blur-sm text-white hover:bg-neutral-800"}`}
               >
                 {theme === "normal" ? "Обычная" : "Киберпанк"}
@@ -254,23 +109,24 @@ export default function Settings() {
           </h2>
           <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-2xl p-4">
             <select
+              id="fontFamily"
               value={settings.fontFamily ?? "JetBrains Mono"}
-              onChange={(e) => updateSettings({ fontFamily: e.target.value as FontFamily })}
+              onChange={handleFontFamilyChange}
               className="w-full bg-neutral-800/50 text-white border border-neutral-700 rounded-xl p-3 outline-none focus:border-red-500 transition-colors"
             >
-              <option value="Inter">Обычный (Inter)</option>
-              <option value="Roboto">Робото (Roboto)</option>
-              <option value="Montserrat">Монтсеррат (Montserrat)</option>
-              <option value="Playfair Display">Классический (Playfair)</option>
-              <option value="JetBrains Mono">Технический (JetBrains)</option>
-              <option value="Press Start 2P">Ретро (8-bit)</option>
-              <option value="Russo One">Мощный (Russo One)</option>
-              <option value="Rubik Beastly">Монстр (Rubik Beastly)</option>
-              <option value="Rubik Burned">Сгоревший (Rubik Burned)</option>
-              <option value="Rubik Glitch">Глитч (Rubik Glitch)</option>
-              <option value="Neucha">Рукописный (Neucha)</option>
-              <option value="Ruslan Display">Славянский (Ruslan)</option>
-              <option value="Tektur">Киберпанк (Tektur)</option>
+              <option value="Inter" className="font-sans">Обычный (Inter)</option>
+              <option value="Roboto" style={{ fontFamily: "'Roboto', sans-serif" }}>Робото (Roboto)</option>
+              <option value="Montserrat" style={{ fontFamily: "'Montserrat', sans-serif" }}>Монтсеррат (Montserrat)</option>
+              <option value="Playfair Display" style={{ fontFamily: "'Playfair Display', serif" }}>Классический (Playfair)</option>
+              <option value="JetBrains Mono" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Технический (JetBrains)</option>
+              <option value="Press Start 2P" style={{ fontFamily: "'Press Start 2P', cursive" }}>Ретро (8-bit)</option>
+              <option value="Russo One" style={{ fontFamily: "'Russo One', sans-serif" }}>Мощный (Russo One)</option>
+              <option value="Rubik Beastly" style={{ fontFamily: "'Rubik Beastly', cursive" }}>Монстр (Rubik Beastly)</option>
+              <option value="Rubik Burned" style={{ fontFamily: "'Rubik Burned', cursive" }}>Сгоревший (Rubik Burned)</option>
+              <option value="Rubik Glitch" style={{ fontFamily: "'Rubik Glitch', cursive" }}>Глитч (Rubik Glitch)</option>
+              <option value="Neucha" style={{ fontFamily: "'Neucha', cursive" }}>Рукописный (Neucha)</option>
+              <option value="Ruslan Display" style={{ fontFamily: "'Ruslan Display', cursive" }}>Славянский (Ruslan)</option>
+              <option value="Tektur" style={{ fontFamily: "'Tektur', sans-serif" }}>Киберпанк (Tektur)</option>
             </select>
           </div>
         </section>
@@ -282,13 +138,17 @@ export default function Settings() {
           </h2>
           <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
             <input
-              type="range" min="5" max="24"
-              value={settings.fontSize ?? 12}
-              onChange={(e) => updateSettings({ fontSize: parseInt(e.target.value, 10) })}
+              id="fontSize"
+              type="range"
+              min="5"
+              max="24"
+              value={settings.fontSize ?? 16}
+              onChange={handleFontSizeChange}
               className="w-full accent-red-600 h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer"
             />
             <div className="flex justify-between text-xs text-white mt-4 font-mono">
-              <span>5px</span><span>24px</span>
+              <span>5px</span>
+              <span>24px</span>
             </div>
           </div>
         </section>
@@ -300,13 +160,17 @@ export default function Settings() {
           </h2>
           <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
             <input
-              type="range" min="0" max="100"
+              id="fontBrightness"
+              type="range"
+              min="0"
+              max="100"
               value={settings.fontBrightness ?? 100}
               onChange={(e) => updateSettings({ fontBrightness: parseInt(e.target.value, 10) })}
               className="w-full accent-red-600 h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer"
             />
             <div className="flex justify-between text-xs text-white mt-4 font-mono">
-              <span>0%</span><span>100%</span>
+              <span>0%</span>
+              <span>100%</span>
             </div>
           </div>
         </section>
@@ -331,44 +195,52 @@ export default function Settings() {
           </h2>
           <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-2xl p-6">
             <input
-              type="range" min="0" max="100"
+              id="musicVolume"
+              type="range"
+              min="0"
+              max="100"
               value={settings.musicVolume ?? 50}
-              onChange={(e) => updateSettings({ musicVolume: parseInt(e.target.value) })}
+              onChange={handleVolumeChange}
               className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-red-600"
             />
             <div className="flex justify-between text-xs text-white mt-4">
               <span>0%</span>
-              <span className="text-white font-bold">{settings.musicVolume}%</span>
+              <span className="text-white font-bold">
+                {settings.musicVolume}%
+              </span>
               <span>100%</span>
             </div>
           </div>
         </section>
 
-        {/* Save Settings Button */}
-        <section>
-          <button
-            onClick={handleSaveSettings}
-            disabled={saving}
-            className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-              savedOk
-                ? "bg-green-800 border border-green-600 text-green-300"
-                : "bg-red-900/30 hover:bg-red-900/50 border border-red-700 text-red-300"
-            }`}
-          >
-            {saving ? <><Loader2 size={18} className="animate-spin" /> Сохранение...</> :
-             savedOk ? <>✓ Сохранено!</> :
-             <><Save size={18} /> СОХРАНИТЬ НАСТРОЙКИ</>}
-          </button>
-        </section>
-
         {/* Reset Data */}
-        <section className="pt-4 space-y-4">
+        <section className="pt-8 space-y-4">
           <button
-            onClick={handleResetProgress}
-            disabled={resetting}
-            className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+            onClick={() => {
+              if (window.confirm("Очистить галерею? Это освободит место в памяти устройства.")) {
+                usePlayerStore.setState({ gallery: [] });
+                alert("Галерея очищена.");
+              }
+            }}
+            className="w-full py-3 bg-neutral-900/50 backdrop-blur-sm hover:bg-neutral-800 text-white border border-neutral-800 rounded-xl font-bold transition-colors text-sm"
           >
-            {resetting ? <><Loader2 size={18} className="animate-spin" /> Сброс...</> : "СБРОСИТЬ ПРОГРЕСС"}
+            ОЧИСТИТЬ ГАЛЕРЕЮ
+          </button>
+
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Вы уверены, что хотите удалить персонажа и начать заново?",
+                )
+              ) {
+                localStorage.removeItem("babai-storage");
+                window.location.href = "/";
+              }
+            }}
+            className="w-full py-4 bg-neutral-900/50 backdrop-blur-sm hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-xl font-bold transition-colors"
+          >
+            СБРОСИТЬ ПРОГРЕСС
           </button>
         </section>
 

@@ -166,36 +166,27 @@ export type Database = {
       }
       chat_messages: {
         Row: {
-          chat_key: string | null
           content: string
           created_at: string
           friend_name: string
           id: string
-          read_at: string | null
           role: string
-          sender_telegram_id: number | null
           telegram_id: number
         }
         Insert: {
-          chat_key?: string | null
           content: string
           created_at?: string
           friend_name: string
           id?: string
-          read_at?: string | null
           role: string
-          sender_telegram_id?: number | null
           telegram_id: number
         }
         Update: {
-          chat_key?: string | null
           content?: string
           created_at?: string
           friend_name?: string
           id?: string
-          read_at?: string | null
           role?: string
-          sender_telegram_id?: number | null
           telegram_id?: number
         }
         Relationships: [
@@ -577,11 +568,9 @@ export type Database = {
           custom_settings: Json | null
           energy: number
           fear: number
-          game_status: string
           id: string
           lore: string | null
           max_energy: number
-          referral_bonus_claimed: boolean
           telegram_id: number
           telekinesis_level: number
           total_clicks: number
@@ -598,11 +587,9 @@ export type Database = {
           custom_settings?: Json | null
           energy?: number
           fear?: number
-          game_status?: string
           id?: string
           lore?: string | null
           max_energy?: number
-          referral_bonus_claimed?: boolean
           telegram_id: number
           telekinesis_level?: number
           total_clicks?: number
@@ -619,11 +606,9 @@ export type Database = {
           custom_settings?: Json | null
           energy?: number
           fear?: number
-          game_status?: string
           id?: string
           lore?: string | null
           max_energy?: number
-          referral_bonus_claimed?: boolean
           telegram_id?: number
           telekinesis_level?: number
           total_clicks?: number
@@ -639,60 +624,6 @@ export type Database = {
             referencedColumns: ["telegram_id"]
           },
         ]
-      }
-      player_stats_history: {
-        Row: {
-          avatar_url: string | null
-          boss_level: number
-          character_gender: string | null
-          character_name: string | null
-          character_style: string | null
-          custom_settings: Json | null
-          energy: number
-          fear: number
-          id: string
-          lore: string | null
-          snapshot_at: string
-          snapshot_reason: string | null
-          telegram_id: number
-          telekinesis_level: number
-          watermelons: number
-        }
-        Insert: {
-          avatar_url?: string | null
-          boss_level?: number
-          character_gender?: string | null
-          character_name?: string | null
-          character_style?: string | null
-          custom_settings?: Json | null
-          energy?: number
-          fear?: number
-          id?: string
-          lore?: string | null
-          snapshot_at?: string
-          snapshot_reason?: string | null
-          telegram_id: number
-          telekinesis_level?: number
-          watermelons?: number
-        }
-        Update: {
-          avatar_url?: string | null
-          boss_level?: number
-          character_gender?: string | null
-          character_name?: string | null
-          character_style?: string | null
-          custom_settings?: Json | null
-          energy?: number
-          fear?: number
-          id?: string
-          lore?: string | null
-          snapshot_at?: string
-          snapshot_reason?: string | null
-          telegram_id?: number
-          telekinesis_level?: number
-          watermelons?: number
-        }
-        Relationships: []
       }
       profiles: {
         Row: {

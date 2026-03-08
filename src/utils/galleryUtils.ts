@@ -21,13 +21,7 @@ export async function saveImageToGallery(
       body: JSON.stringify({ imageUrl, telegramId, label, prompt }),
     });
 
-    const text = await resp.text();
-    if (!text || !text.trim()) {
-      console.warn("saveImageToGallery: empty response body");
-      return null;
-    }
-    let data: any;
-    try { data = JSON.parse(text); } catch { console.warn("saveImageToGallery: invalid JSON"); return null; }
+    const data = await resp.json();
     if (data.success && data.gallery_item?.image_url) {
       return data.gallery_item.image_url;
     }

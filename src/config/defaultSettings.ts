@@ -141,9 +141,12 @@ export const DEFAULT_USERS: Array<{
   },
 ];
 
-// Базовые изображения для галереи — только проверенные рабочие ссылки
+// Базовые изображения для галереи
 export const DEFAULT_GALLERY_IMAGES = [
+  "https://images.unsplash.com/photo-1505635552518-3448ff116af3?q=80&w=1080&auto=format&fit=crop",
   "https://i.ibb.co/BVgY7XrT/babai.png",
+  "https://picsum.photos/id/718/1920/1080",
+  "https://picsum.photos/id/878/1920/1080"
 ];
 
 // Базовые вертикальные видео (для мобильных/шортсов)
