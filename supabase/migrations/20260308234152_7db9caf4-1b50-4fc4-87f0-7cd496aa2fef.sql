@@ -1,0 +1,1 @@
+ALTER TABLE public.pvp_room_members ADD COLUMN IF NOT EXISTS watermelons integer NOT NULL DEFAULT 0;

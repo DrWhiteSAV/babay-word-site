@@ -923,6 +923,7 @@ export type Database = {
           score: number
           status: string
           telegram_id: number
+          watermelons: number
         }
         Insert: {
           avatar_url?: string | null
@@ -934,6 +935,7 @@ export type Database = {
           score?: number
           status?: string
           telegram_id: number
+          watermelons?: number
         }
         Update: {
           avatar_url?: string | null
@@ -945,6 +947,7 @@ export type Database = {
           score?: number
           status?: string
           telegram_id?: number
+          watermelons?: number
         }
         Relationships: [
           {
