@@ -14,6 +14,7 @@ interface GalleryItem {
   id: string;
   image_url: string;
   label: string | null;
+  prompt: string | null;
   created_at: string;
 }
 
