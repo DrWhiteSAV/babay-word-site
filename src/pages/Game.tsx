@@ -374,8 +374,8 @@ export default function Game() {
           const bgUrl = (bgResult as any).url;
           setBgImage(bgUrl);
           setBgGenRetry(false);
-          // Save to gallery [backgrounds] with imgbb URL
-          if (tgId && bgUrl.includes("ibb.co")) {
+          // Save to gallery [backgrounds] — save-to-gallery uploads to ImgBB automatically
+          if (tgId) {
             saveImageToGallery(
               bgUrl,
               tgId,
