@@ -4,7 +4,7 @@ import { usePlayerStore } from "../store/playerStore";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Loader2, Swords, Users, Clock, Crown, CheckCircle, Timer } from "lucide-react";
+import { ArrowLeft, Loader2, Swords, Users, Clock, Crown, Timer, Send } from "lucide-react";
 
 interface RoomMember {
   telegram_id: number;
@@ -25,12 +25,20 @@ interface PvpRoom {
   timer_ends_at: string | null;
 }
 
+interface ChatMsg {
+  id: string;
+  telegram_id: number;
+  sender_name: string;
+  text: string;
+  created_at: string;
+}
+
 export default function PvpRoom() {
   const { roomId } = useParams<{ roomId: string }>();
   const [searchParams] = useSearchParams();
   const autoJoin = searchParams.get("join") === "1";
   const navigate = useNavigate();
-  const { character, energy, useEnergy } = usePlayerStore();
+  const { character, useEnergy } = usePlayerStore();
   const { profile } = useTelegram();
   const tgId = profile?.telegram_id;
 
@@ -41,6 +49,12 @@ export default function PvpRoom() {
   const [joining, setJoining] = useState(false);
   const [timerLeft, setTimerLeft] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Live chat state
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isOrganizer = room?.organizer_telegram_id === tgId;
   const myMember = members.find(m => m.telegram_id === tgId);
@@ -58,12 +72,33 @@ export default function PvpRoom() {
     setLoading(false);
   };
 
+  const loadChat = async () => {
+    if (!roomId) return;
+    const chatKey = `pvp_room_${roomId}`;
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("id, telegram_id, friend_name, content, created_at")
+      .eq("chat_key", chatKey)
+      .order("created_at", { ascending: true })
+      .limit(100);
+    if (data) {
+      setChatMessages(data.map(m => ({
+        id: m.id,
+        telegram_id: m.telegram_id,
+        sender_name: m.friend_name,
+        text: m.content,
+        created_at: m.created_at,
+      })));
+    }
+  };
+
   const autoJoinDoneRef = useRef(false);
 
   useEffect(() => {
     loadRoom();
+    loadChat();
 
-    // Realtime subscription
+    // Realtime subscription for room + members + chat
     const channel = supabase
       .channel(`pvp-room-${roomId}`)
       .on("postgres_changes", {
@@ -82,21 +117,44 @@ export default function PvpRoom() {
       }, () => {
         loadRoom();
       })
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_messages",
+      }, (payload) => {
+        const msg = payload.new as any;
+        if (msg.chat_key === `pvp_room_${roomId}`) {
+          setChatMessages(prev => {
+            if (prev.find(m => m.id === msg.id)) return prev;
+            return [...prev, {
+              id: msg.id,
+              telegram_id: msg.telegram_id,
+              sender_name: msg.friend_name,
+              text: msg.content,
+              created_at: msg.created_at,
+            }];
+          });
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
+  // Scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
   // Auto-join when arriving via ?join=1 (from chat button) once room + profile loaded
   useEffect(() => {
     if (!autoJoin || autoJoinDoneRef.current || !tgId || !character || !roomId) return;
     const myM = members.find(m => m.telegram_id === tgId);
-    if (!myM) return; // members not loaded yet
+    if (!myM) return;
     if (myM.status === "invited") {
       autoJoinDoneRef.current = true;
       handleJoin();
     } else {
-      // Already joined — mark done to skip
       autoJoinDoneRef.current = true;
     }
   }, [autoJoin, tgId, character, roomId, members]);
@@ -151,18 +209,39 @@ export default function PvpRoom() {
       .from("pvp_rooms")
       .update({ status: "playing", started_at: new Date().toISOString() })
       .eq("id", roomId);
-    // Update all joined members to playing
     await supabase
       .from("pvp_room_members")
       .update({ status: "playing" })
       .eq("room_id", roomId)
       .eq("status", "joined");
     setStarting(false);
-    // Navigate organizer
     navigate(`/game?pvp=${roomId}&diff=${encodeURIComponent(diff)}`);
   };
 
+  const handleSendChat = async () => {
+    if (!tgId || !roomId || !chatInput.trim()) return;
+    setSendingMsg(true);
+    const senderName = character?.name || profile?.first_name || "Бабай";
+    const chatKey = `pvp_room_${roomId}`;
+    const text = chatInput.trim();
+    setChatInput("");
+    await supabase.from("chat_messages").insert({
+      chat_key: chatKey,
+      telegram_id: tgId,
+      sender_telegram_id: tgId,
+      role: "user",
+      friend_name: senderName,
+      content: text,
+      is_ai_reply: false,
+    } as any);
+    setSendingMsg(false);
+  };
+
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+  const fmtChatTime = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+  };
 
   if (loading) {
     return (
@@ -183,7 +262,6 @@ export default function PvpRoom() {
 
   const joinedMembers = members.filter(m => m.status !== "invited");
   const invitedMembers = members.filter(m => m.status === "invited");
-  const finishedMembers = members.filter(m => m.status === "finished");
 
   return (
     <motion.div
@@ -337,6 +415,63 @@ export default function PvpRoom() {
           <p>• Кто не успел — проигрывает</p>
           <p>• Несколько победителей делят банк поровну (с округлением вверх)</p>
         </section>
+
+        {/* ── LIVE CHAT ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">💬</span>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300">Чат комнаты</h2>
+          </div>
+          <div className="bg-black/30 border border-neutral-800 rounded-xl overflow-hidden">
+            {/* Messages */}
+            <div className="h-48 overflow-y-auto p-3 space-y-2">
+              {chatMessages.length === 0 ? (
+                <p className="text-center text-neutral-600 text-xs mt-6">Пока тихо... Напиши первым! 👻</p>
+              ) : (
+                chatMessages.map(msg => {
+                  const isMe = msg.telegram_id === tgId;
+                  return (
+                    <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                      <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-xs ${
+                        isMe
+                          ? "bg-red-700/80 text-white rounded-tr-sm"
+                          : "bg-neutral-800/80 text-neutral-200 rounded-tl-sm"
+                      }`}>
+                        {!isMe && (
+                          <p className="font-bold text-red-400 text-[10px] mb-0.5">{msg.sender_name}</p>
+                        )}
+                        <p className="break-words">{msg.text}</p>
+                        <p className={`text-[9px] mt-0.5 ${isMe ? "text-red-200/60 text-right" : "text-neutral-500"}`}>
+                          {fmtChatTime(msg.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            {/* Input */}
+            <div className="flex items-center gap-2 p-2 border-t border-neutral-800">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendChat()}
+                placeholder="Написать в чат..."
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-600 outline-none focus:border-red-800 transition-colors"
+              />
+              <button
+                onClick={handleSendChat}
+                disabled={!chatInput.trim() || sendingMsg}
+                className="p-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 rounded-xl transition-colors shrink-0"
+              >
+                {sendingMsg ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              </button>
+            </div>
+          </div>
+        </section>
+
       </div>
 
       {/* Bottom action */}

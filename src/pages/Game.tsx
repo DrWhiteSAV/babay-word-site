@@ -804,7 +804,7 @@ export default function Game() {
             <h3 className="text-xl font-bold text-white group-hover:text-red-500 transition-colors">Бесконечная</h3>
             <p className="text-neutral-400 text-sm mt-1">Без конца, без боссов. Стоимость: <span className="text-yellow-400 font-bold">50 <Zap size={12} className="inline" /></span></p>
           </button>
-          <button onClick={() => setIsPvpLobby(true)} className="w-full p-6 bg-neutral-900 border border-neutral-800 rounded-2xl text-left hover:border-red-900 transition-colors group lightning-btn">
+          <button onClick={() => navigate("/pvp")} className="w-full p-6 bg-neutral-900 border border-neutral-800 rounded-2xl text-left hover:border-red-900 transition-colors group lightning-btn">
             <h3 className="text-xl font-bold text-white group-hover:text-red-500 transition-colors">PVP Бабаев</h3>
             <p className="text-neutral-400 text-sm mt-1">Групповое участие с друзьями.</p>
           </button>
