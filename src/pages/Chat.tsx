@@ -931,47 +931,6 @@ export default function Chat() {
       {/* Input area */}
       <div className="chat-input-glass p-3 relative z-20">
 
-        {/* AI Substitute Banner — shown above input when enabled (personal chats only) */}
-        {/* For ДанИИл: always AI, hide the substitute toggle */}
-        {friend && !isDanil && (
-          <AnimatePresence>
-            {isAiSubstitute ? (
-              <motion.div
-                key="ai-on"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                className="mb-2 rounded-xl px-3 py-2.5 flex items-center gap-2"
-                style={{ background: "linear-gradient(135deg,rgba(34,197,94,0.18),rgba(16,185,129,0.12))", border: "1px solid rgba(34,197,94,0.3)" }}
-              >
-                <Bot size={15} className="text-green-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-green-300 block">ИИ-заместитель активен · отвечает за тебя</span>
-                </div>
-                <button
-                  onClick={() => { toggleAiSubstitute(false); setMyAiDraft(""); setInput(""); if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current); setAiSubCountdown(0); setAiSubTypingCountdown(0); if (aiSubBroadcastChannelRef.current) aiSubBroadcastChannelRef.current.send({ type: 'broadcast', event: 'ai_sub_typing', payload: { remaining: 0, senderTid: profile?.telegram_id } }); }}
-                  className="text-green-400 hover:text-white text-xs font-bold shrink-0"
-                >Выкл</button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="ai-off"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="mb-2 flex justify-end"
-              >
-                <button
-                  onClick={() => toggleAiSubstitute(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] text-neutral-500 hover:text-green-400 border border-neutral-700 hover:border-green-600 transition-all"
-                >
-                  <Bot size={11} /> ИИ-заместитель
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
         {/* Reply preview */}
         {replyToMsg && (
           <motion.div
@@ -1004,80 +963,97 @@ export default function Chat() {
           </div>
         )}
 
-        {/* AI substitute active: show generate + send buttons */}
-        {friend && isAiSubstitute ? (
-          <div className="flex items-end gap-2">
-            <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageUpload} />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 rounded-xl text-neutral-400 hover:text-white transition-colors flex-shrink-0 self-end"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+        {/* AI substitute active: show draft generate button above input */}
+        {friend && isAiSubstitute && (
+          <AnimatePresence>
+            <motion.button
+              key="gen-draft"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              onClick={handleGenerateMyReply}
+              disabled={isMyAiTyping}
+              className="w-full mb-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg,rgba(34,197,94,0.2),rgba(16,185,129,0.15))", border: "1px solid rgba(34,197,94,0.25)" }}
             >
-              <ImagePlus size={18} />
-            </button>
-            <div className="flex-1 flex flex-col gap-1.5">
-              {/* Editable draft area */}
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                placeholder={isMyAiTyping ? "ИИ пишет за тебя..." : "Или напиши сам..."}
-                rows={1}
-                className="chat-input-field w-full rounded-2xl px-4 py-2.5 text-sm resize-none overflow-hidden"
-                style={{ minHeight: "42px", maxHeight: "160px" }}
-              />
-              <button
-                onClick={handleGenerateMyReply}
-                disabled={isMyAiTyping}
-                className="w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg,rgba(34,197,94,0.25),rgba(16,185,129,0.2))", border: "1px solid rgba(34,197,94,0.3)" }}
-              >
-                {isMyAiTyping
-                  ? <><RefreshCw size={13} className="animate-spin" /> Генерирую ответ...</>
-                  : <><Bot size={13} className="text-green-400" /> Сгенерировать ответ</>}
-              </button>
-            </div>
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() && !selectedImage}
-              className="chat-send-btn p-2.5 rounded-xl flex-shrink-0 self-end"
-            >
-              <Send size={18} />
-            </button>
-          </div>
-        ) : (
-          /* Normal input row */
-          <div className="flex items-end gap-2">
-            <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageUpload} />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 rounded-xl text-neutral-400 hover:text-white transition-colors flex-shrink-0 self-end"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              <ImagePlus size={18} />
-            </button>
-
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={`Написать ${chatTitle}...`}
-              rows={1}
-              className="chat-input-field flex-1 rounded-2xl px-4 py-2.5 text-sm resize-none overflow-hidden"
-              style={{ minHeight: "42px", maxHeight: "160px" }}
-            />
-
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() && !selectedImage}
-              className="chat-send-btn p-2.5 rounded-xl flex-shrink-0 self-end"
-            >
-              <Send size={18} />
-            </button>
-          </div>
+              {isMyAiTyping
+                ? <><RefreshCw size={12} className="animate-spin text-green-400" /> Генерирую ответ...</>
+                : <><Bot size={12} className="text-green-400" /> Сгенерировать ответ за меня</>}
+            </motion.button>
+          </AnimatePresence>
         )}
+
+        {/* Input row — unified for all modes */}
+        <div className="flex items-end gap-2">
+          <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageUpload} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2.5 rounded-xl text-neutral-400 hover:text-white transition-colors flex-shrink-0 self-end"
+            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <ImagePlus size={18} />
+          </button>
+
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            placeholder={
+              friend && isAiSubstitute
+                ? (isMyAiTyping ? "ИИ пишет за тебя..." : "Или напиши сам...")
+                : `Написать ${chatTitle}...`
+            }
+            rows={1}
+            className="chat-input-field flex-1 rounded-2xl px-4 py-2.5 text-sm resize-none overflow-hidden"
+            style={{ minHeight: "42px", maxHeight: "160px" }}
+          />
+
+          {/* AI-substitute toggle icon — only for real personal chats (not ДанИИл) */}
+          {friend && !isDanil && (
+            <button
+              onClick={() => {
+                if (isAiSubstitute) {
+                  toggleAiSubstitute(false);
+                  setMyAiDraft("");
+                  setInput("");
+                  if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current);
+                  setAiSubCountdown(0);
+                  setAiSubTypingCountdown(0);
+                  if (aiSubBroadcastChannelRef.current) {
+                    aiSubBroadcastChannelRef.current.send({ type: 'broadcast', event: 'ai_sub_typing', payload: { remaining: 0, senderTid: profile?.telegram_id } });
+                  }
+                } else {
+                  toggleAiSubstitute(true);
+                }
+              }}
+              title={isAiSubstitute ? "ИИ-заместитель активен (нажми чтобы выключить)" : "Включить ИИ-заместителя"}
+              className={`p-2.5 rounded-xl flex-shrink-0 self-end transition-all ${
+                isAiSubstitute
+                  ? "text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.4)]"
+                  : "text-neutral-500 hover:text-green-400"
+              }`}
+              style={{
+                background: isAiSubstitute
+                  ? "rgba(34,197,94,0.15)"
+                  : "rgba(255,255,255,0.07)",
+                border: isAiSubstitute
+                  ? "1px solid rgba(34,197,94,0.35)"
+                  : "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <Bot size={18} />
+            </button>
+          )}
+
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() && !selectedImage}
+            className="chat-send-btn p-2.5 rounded-xl flex-shrink-0 self-end"
+          >
+            <Send size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Members Modal */}
