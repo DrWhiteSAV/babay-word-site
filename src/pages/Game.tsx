@@ -726,6 +726,11 @@ export default function Game() {
   // ======== SCREENS ========
 
   if (isGameOver) {
+    // PVP room mode → redirect to results page
+    if (pvpRoomId) {
+      navigate(`/pvp/results/${pvpRoomId}`, { replace: true });
+      return null;
+    }
     if (pvpParticipants.length > 0 && pvpResults) {
       const isWinner = pvpResults[0].isLocal && !exitedEarly;
       const totalFear = pvpResults.reduce((sum, r) => sum + r.fear, 0);
