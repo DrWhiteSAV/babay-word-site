@@ -47,12 +47,31 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   useEffect(() => {
     const isPortrait = window.innerHeight > window.innerWidth;
     const videos = isPortrait ? videoCutscenes.vertical : videoCutscenes.horizontal;
-    
+
     if (videos && videos.length > 0) {
       videosLoadedRef.current = true;
       const raw = videos[Math.floor(Math.random() * videos.length)];
-      // Use cached version if already downloaded, else direct URL (fallback)
-      resolveUrl(raw).then(resolved => setVideoUrl(resolved));
+
+      // Try to load from Cache API fresh (blob URLs don't persist across sessions)
+      const tryCache = async () => {
+        try {
+          if ("caches" in window) {
+            const cache = await caches.open("babai-assets-v2");
+            const response = await cache.match(raw);
+            if (response) {
+              const blob = await response.blob();
+              if (blob.size > 0) {
+                setVideoUrl(URL.createObjectURL(blob));
+                return;
+              }
+            }
+          }
+        } catch { /**/ }
+        // Fallback: direct URL
+        setVideoUrl(raw);
+      };
+
+      tryCache();
     } else if (!videosLoadedRef.current) {
       // Videos not yet loaded from DB — wait up to 3s before falling back
       const fallbackTimer = setTimeout(() => {
