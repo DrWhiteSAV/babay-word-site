@@ -51,6 +51,9 @@ import AdminEvents from "./pages/AdminEvents";
 import AdminAchievements from "./pages/AdminAchievements";
 import NotificationSettings from "./pages/NotificationSettings";
 import TelegramOnly from "./pages/TelegramOnly";
+import PvpSetup from "./pages/PvpSetup";
+import PvpRoom from "./pages/PvpRoom";
+import PvpResults from "./pages/PvpResults";
 
 /** Restricts a route to Супер-Бабай and Ад-Бабай only */
 function AdminGuard({ children }: { children: React.ReactNode }) {
