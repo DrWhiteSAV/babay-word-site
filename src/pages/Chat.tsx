@@ -896,7 +896,19 @@ export default function Chat() {
 
                     {/* Image */}
                     {msg.imageUrl && (
-                      <img src={msg.imageUrl} alt="attachment" className="w-full max-w-[200px] rounded-xl mb-2 object-contain" />
+                      <div className="mb-2">
+                        <img src={msg.imageUrl} alt="attachment" className="w-full max-w-[200px] rounded-xl mb-1 object-contain" />
+                        {msg.imageUrl.startsWith("http") && (
+                          <a
+                            href={msg.imageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-[10px] text-blue-300/80 hover:text-blue-200 underline break-all leading-tight max-w-[200px]"
+                          >
+                            {msg.imageUrl.length > 50 ? msg.imageUrl.slice(0, 47) + "…" : msg.imageUrl}
+                          </a>
+                        )}
+                      </div>
                     )}
 
                     {/* Text */}
