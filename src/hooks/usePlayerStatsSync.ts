@@ -139,6 +139,7 @@ export function usePlayerStatsSync() {
           updates.gameStatus = "new";
           updates.dbLoaded = true;
           usePlayerStore.setState(updates);
+          dbLoadedAtRef.current = Date.now();
           return;
         }
 
