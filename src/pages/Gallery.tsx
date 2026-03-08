@@ -278,10 +278,7 @@ export default function Gallery() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.03 }}
                 className="aspect-square rounded-xl overflow-hidden border border-neutral-800 cursor-pointer hover:border-red-900/50 transition-colors relative group"
-                onClick={() => {
-                  setSelectedImage(item);
-                  playClick();
-                }}
+                onClick={() => handleOpenImage(item)}
               >
                 <img
                   src={item.image_url}
@@ -316,35 +313,56 @@ export default function Gallery() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-2 backdrop-blur-sm"
+            onClick={() => { setSelectedImage(null); setSelectedLore(null); }}
           >
             <button
               className="absolute top-4 right-4 p-2 bg-neutral-800 rounded-full text-white hover:bg-neutral-700 transition-colors z-50"
-              onClick={(e) => { e.stopPropagation(); playClick(); setSelectedImage(null); }}
+              onClick={(e) => { e.stopPropagation(); playClick(); setSelectedImage(null); setSelectedLore(null); }}
             >
               <X size={24} />
             </button>
 
-            <div className="relative max-w-full max-h-full w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="relative w-full max-w-lg flex flex-col items-center max-h-[95vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <img
                 src={selectedImage.image_url}
                 alt={selectedImage.label || "Full size"}
-                className="max-w-full max-h-[75vh] rounded-lg shadow-2xl border border-neutral-800 object-contain"
+                className="w-full rounded-lg shadow-2xl border border-neutral-800 object-contain max-h-[55vh]"
                 referrerPolicy="no-referrer"
               />
+
+              {/* Label (name) */}
               {selectedImage.label && (
-                <p className="text-center text-neutral-400 text-sm mt-2">
-                  {selectedImage.label.replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "")}
+                <p className="text-center text-neutral-300 text-sm font-semibold mt-3 px-2">
+                  {selectedImage.label.replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "").split("|")[0].trim()}
                 </p>
               )}
 
-              {/* Direct ImgBB link */}
-              <p className="text-[10px] text-neutral-600 mt-1 text-center break-all px-4 max-w-sm">
+              {/* Lore — full, no truncation (avatars only) */}
+              {selectedLore && (
+                <div className="w-full mt-2 px-3 py-2 bg-neutral-900/80 rounded-xl border border-neutral-800">
+                  <p className="text-[11px] text-purple-300 font-bold mb-1 uppercase tracking-wide">Лор</p>
+                  <p className="text-neutral-300 text-xs leading-relaxed whitespace-pre-wrap">{selectedLore}</p>
+                </div>
+              )}
+
+              {/* Prompt — full, no truncation */}
+              {selectedImage.prompt && (
+                <div className="w-full mt-2 px-3 py-2 bg-neutral-900/80 rounded-xl border border-neutral-800">
+                  <p className="text-[11px] text-yellow-500/80 font-bold mb-1 uppercase tracking-wide">Промпт</p>
+                  <p className="text-neutral-400 text-xs leading-relaxed whitespace-pre-wrap">{selectedImage.prompt}</p>
+                </div>
+              )}
+
+              {/* URL */}
+              <p className="text-[10px] text-neutral-600 mt-2 text-center break-all px-4">
                 {selectedImage.image_url}
               </p>
 
-              <div className="mt-3 flex justify-center gap-2 flex-wrap">
+              <div className="mt-3 mb-2 flex justify-center gap-2 flex-wrap">
                 {getCategory(selectedImage) === "avatars" && character && (
                   <button
                     onClick={handleSetAsAvatar}
