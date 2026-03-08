@@ -153,6 +153,24 @@ export default function PvpSetup() {
     navigate(`/pvp/room/${roomId}`);
   };
 
+  const checkConnection = async () => {
+    setConnStatus("checking");
+    setConnMessage("");
+    try {
+      const reply = await protalkGenerateText("Ответь одним словом: готов", tgId);
+      if (reply && reply.trim().length > 0) {
+        setConnStatus("ok");
+        setConnMessage(reply.trim());
+      } else {
+        setConnStatus("error");
+        setConnMessage("Пустой ответ от сервера");
+      }
+    } catch (e: any) {
+      setConnStatus("error");
+      setConnMessage(e?.message || "Нет связи с ProTalk");
+    }
+  };
+
   const cost = difficulty === "Невозможная" ? 15 : 3;
 
   return (
