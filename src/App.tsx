@@ -177,7 +177,17 @@ function AppContent() {
   };
 
   const fontClass = fontFamilyMap[settings.fontFamily] || "font-jetbrains";
-  const themeClass = settings.theme === "cyberpunk" ? "theme-cyberpunk" : "";
+  const themeClassMap: Record<string, string> = {
+    cyberpunk: "theme-cyberpunk",
+    horror: "theme-horror",
+    steampunk: "theme-steampunk",
+    anime: "theme-anime",
+    soviet: "theme-soviet",
+    fairytale: "theme-fairytale",
+    cartoon: "theme-cartoon",
+    fantasy: "theme-fantasy",
+  };
+  const themeClass = themeClassMap[settings.theme] || "";
 
   const buttonSizeClass = 
     settings.buttonSize === "small" ? "btn-small" :
