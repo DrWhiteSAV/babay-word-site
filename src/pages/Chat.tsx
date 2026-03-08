@@ -427,7 +427,16 @@ export default function Chat() {
   }, []);
 
   const saveMessageToDB = async (msg: Message, role: string, senderName: string): Promise<string | null> => {
-    if (!chatKey) return null;
+    // Always compute the canonical chatKey at save time using the latest friendTelegramId
+    // This prevents AI responses from being saved with the wrong key (ai_TID_name vs TID_TID)
+    const effectiveChatKey = groupId
+      ? `group_${groupId}`
+      : profile?.telegram_id && friendTelegramId
+        ? [profile.telegram_id, friendTelegramId].map(String).sort().join('_')
+        : profile?.telegram_id && friendName
+          ? `ai_${profile.telegram_id}_${friendName}`
+          : chatKey;
+    if (!effectiveChatKey) return null;
     // Encode imageUrl into content using [img]: prefix so it persists in DB
     let content = msg.text || '';
     if (msg.imageUrl) content = `[img]:${msg.imageUrl}\n${content}`;
@@ -436,7 +445,7 @@ export default function Chat() {
       content,
       role,
       friend_name: senderName,
-      chat_key: chatKey,
+      chat_key: effectiveChatKey,
       sender_telegram_id: role === 'user' ? profile?.telegram_id : null,
     } as any).select('id').single();
 
