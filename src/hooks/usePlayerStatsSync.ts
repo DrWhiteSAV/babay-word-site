@@ -308,6 +308,7 @@ export function usePlayerStatsSync() {
     store.dbLoaded,
     store.gameStatus,
     store.fear,
+    store.energy,
     store.watermelons,
     store.bossLevel,
     store.character?.telekinesisLevel,
