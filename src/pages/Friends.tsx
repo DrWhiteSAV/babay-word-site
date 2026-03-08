@@ -529,67 +529,9 @@ export default function Friends() {
           </AnimatePresence>
         </section>
 
-        {/* Group Chats */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Групповые чаты ({groupChats.length})</h2>
-            <button onClick={() => setShowGroupModal(true)} className="flex items-center gap-1 text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-2 rounded-xl font-bold transition-colors">
-              <Plus size={14} /> Создать
-            </button>
-          </div>
-          {groupChats.length === 0 ? (
-            <p className="text-center text-neutral-500 py-4 text-sm">Нет групповых чатов</p>
-          ) : (
-            <div className="space-y-2">
-              {groupChats.map(chat => (
-                <div key={chat.id} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Users size={16} className="text-purple-400 shrink-0" />
-                      {editingGroupId === chat.id ? (
-                        <div className="flex gap-2 flex-1 min-w-0">
-                          <input
-                            value={editGroupName}
-                            onChange={e => setEditGroupName(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && saveGroupName()}
-                            className="flex-1 bg-neutral-800 text-white rounded-lg px-3 py-1 text-sm focus:outline-none min-w-0"
-                            autoFocus
-                          />
-                          <button onClick={saveGroupName} className="text-green-400 text-xs font-bold shrink-0">Сохранить</button>
-                        </div>
-                      ) : (
-                        <span className="font-bold text-white text-sm truncate">{chat.name}</span>
-                      )}
-                    </div>
-                    <div className="flex gap-1.5 shrink-0 items-center">
-                      <button onClick={() => handleEditGroup(chat.id, chat.name)} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 transition-colors"><Edit2 size={14} /></button>
-                      <button
-                        onClick={() => navigate("/chat", { state: { groupId: chat.id } })}
-                        className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
-                      >
-                        <MessageSquare size={14} />
-                        {(perChatUnread[`group_${chat.id}`] || 0) > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
-                            {perChatUnread[`group_${chat.id}`] > 99 ? "99+" : perChatUnread[`group_${chat.id}`]}
-                          </span>
-                        )}
-                      </button>
-                      <button onClick={() => { if (confirm('Удалить группу?')) deleteGroupChat(chat.id); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  </div>
-                  {chat.members.length > 0 && (
-                    <p className="text-xs text-neutral-500 mt-2 truncate">{chat.members.join(", ")}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
         {/* Friends List */}
         <section>
           <h2 className="text-lg font-bold mb-4 text-white">Список друзей ({friends.length})</h2>
-          {/* ДанИИл — hardcoded built-in AI friend, always first */}
           <div className="space-y-3">
             {/* ДанИИл block */}
             <div className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-xl border border-green-900/30 flex flex-col gap-2">
@@ -631,27 +573,26 @@ export default function Friends() {
 
             {/* Regular friends */}
             {friends.filter(f => f.name !== "ДанИИл").map((friend) => {
-                const meta = friendsMeta[friend.name] || {};
+              const meta = friendsMeta[friend.name] || {};
               const avatarSrc = meta.avatar_url || `https://picsum.photos/seed/${friend.name}/100/100`;
               const tgLink = meta.username ? `https://t.me/${meta.username}` : null;
               const isOnline = meta.telegram_id ? !!onlineMap[meta.telegram_id] : false;
+              const dmKey = meta.telegram_id
+                ? [String(profile?.telegram_id), String(meta.telegram_id)].sort().join("_")
+                : null;
+              const unread = dmKey ? (perChatUnread[dmKey] || 0) : 0;
 
               return (
                 <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-xl border border-neutral-800 flex flex-col gap-2">
-                  {/* Top row: avatar + names + buttons */}
                   <div className="flex items-center gap-2 w-full min-w-0">
-                    {/* Avatar with online dot */}
                     <div className="relative shrink-0">
                       <img
-                        src={avatarSrc}
-                        alt="avatar"
+                        src={avatarSrc} alt="avatar"
                         className="w-10 h-10 rounded-full object-cover border border-neutral-700 cursor-pointer"
                         onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
                       />
                       <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-neutral-900 ${isOnline ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : 'bg-neutral-600'}`} />
                     </div>
-
-                    {/* Name block */}
                     <div
                       className="flex-1 min-w-0 cursor-pointer overflow-hidden"
                       onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
@@ -660,13 +601,9 @@ export default function Friends() {
                         <p className="text-[11px] text-neutral-400 truncate leading-tight">
                           {meta.first_name}{meta.last_name ? ` ${meta.last_name}` : ""}
                           {meta.username && tgLink && (
-                            <a
-                              href={tgLink}
-                              target="_blank"
-                              rel="noreferrer"
+                            <a href={tgLink} target="_blank" rel="noreferrer"
                               className="text-blue-400 hover:underline ml-1"
-                              onClick={e => e.stopPropagation()}
-                            >@{meta.username}</a>
+                              onClick={e => e.stopPropagation()}>@{meta.username}</a>
                           )}
                         </p>
                       )}
@@ -675,42 +612,44 @@ export default function Friends() {
                         <span className="text-neutral-500 font-normal text-xs ml-1">· тк. {meta.telekinesis_level ?? 1}</span>
                       </p>
                     </div>
-
-                    {/* Action buttons */}
                     <div className="flex gap-1 shrink-0 items-center">
+                      {/* AI Substitute toggle */}
+                      <button
+                        onClick={async () => {
+                          const newVal = !friend.isAiEnabled;
+                          toggleFriendAi(friend.name);
+                          if (profile?.telegram_id) {
+                            await supabase.from("friends").update({ ai_substitute: newVal } as any)
+                              .eq("telegram_id", profile.telegram_id).eq("friend_name", friend.name);
+                          }
+                        }}
+                        title={friend.isAiEnabled ? "ИИ-заместитель включён" : "ИИ-заместитель выключен"}
+                        className={`p-2 rounded-lg transition-colors ${friend.isAiEnabled ? "bg-green-900/50 text-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)]" : "bg-neutral-800 text-neutral-600 hover:text-neutral-400"}`}
+                      ><Bot size={15} /></button>
                       <button
                         onClick={() => setEnergyModal({ friendName: friend.name, telegramId: meta.telegram_id })}
                         className="p-2 bg-neutral-800 hover:bg-yellow-900/40 rounded-lg text-yellow-500 transition-colors"
                         title="Поделиться энергией"
                       ><Zap size={15} /></button>
-                      {(() => {
-                        const dmKey = meta.telegram_id
-                          ? [String(profile?.telegram_id), String(meta.telegram_id)].sort().join("_")
-                          : null;
-                        const unread = dmKey ? (perChatUnread[dmKey] || 0) : 0;
-                        return (
-                          <button
-                            onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
-                            className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
-                            title="Чат"
-                          >
-                            <MessageSquare size={15} />
-                            {unread > 0 && (
-                              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
-                                {unread > 99 ? "99+" : unread}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })()}
+                      <button
+                        onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
+                        className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
+                        title="Чат"
+                      >
+                        <MessageSquare size={15} />
+                        {unread > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                      </button>
                       <button
                         onClick={async () => {
                           if (!confirm(`Удалить ${friend.name}?`)) return;
                           deleteFriend(friend.name);
                           if (profile?.telegram_id) {
                             await supabase.from("friends").delete()
-                              .eq("telegram_id", profile.telegram_id)
-                              .eq("friend_name", friend.name);
+                              .eq("telegram_id", profile.telegram_id).eq("friend_name", friend.name);
                             setFriendsMeta(prev => { const n = { ...prev }; delete n[friend.name]; return n; });
                           }
                         }}
