@@ -207,7 +207,7 @@ export function usePlayerStatsSync() {
   }, [profile?.telegram_id]);
 
   // ─── AUTO-SYNC TO DB ─────────────────────────────────────────────────────────
-  // CRITICAL: This effect ONLY writes gameplay stats (fear, watermelons, boss_level, telekinesis_level).
+  // CRITICAL: This effect ONLY writes gameplay stats (fear, watermelons, boss_level, telekinesis_level, energy).
   // It NEVER touches: avatar_url, character_name, character_gender, character_style, lore, custom_settings.
   // custom_settings is written ONLY via the "Сохранить настройки" button in Settings.
   // Identity fields are written ONLY by CharacterCreate, Gallery, or explicit save actions.
@@ -220,6 +220,48 @@ export function usePlayerStatsSync() {
   }, [profile?.telegram_id]);
 
   const store = usePlayerStore();
+
+  // Helper: write gameplay stats to DB immediately (no delay)
+  const writeGameplayToDB = useRef<(telegramId: number, payload: ReturnType<typeof JSON.parse>) => Promise<void>>();
+  writeGameplayToDB.current = async (telegramId: number, payload: Record<string, unknown>) => {
+    console.log(`[DB WRITE] ⚡ player_stats IMMEDIATE UPDATE for telegram_id=${telegramId}`, {
+      fear: payload.fear,
+      energy: payload.energy,
+      watermelons: payload.watermelons,
+      boss_level: payload.boss_level,
+      telekinesis_level: payload.telekinesis_level,
+    });
+    const { error } = await supabase
+      .from("player_stats")
+      .update({
+        fear: payload.fear,
+        energy: payload.energy,
+        watermelons: payload.watermelons,
+        boss_level: payload.boss_level,
+        telekinesis_level: payload.telekinesis_level,
+      })
+      .eq("telegram_id", telegramId);
+
+    if (error) {
+      console.error("[DB WRITE] ❌ player_stats UPDATE error:", error.message);
+    } else {
+      console.log("[DB WRITE] ✅ player_stats UPDATE success");
+    }
+
+    // Leaderboard cache update
+    const storeNow = usePlayerStore.getState();
+    const avatarForLeader = isRealAvatar(storeNow.character?.avatarUrl)
+      ? storeNow.character!.avatarUrl
+      : FALLBACK_AVATAR;
+
+    await supabase.from("leaderboard_cache").upsert({
+      telegram_id: telegramId,
+      display_name: storeNow.character?.name || "Безымянный",
+      fear: storeNow.fear,
+      telekinesis_level: storeNow.character?.telekinesisLevel ?? 1,
+      avatar_url: avatarForLeader,
+    }, { onConflict: "telegram_id" });
+  };
 
   useEffect(() => {
     const telegramId = profile?.telegram_id;
@@ -252,54 +294,21 @@ export function usePlayerStatsSync() {
     }
 
     const payload = JSON.parse(snapshot);
-    const timer = setTimeout(async () => {
-      // UPDATE only gameplay stats — custom_settings and identity fields are NOT touched here
-      console.log(`[DB WRITE] 📝 player_stats UPDATE (gameplay only) for telegram_id=${telegramId}`, {
-        fear: payload.fear,
-        energy: payload.energy,
-        watermelons: payload.watermelons,
-        boss_level: payload.boss_level,
-        telekinesis_level: payload.telekinesis_level,
-        timestamp: new Date().toISOString(),
-      });
 
-      const { error } = await supabase
-        .from("player_stats")
-        .update({
-          fear: payload.fear,
-          energy: payload.energy,
-          watermelons: payload.watermelons,
-          boss_level: payload.boss_level,
-          telekinesis_level: payload.telekinesis_level,
-          // custom_settings intentionally excluded — saved only via Settings page
-        })
-        .eq("telegram_id", telegramId);
+    // ⚡ IMMEDIATE write when energy is spent (decreased) or hits 0 — no delay
+    const prevEnergy = prev ? (JSON.parse(prev) as Record<string, unknown>).energy as number : null;
+    const energyDecreased = prevEnergy !== null && (payload.energy as number) < prevEnergy;
+    const energyZero = payload.energy === 0;
 
-      if (error) {
-        console.error("[DB WRITE] ❌ player_stats UPDATE error:", error.message);
-      } else {
-        console.log("[DB WRITE] ✅ player_stats UPDATE success (gameplay)");
-      }
+    if (energyDecreased || energyZero) {
+      console.log("[sync] ⚡ energy changed (immediate write):", prevEnergy, "→", payload.energy);
+      writeGameplayToDB.current!(telegramId, payload);
+      return; // no delayed write needed — already written
+    }
 
-      // Leaderboard cache — read-only for display, uses current store values
-      const storeNow = usePlayerStore.getState();
-      const avatarForLeader = isRealAvatar(storeNow.character?.avatarUrl)
-        ? storeNow.character!.avatarUrl
-        : FALLBACK_AVATAR;
-
-      const { error: lbError } = await supabase.from("leaderboard_cache").upsert({
-        telegram_id: telegramId,
-        display_name: storeNow.character?.name || "Безымянный",
-        fear: storeNow.fear,
-        telekinesis_level: storeNow.character?.telekinesisLevel ?? 1,
-        avatar_url: avatarForLeader,
-      }, { onConflict: "telegram_id" });
-
-      if (lbError) {
-        console.error("[DB WRITE] ❌ leaderboard_cache UPSERT error:", lbError.message);
-      } else {
-        console.log("[DB WRITE] ✅ leaderboard_cache UPSERT success");
-      }
+    // For all other changes (fear, watermelons, boss_level, telekinesis) — debounce 2s
+    const timer = setTimeout(() => {
+      writeGameplayToDB.current!(telegramId, payload);
     }, 2000);
 
     return () => clearTimeout(timer);
