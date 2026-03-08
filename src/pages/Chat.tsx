@@ -876,7 +876,7 @@ export default function Chat() {
               >
                 <Bot size={15} className="text-green-400 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs text-green-300 block">ИИ-заместитель пишет за тебя</span>
+                  <span className="text-xs text-green-300 block">ИИ-заместитель активен · отвечает за тебя</span>
                   {aiSubCountdown > 0 && (
                     <span className="text-[10px] text-green-500 font-mono">
                       Ответит через <span className="text-green-300 font-bold">{aiSubCountdown}с</span>
@@ -884,7 +884,7 @@ export default function Chat() {
                   )}
                 </div>
                 <button
-                  onClick={() => { setIsAiSubstitute(false); setMyAiDraft(""); setInput(""); if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current); setAiSubCountdown(0); }}
+                  onClick={() => { toggleAiSubstitute(false); setMyAiDraft(""); setInput(""); if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current); setAiSubCountdown(0); }}
                   className="text-green-400 hover:text-white text-xs font-bold shrink-0"
                 >Выкл</button>
               </motion.div>
@@ -897,7 +897,7 @@ export default function Chat() {
                 className="mb-2 flex justify-end"
               >
                 <button
-                  onClick={() => setIsAiSubstitute(true)}
+                  onClick={() => toggleAiSubstitute(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] text-neutral-500 hover:text-green-400 border border-neutral-700 hover:border-green-600 transition-all"
                 >
                   <Bot size={11} /> ИИ-заместитель
