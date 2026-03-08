@@ -303,8 +303,8 @@ export function usePlayerStatsSync() {
     const payload = JSON.parse(snapshot) as GameplayPayload;
 
     // ⚡ IMMEDIATE write when energy is spent (decreased) or hits 0 — no delay
-    const prevEnergy = prev ? (JSON.parse(prev) as Record<string, unknown>).energy as number : null;
-    const energyDecreased = prevEnergy !== null && (payload.energy as number) < prevEnergy;
+    const prevEnergy = prev ? (JSON.parse(prev) as GameplayPayload).energy : null;
+    const energyDecreased = prevEnergy !== null && payload.energy < prevEnergy;
     const energyZero = payload.energy === 0;
 
     if (energyDecreased || energyZero) {
