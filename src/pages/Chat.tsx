@@ -543,7 +543,6 @@ export default function Chat() {
         {showProfilePopup && (
           <ProfilePopup
             name={showProfilePopup === "user" ? (character?.name || "Ты") : showProfilePopup}
-            avatarUrl={getAvatarUrl(showProfilePopup)}
             onClose={() => setShowProfilePopup(null)}
           />
         )}
