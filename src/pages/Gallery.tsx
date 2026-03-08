@@ -119,13 +119,16 @@ export default function Gallery() {
 
     // Parse name and lore from label
     // Label format examples:
-    //   "[avatars] Имя Бабая | Лор..."
-    //   "[avatar] Dr.White SAV AI"
-    //   "Аватар Бабай — старый дух..."
-    const rawLabel = (selectedImage.label || "").replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "").trim();
+    //   "[avatars] Пижамный Ужас | Лор..."
+    //   "[avatars] Имя | Лор"
+    //   "Аватар: Пижамный Ужас"   <- legacy format
+    let rawLabel = (selectedImage.label || "")
+      .replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "") // strip [avatars] prefix
+      .replace(/^Аватар:\s*/i, "")                              // strip legacy "Аватар: " prefix
+      .trim();
 
-    // Split by "|" or "—" to extract name vs lore
-    const parts = rawLabel.split(/\s*[|—]\s*/);
+    // Split by "|" or " — " to extract name vs lore
+    const parts = rawLabel.split(/\s*\|\s*|\s+—\s+/);
     const parsedName = parts[0]?.trim() || null;
     const parsedLore = parts.slice(1).join(" — ").trim() || null;
 
