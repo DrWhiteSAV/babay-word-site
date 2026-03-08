@@ -38,6 +38,9 @@ export default function Friends() {
   const [showReferralList, setShowReferralList] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [friendsMeta, setFriendsMeta] = useState<Record<string, { first_name?: string; last_name?: string; username?: string; telegram_id?: number; telekinesis_level?: number; avatar_url?: string }>>({});
+  const [energyModal, setEnergyModal] = useState<{ friendName: string; telegramId?: number } | null>(null);
+  const [energyAmount, setEnergyAmount] = useState(10);
+  const [energySending, setEnergySending] = useState(false);
 
   useEffect(() => {
     if (!profile?.telegram_id) return;
