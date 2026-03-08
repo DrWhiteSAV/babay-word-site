@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, ButtonSize, FontFamily, Theme } from "../store/playerStore";
 import { motion } from "motion/react";
+import { Loader2 as _Loader2Import } from "lucide-react";
 import {
   Settings as SettingsIcon,
   Volume2,

@@ -79,6 +79,17 @@ export default function Profile() {
     loadReferrals();
   }, [profile]);
 
+  // Wait for DB to load before redirecting — character is null until loadStats completes
+  const { dbLoaded } = usePlayerStore();
+  if (!dbLoaded) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
+        <Loader2 size={28} className="animate-spin text-red-700" />
+        <span className="text-sm">Загрузка профиля...</span>
+      </div>
+    );
+  }
+
   if (!character) {
     navigate("/");
     return null;
