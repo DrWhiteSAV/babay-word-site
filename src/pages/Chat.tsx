@@ -431,7 +431,7 @@ export default function Chat() {
                 {group && !isUser && showAvatar && (
                   <span
                     className="text-[10px] text-neutral-400 mb-1 ml-1 cursor-pointer hover:text-white transition-colors"
-                    onClick={() => setShowProfilePopup(msg.sender)}
+                    onClick={() => setShowProfilePopup({ name: msg.sender, telegramId: msg.sender_telegram_id ?? undefined })}
                   >{msg.sender}</span>
                 )}
 
