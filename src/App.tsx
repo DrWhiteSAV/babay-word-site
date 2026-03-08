@@ -20,6 +20,36 @@ import { useIncomingMessageNotifier } from "./hooks/useIncomingMessageNotifier";
 import { useGroupChatsSync } from "./hooks/useGroupChatsSync";
 import { useTelegram } from "./context/TelegramContext";
 
+// Pages
+import Home from "./pages/Home";
+import CharacterCreate from "./pages/CharacterCreate";
+import GameHub from "./pages/GameHub";
+import Game from "./pages/Game";
+import Shop from "./pages/Shop";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Friends from "./pages/Friends";
+import Chat from "./pages/Chat";
+import Gallery from "./pages/Gallery";
+import Leaderboard from "./pages/Leaderboard";
+import Events from "./pages/Events";
+import Achievements from "./pages/Achievements";
+import Admin from "./pages/Admin";
+import AdminPic from "./pages/AdminPic";
+import AdminVideo from "./pages/AdminVideo";
+import AdminStore from "./pages/AdminStore";
+import AdminUsers from "./pages/AdminUsers";
+import AdminAI from "./pages/AdminAI";
+import AdminAudio from "./pages/AdminAudio";
+import AdminText from "./pages/AdminText";
+import AdminStat from "./pages/AdminStat";
+import AdminNotifications from "./pages/AdminNotifications";
+import AdminImages from "./pages/AdminImages";
+import AdminEvents from "./pages/AdminEvents";
+import AdminAchievements from "./pages/AdminAchievements";
+import NotificationSettings from "./pages/NotificationSettings";
+import TelegramOnly from "./pages/TelegramOnly";
+
 /** Restricts a route to Супер-Бабай and Ад-Бабай only */
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { profile, isLoading } = useTelegram();
