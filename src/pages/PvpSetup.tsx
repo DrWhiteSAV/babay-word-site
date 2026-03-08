@@ -29,6 +29,7 @@ export default function PvpSetup() {
   const [selected, setSelected] = useState<number[]>([]);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!tgId || friends.length === 0) return;
