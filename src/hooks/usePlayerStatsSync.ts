@@ -130,8 +130,29 @@ export function usePlayerStatsSync() {
           updates.bossLevel = 0;
           updates.inventory = [];
           updates.settings = { ...DEFAULT_SETTINGS };
+          updates.gameStatus = "new";
           updates.dbLoaded = true;
           usePlayerStore.setState(updates);
+          return;
+        }
+
+        // ── If game_status = 'reset', block sync and treat as new user ────────
+        const gameStatus = data.game_status || "playing";
+        updates.gameStatus = gameStatus;
+
+        if (gameStatus === "reset") {
+          // User reset and closed app before completing character creation
+          // Do NOT write anything to DB — just load empty state and send to /create
+          updates.character = null;
+          updates.fear = 0;
+          updates.energy = 100;
+          updates.watermelons = 0;
+          updates.bossLevel = 0;
+          updates.inventory = [];
+          updates.settings = { ...DEFAULT_SETTINGS };
+          updates.dbLoaded = true;
+          usePlayerStore.setState(updates);
+          console.log("[usePlayerStatsSync] game_status=reset — sync blocked, redirecting to create");
           return;
         }
 
@@ -186,6 +207,7 @@ export function usePlayerStatsSync() {
         console.log("[usePlayerStatsSync] Loaded from DB:", {
           character: updates.character?.name,
           avatar: updates.character?.avatarUrl,
+          gameStatus,
           settings: updates.settings,
         });
       } catch (err) {
