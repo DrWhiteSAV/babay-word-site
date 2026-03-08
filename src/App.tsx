@@ -174,6 +174,9 @@ function AppContent() {
     "Neucha": "font-neucha",
     "Ruslan Display": "font-ruslan-display",
     "Tektur": "font-tektur",
+    "Special Elite": "font-special-elite",
+    "Cinzel Decorative": "font-cinzel-decorative",
+    "Nunito": "font-nunito",
   };
 
   const fontClass = fontFamilyMap[settings.fontFamily] || "font-jetbrains";
