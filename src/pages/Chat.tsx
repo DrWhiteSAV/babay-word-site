@@ -525,9 +525,9 @@ export default function Chat() {
     try {
       let responseText: string;
       if (isSubstituteCall) {
-        // AI writes AS ME — use generateMyAiReply with stable telegramId (mine)
+        // AI writes AS ME — use generateMyAiReply with stable chatKey-based session
         responseText = await generateMyAiReply(
-          responder, character!, recentMessages, profile?.telegram_id
+          responder, character!, recentMessages, profile?.telegram_id, chatKey || undefined
         );
       } else {
         responseText = await generateFriendChat(
