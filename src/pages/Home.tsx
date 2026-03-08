@@ -8,27 +8,59 @@ import { useTelegram } from "../context/TelegramContext";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { character, dbLoaded } = usePlayerStore();
+  const { character } = usePlayerStore();
   const { profile, isLoading: tgLoading } = useTelegram();
-  const [checking, setChecking] = useState(true);
 
-  // Once DB is loaded, decide routing
+  // null = still checking, true = has character, false = no character
+  const [hasCharacter, setHasCharacter] = useState<boolean | null>(null);
+
+  // Direct DB check — source of truth, no cache involved
   useEffect(() => {
     if (tgLoading) return;
-    if (!dbLoaded) return; // wait for DB hydration
+    if (!profile?.telegram_id) return;
 
-    setChecking(false);
-  }, [dbLoaded, tgLoading]);
+    let cancelled = false;
+
+    const checkDB = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("player_stats")
+          .select("character_name, game_status")
+          .eq("telegram_id", profile.telegram_id)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (error) {
+          console.error("[Home] DB check error:", error.message);
+          // Fall back to local store state if DB fails
+          setHasCharacter(!!character);
+          return;
+        }
+
+        const exists = !!(data?.character_name && data.character_name.trim().length > 0);
+        setHasCharacter(exists);
+      } catch (err) {
+        console.error("[Home] Unexpected error:", err);
+        if (!cancelled) setHasCharacter(!!character);
+      }
+    };
+
+    checkDB();
+    return () => { cancelled = true; };
+  }, [profile?.telegram_id, tgLoading]);
 
   const handlePlay = () => {
-    if (character) {
+    if (hasCharacter) {
       navigate("/hub");
     } else {
       navigate("/create");
     }
   };
 
-  if (tgLoading || !dbLoaded || checking) {
+  const isChecking = tgLoading || hasCharacter === null;
+
+  if (isChecking) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-transparent">
         <div className="fog-container">
@@ -77,10 +109,10 @@ export default function Home() {
           className="w-full py-4 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold text-lg transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.4)] lightning-btn"
         >
           <Play fill="currentColor" size={20} />
-          {character ? "ПРОДОЛЖИТЬ" : "НАЧАТЬ"}
+          {hasCharacter ? "ПРОДОЛЖИТЬ" : "НАЧАТЬ"}
         </button>
 
-        {character && (
+        {hasCharacter && character && (
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => navigate("/profile")}
