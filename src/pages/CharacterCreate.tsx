@@ -238,12 +238,61 @@ export default function CharacterCreate() {
     const name = generatedName || "Безымянный";
     const finalUrl = selectedDefaultImage || generatedAvatarUrl || FALLBACK_AVATAR;
 
-    setCharacter({ name, gender, style, wishes, avatarUrl: finalUrl, telekinesisLevel: 1 });
-    if (generatedLore) updateCharacter({ lore: generatedLore });
+    setCharacter({
+      name,
+      gender,
+      style,
+      wishes,
+      avatarUrl: finalUrl,
+      telekinesisLevel: 1,
+      lore: generatedLore || undefined,
+    });
 
-    // Persist lore
-    if (tgId && generatedLore) {
-      supabase.from("player_stats").update({ lore: generatedLore }).eq("telegram_id", tgId).then();
+    if (tgId) {
+      try {
+        const storeState = usePlayerStore.getState();
+        const { data: existingStats } = await supabase
+          .from("player_stats")
+          .select("custom_settings")
+          .eq("telegram_id", tgId)
+          .maybeSingle();
+
+        const existingCustomSettings =
+          existingStats?.custom_settings && typeof existingStats.custom_settings === "object"
+            ? (existingStats.custom_settings as Record<string, unknown>)
+            : {};
+
+        await supabase.from("player_stats").upsert(
+          {
+            telegram_id: tgId,
+            fear: storeState.fear,
+            energy: storeState.energy,
+            watermelons: storeState.watermelons,
+            boss_level: storeState.bossLevel,
+            telekinesis_level: 1,
+            character_name: name,
+            character_gender: gender,
+            character_style: style,
+            avatar_url: finalUrl,
+            lore: generatedLore || null,
+            custom_settings: {
+              ...existingCustomSettings,
+              buttonSize: storeState.settings.buttonSize,
+              fontFamily: storeState.settings.fontFamily,
+              fontSize: storeState.settings.fontSize,
+              fontBrightness: storeState.settings.fontBrightness,
+              theme: storeState.settings.theme,
+              musicVolume: storeState.settings.musicVolume,
+              ttsEnabled: storeState.settings.ttsEnabled,
+              wishes,
+              inventory: storeState.inventory,
+            },
+          },
+          { onConflict: "telegram_id" }
+        );
+      } catch (e) {
+        console.error("[Create] initial save error:", e);
+      }
     }
 
     // Referral bonus
