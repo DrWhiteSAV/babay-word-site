@@ -170,18 +170,49 @@ export default function Game() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pvpRoomId, pvpDiffParam, character]);
 
+  // PVP: write timeout to DB (used on early exit / app close)
+  const writePvpTimeout = useCallback(async (roomId: string, tid: number) => {
+    const score = localFearRef.current;
+    console.log(`[DB WRITE] 📝 PVP timeout: tgId=${tid}, room=${roomId}, score=${score}`);
+    await supabase.from("pvp_room_members").update({
+      status: "timeout",
+      score,
+      finished_at: new Date().toISOString(),
+    }).eq("room_id", roomId).eq("telegram_id", tid);
+  }, []);
+
+  // PVP: on app hide / close → mark as timeout via beacon so it fires even on tab close
+  useEffect(() => {
+    if (!pvpRoomId || !tgId) return;
+    const onHide = () => {
+      if (exitedEarlyRef.current || pvpSavedRef.current) return;
+      // Use sendBeacon for reliability on tab close
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/pvp_room_members?room_id=eq.${pvpRoomId}&telegram_id=eq.${tgId}`;
+      const body = JSON.stringify({ status: "timeout", score: localFearRef.current, finished_at: new Date().toISOString() });
+      navigator.sendBeacon
+        ? navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))
+        : writePvpTimeout(pvpRoomId, tgId);
+    };
+    document.addEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", () => { if (document.hidden) onHide(); });
+      window.removeEventListener("pagehide", onHide);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pvpRoomId, tgId]);
+
   // PVP room: report finish to DB when game over, then navigate
   const [pvpSaved, setPvpSaved] = useState(false);
+  const pvpSavedRef = useRef(false);
   useEffect(() => {
     if (!pvpRoomId || !tgId || !isGameOver || pvpSaved) return;
-    // Mark saved immediately to prevent double-run
     setPvpSaved(true);
-    // Read score from ref — state may be stale due to closure
+    pvpSavedRef.current = true;
     const finalScore = localFearRef.current;
     const exited = exitedEarlyRef.current;
     console.log(`[DB WRITE] 📝 PVP finish: tgId=${tgId}, room=${pvpRoomId}, score=${finalScore}, exited=${exited}`);
     (async () => {
-      // Update member status to finished with final score
       const { error } = await supabase.from("pvp_room_members").update({
         status: exited ? "timeout" : "finished",
         score: finalScore,
@@ -189,26 +220,23 @@ export default function Game() {
       }).eq("room_id", pvpRoomId).eq("telegram_id", tgId);
       console.log(`[DB WRITE] 📝 pvp_room_members update result:`, error ? `ERROR: ${error.message}` : "OK");
 
-      // Check if this is the first finisher → set timer_ends_at
+      // First finisher → set timer_ends_at
       const { data: roomData } = await supabase
         .from("pvp_rooms").select("timer_ends_at, difficulty").eq("id", pvpRoomId).single();
-
       if (roomData && !roomData.timer_ends_at && !exited) {
         const waitMinutes = roomData.difficulty === "Невозможная" ? 10 : 3;
         const timerEndsAt = new Date(Date.now() + waitMinutes * 60 * 1000).toISOString();
         await supabase.from("pvp_rooms").update({ timer_ends_at: timerEndsAt }).eq("id", pvpRoomId);
       }
 
-      // Check if all playing members finished → close room
-      const { data: members } = await supabase
-        .from("pvp_room_members")
-        .select("status").eq("room_id", pvpRoomId);
-      const playingOrJoined = (members || []).filter(m => m.status === "playing" || m.status === "joined");
-      if (playingOrJoined.length === 0) {
+      // All done → close room
+      const { data: membersData } = await supabase
+        .from("pvp_room_members").select("status").eq("room_id", pvpRoomId);
+      const stillPlaying = (membersData || []).filter(m => m.status === "playing" || m.status === "joined");
+      if (stillPlaying.length === 0) {
         await supabase.from("pvp_rooms").update({ status: "finished" }).eq("id", pvpRoomId);
       }
 
-      // Navigate AFTER DB write completes
       navigate(`/pvp/results/${pvpRoomId}`, { replace: true });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -918,8 +946,14 @@ export default function Game() {
       <header className="relative z-10 flex justify-between items-center p-4 bg-neutral-950/50 backdrop-blur-sm border-b border-neutral-800">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              if (pvpRoomId || pvpParticipants.length > 0) {
+            onClick={async () => {
+              if (pvpRoomId && tgId) {
+                // PVP real room: write timeout immediately then go to lobby
+                exitedEarlyRef.current = true;
+                pvpSavedRef.current = true;
+                await writePvpTimeout(pvpRoomId, tgId);
+                navigate(`/pvp/room/${pvpRoomId}`, { replace: true });
+              } else if (pvpParticipants.length > 0) {
                 exitedEarlyRef.current = true;
                 setExitedEarly(true);
                 setIsGameOver(true);
