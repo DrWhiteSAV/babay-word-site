@@ -203,17 +203,11 @@ export default function Settings() {
   };
 
   const handleResetProgress = async () => {
-    if (!window.confirm("Вы уверены? Весь прогресс, персонаж, очки и инвентарь будут удалены безвозвратно.")) return;
-    const word = window.prompt('Для подтверждения введите слово СБРОС:');
-    if (word?.trim().toUpperCase() !== "СБРОС") {
-      window.alert("Сброс отменён — слово не совпало.");
-      return;
-    }
+    setResetDialogOpen(false);
     setResetting(true);
     try {
       const telegramId = profile?.telegram_id;
       if (telegramId) {
-        // Save snapshot before reset for rollback
         const { data: current } = await supabase
           .from("player_stats")
           .select("*")
@@ -221,9 +215,10 @@ export default function Settings() {
           .single();
 
         if (current) {
+          const label = snapshotName.trim() || current.character_name || "Безымянный";
           await supabase.from("player_stats_history").insert({
             telegram_id: telegramId,
-            character_name: current.character_name,
+            character_name: label,
             character_gender: current.character_gender,
             character_style: current.character_style,
             avatar_url: current.avatar_url,
@@ -267,7 +262,6 @@ export default function Settings() {
     } catch (e) {
       console.error("Reset error:", e);
     }
-    // Reset store to defaults
     usePlayerStore.setState({
       character: null,
       fear: 0,
@@ -290,6 +284,7 @@ export default function Settings() {
       },
       dbLoaded: false,
     });
+    setSnapshotName("");
     setResetting(false);
     navigate("/create");
   };
