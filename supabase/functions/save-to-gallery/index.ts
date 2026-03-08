@@ -148,7 +148,8 @@ serve(async (req) => {
         console.log(`[DB WRITE] 📝 avatars INSERT for telegram_id=${telegramId}, name="${cleanName}"`);
       }
 
-      // Update player_stats: avatar_url + character_name + lore (identity fields only)
+      // Update player_stats: ONLY identity fields (avatar_url, character_name, lore, style, gender)
+      // NEVER touch custom_settings here — that belongs only to the Settings page
       const statsUpdate: Record<string, unknown> = { avatar_url: finalUrl };
       statsUpdate.character_name = cleanName;
       if (lore && lore.trim()) statsUpdate.lore = lore.trim();
@@ -165,23 +166,8 @@ serve(async (req) => {
       } else {
         console.log(`[DB WRITE] 📝 player_stats UPDATE identity for telegram_id=${telegramId}:`, Object.keys(statsUpdate).join(", "));
       }
-
-      // Update custom_settings.wishes in player_stats if wishes provided
-      if (wishesArray.length > 0) {
-        const { data: existing } = await supabase
-          .from("player_stats")
-          .select("custom_settings")
-          .eq("telegram_id", telegramId)
-          .single();
-        const cs = existing?.custom_settings && typeof existing.custom_settings === "object"
-          ? existing.custom_settings as Record<string, unknown>
-          : {};
-        await supabase
-          .from("player_stats")
-          .update({ custom_settings: { ...cs, wishes: wishesArray } })
-          .eq("telegram_id", telegramId);
-        console.log(`[DB WRITE] 📝 player_stats UPDATE custom_settings.wishes for telegram_id=${telegramId}`);
-      }
+      // NOTE: custom_settings (including wishes) is intentionally NOT updated here.
+      // wishes are stored in the avatars table and applied only when user picks an avatar in Gallery.
     }
 
     // 7. Send to Telegram
