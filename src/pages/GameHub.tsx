@@ -15,6 +15,9 @@ import {
   MessageSquare,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
+import { usePvpLobby } from "../hooks/usePvpLobby";
+import PvpLobbyBanner from "../components/PvpLobbyBanner";
+import { useTelegram } from "../context/TelegramContext";
 
 export default function GameHub() {
   const navigate = useNavigate();
