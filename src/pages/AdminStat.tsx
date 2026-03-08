@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { BarChart3, Users, Zap, TrendingUp, Activity, MessageSquare, Image, Trophy, RefreshCw, Loader2 } from "lucide-react";
 import Header from "../components/Header";
@@ -24,13 +23,12 @@ interface DailyActivity {
 export default function AdminStat() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [daily, setDaily] = useState<DailyActivity[]>([]);
-  const [topPlayers, setTopPlayers] = useState<{ name: string | null; fear: number; telegram_id: number }[]>([]);
+  const [topPlayers, setTopPlayers] = useState<{ character_name: string | null; fear: number; telegram_id: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    const [agg, msgs, top] = await Promise.all([
-      supabase.rpc ? null : null, // placeholder
+    const [msgs] = await Promise.all([
       supabase.from("chat_messages")
         .select("created_at")
         .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
