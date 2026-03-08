@@ -529,6 +529,33 @@ export default function Chat() {
     isRetry = false,
     isSubstituteCall = false,
   ) => {
+    // For substitute calls: always use the canonical tid_tid chatKey derived from friendTelegramId.
+    // This is the ONLY key visible to both participants and used by ai-substitute-worker.
+    const canonicalSubKey = isSubstituteCall && profile?.telegram_id && friendTelegramId
+      ? [profile.telegram_id, friendTelegramId].map(String).sort().join('_')
+      : chatKey;
+
+    // Broadcast typing countdown to both sides so the ASKER also sees the 🤖 bubble
+    if (isSubstituteCall && canonicalSubKey && profile?.telegram_id) {
+      const broadcastCh = aiSubBroadcastChannelRef.current;
+      const broadcastTyping = (remaining: number) => {
+        broadcastCh?.send({
+          type: 'broadcast',
+          event: 'ai_sub_typing',
+          payload: { remaining, senderTid: profile.telegram_id },
+        });
+      };
+      let count = AI_REPLY_TIMEOUT;
+      setAiSubTypingCountdown(count);
+      const iv = setInterval(() => {
+        count -= 1;
+        setAiSubTypingCountdown(count > 0 ? count : 0);
+        broadcastTyping(count);
+        if (count <= 0) clearInterval(iv);
+      }, 1000);
+      aiSubIntervalRef.current = iv;
+    }
+
     setIsAiTyping(true);
     setAiTimedOut(false);
     if (!isRetry) setPendingRetry(null);
@@ -536,9 +563,12 @@ export default function Chat() {
     try {
       let responseText: string;
       if (isSubstituteCall) {
-        // AI writes AS ME — use generateMyAiReply with stable chatKey-based session
+        // AI writes AS ME — use generateMyAiReply with stable aisub-prefixed chatKey session
+        const sessionKey = canonicalSubKey
+          ? `aisub_${canonicalSubKey.replace(/[^a-z0-9_]/gi, '_')}`
+          : undefined;
         responseText = await generateMyAiReply(
-          responder, character!, recentMessages, profile?.telegram_id, chatKey || undefined
+          responder, character!, recentMessages, profile?.telegram_id, sessionKey
         );
       } else {
         responseText = await generateFriendChat(
@@ -546,6 +576,18 @@ export default function Chat() {
           recentMessages, imageToSend || undefined, profile?.telegram_id
         );
       }
+
+      // Stop typing countdown
+      if (isSubstituteCall) {
+        if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current);
+        setAiSubTypingCountdown(0);
+        aiSubBroadcastChannelRef.current?.send({
+          type: 'broadcast',
+          event: 'ai_sub_typing',
+          payload: { remaining: 0, senderTid: profile?.telegram_id },
+        });
+      }
+
       if (aiResolvedRef.current && isRetry === false) return;
       stopAiCountdown();
       aiResolvedRef.current = true;
@@ -563,12 +605,16 @@ export default function Chat() {
       setMessages(prev => [...prev, aiMsg]);
       const dbRole = isSubstituteCall ? 'user' : 'assistant';
       const dbSenderName = isSubstituteCall ? (character?.name || 'user') : responder;
-      const dbId = await saveMessageToDB(aiMsg, dbRole, dbSenderName);
+      const dbId = await saveMessageToDB(aiMsg, dbRole, dbSenderName, isSubstituteCall);
       if (dbId) {
         setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: dbId } : m));
       }
       setPendingRetry(null);
     } catch (e) {
+      if (isSubstituteCall) {
+        if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current);
+        setAiSubTypingCountdown(0);
+      }
       stopAiCountdown();
       aiResolvedRef.current = true;
       setAiTimedOut(true);
@@ -576,7 +622,7 @@ export default function Chat() {
     } finally {
       if (aiResolvedRef.current) setIsAiTyping(false);
     }
-  }, [character, profile?.telegram_id, startAiCountdown, stopAiCountdown]);
+  }, [character, profile?.telegram_id, friendTelegramId, chatKey, startAiCountdown, stopAiCountdown]);
 
   const handleRetryAi = useCallback(() => {
     if (!pendingRetry) return;
