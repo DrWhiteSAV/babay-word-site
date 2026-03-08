@@ -110,8 +110,10 @@ export default function Game() {
   const [isPvpLobby, setIsPvpLobby] = useState(false);
   const [pvpParticipants, setPvpParticipants] = useState<string[]>([]);
   const [localFear, setLocalFear] = useState(0);
+  const localFearRef = useRef(0); // always-fresh ref for async closures
   const [localWatermelons, setLocalWatermelons] = useState(0);
   const [exitedEarly, setExitedEarly] = useState(false);
+  const exitedEarlyRef = useRef(false);
 
   interface PvpResult { name: string; fear: number; watermelons: number; isLocal: boolean; exited?: boolean; }
   const [pvpResults, setPvpResults] = useState<PvpResult[] | null>(null);
@@ -171,11 +173,13 @@ export default function Game() {
   // PVP room: report finish to DB when game over
   useEffect(() => {
     if (!pvpRoomId || !tgId || !isGameOver) return;
-    const score = localFear;
+    // Use ref to get the latest localFear value — state closure may be stale
+    const score = localFearRef.current;
+    const exited = exitedEarlyRef.current;
     (async () => {
       // Update member status to finished
       await supabase.from("pvp_room_members").update({
-        status: exitedEarly ? "timeout" : "finished",
+        status: exited ? "timeout" : "finished",
         score,
         finished_at: new Date().toISOString(),
       }).eq("room_id", pvpRoomId).eq("telegram_id", tgId);
@@ -184,7 +188,7 @@ export default function Game() {
       const { data: roomData } = await supabase
         .from("pvp_rooms").select("timer_ends_at, difficulty").eq("id", pvpRoomId).single();
 
-      if (roomData && !roomData.timer_ends_at && !exitedEarly) {
+      if (roomData && !roomData.timer_ends_at && !exited) {
         const waitMinutes = roomData.difficulty === "Невозможная" ? 10 : 3;
         const timerEndsAt = new Date(Date.now() + waitMinutes * 60 * 1000).toISOString();
         await supabase.from("pvp_rooms").update({ timer_ends_at: timerEndsAt }).eq("id", pvpRoomId);
@@ -380,8 +384,10 @@ export default function Game() {
     setStage(1);
     setScore(0);
     setLocalFear(0);
+    localFearRef.current = 0;
     setLocalWatermelons(0);
     setExitedEarly(false);
+    exitedEarlyRef.current = false;
     setPvpResults(null);
     setIsGameOver(false);
     setWorldReady(false);
@@ -624,8 +630,14 @@ export default function Game() {
 
     if (isCorrect) {
       const fearReward = 1 + (character ? (character.telekinesisLevel - 1) * storeConfig.telekinesisRewardBonus : 0);
-      if (pvpParticipants.length > 0) setLocalFear(f => f + fearReward);
-      else addFear(fearReward);
+      // PVP real-room OR legacy local sim: track score locally, don't add to global store yet
+      if (pvpRoomId || pvpParticipants.length > 0) {
+        setLocalFear(f => {
+          const next = f + fearReward;
+          localFearRef.current = next;
+          return next;
+        });
+      } else addFear(fearReward);
       setScore(s => s + 1);
       playSuccess(settings.musicVolume);
       setShowSuccessAvatar(true);
@@ -659,7 +671,7 @@ export default function Game() {
     const reward = Math.floor(storeConfig.bossRewardBase * Math.pow(storeConfig.bossRewardMultiplier, bossLevel - 1) * bossRewardMultiplier);
     if (newTaps >= maxHp) {
       setIsBossDefeated(true);
-      if (pvpParticipants.length > 0) setLocalWatermelons(w => w + reward);
+      if (pvpRoomId || pvpParticipants.length > 0) setLocalWatermelons(w => w + reward);
       else addWatermelons(reward);
       playSuccess(settings.musicVolume);
     }
@@ -896,8 +908,11 @@ export default function Game() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (pvpParticipants.length > 0) { setExitedEarly(true); setIsGameOver(true); }
-              else navigate("/hub");
+              if (pvpRoomId || pvpParticipants.length > 0) {
+                exitedEarlyRef.current = true;
+                setExitedEarly(true);
+                setIsGameOver(true);
+              } else navigate("/hub");
             }}
             className="p-2 bg-neutral-900/80 rounded-full hover:bg-neutral-800 transition-colors"
           >
