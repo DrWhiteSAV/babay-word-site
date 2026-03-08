@@ -332,7 +332,7 @@ export default function Chat() {
     };
   }, [chatKey, profile?.telegram_id]);
 
-  // ── AI-Substitute: 30s countdown then reply AS ME when friend sends a message ──
+  // ── AI-Substitute: reply AS ME when friend sends a message ──
   useEffect(() => {
     if (!isAiSubstitute) {
       if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current);
@@ -347,20 +347,35 @@ export default function Chat() {
     // Only trigger when the last message is from the OTHER person (friend), not from me
     const lastMsgFromFriend = lastMsg.sender !== 'user' && lastMsg.sender_telegram_id !== profile?.telegram_id;
     if (!lastMsgFromFriend) return;
-    if (lastMsg.id === lastAutoRespondedIdRef.current) return;
     // Don't trigger if this is a pending_ (optimistic) message
     if (lastMsg.id.startsWith('pending_')) return;
+
+    // ── Anti-repeat guard: check if there's ALREADY a reply from me AFTER the last friend message ──
+    // This prevents re-answering every time the user opens the chat
+    let lastFriendMsgIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m: Message = messages[i];
+      if (m.sender !== 'user' && m.sender_telegram_id !== profile?.telegram_id && !m.id.startsWith('pending_')) {
+        lastFriendMsgIdx = i;
+        break;
+      }
+    }
+    if (lastFriendMsgIdx !== -1) {
+      const hasMyReplyAfter = messages.slice(lastFriendMsgIdx + 1).some(
+        (m: Message) => m.sender === 'user' || m.sender_telegram_id === profile?.telegram_id
+      );
+      if (hasMyReplyAfter) return; // Already replied — don't repeat
+    }
+
+    if (lastMsg.id === lastAutoRespondedIdRef.current) return;
 
     // Clear any previous countdown
     if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current);
 
-    const targetMsgId = lastMsg.id;
-    if (lastAutoRespondedIdRef.current !== targetMsgId) {
-      lastAutoRespondedIdRef.current = targetMsgId;
-      const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-      // Start AI reply immediately — the red AI countdown (AI_REPLY_TIMEOUT=30s) is the only timer
-      doAiReply(lastMsg.text, null, lastMsg.id, character.name, recentMessages, false, true);
-    }
+    lastAutoRespondedIdRef.current = lastMsg.id;
+    // Only send last 4 messages for context
+    const recentMessages = messages.slice(-4).map(m => ({ sender: m.sender, text: m.text }));
+    doAiReply(lastMsg.text, null, lastMsg.id, character.name, recentMessages, false, true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length, isAiSubstitute, friend?.name, character?.name, chatKey, profile?.telegram_id]);
 
@@ -402,9 +417,9 @@ export default function Chat() {
     setAiCountdown(0);
   }, []);
 
-  const saveMessageToDB = async (msg: Message, role: string, senderName: string): Promise<string | null> => {
+  const saveMessageToDB = useCallback(async (msg: Message, role: string, senderName: string): Promise<string | null> => {
     // Always compute the canonical chatKey at save time using the latest friendTelegramId
-    // This prevents AI responses from being saved with the wrong key (ai_TID_name vs TID_TID)
+    // useCallback ensures the closure always has the LATEST friendTelegramId, not a stale one
     const effectiveChatKey = groupId
       ? `group_${groupId}`
       : profile?.telegram_id && friendTelegramId
@@ -492,7 +507,7 @@ export default function Chat() {
       }
     }
     return inserted?.id || null;
-  };
+  }, [groupId, profile?.telegram_id, friendTelegramId, friendName, chatKey, character, friend, group]);
 
   const doAiReply = useCallback(async (
     userMessage: string,

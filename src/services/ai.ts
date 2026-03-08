@@ -277,11 +277,13 @@ export async function generateFriendChat(
   telegramId?: number,
 ): Promise<string> {
   try {
+    // Only last 4 messages for context — keep prompt focused
+    const last4 = chatHistory.slice(-4);
     let historyText = "";
-    if (chatHistory.length > 0) {
+    if (last4.length > 0) {
       historyText =
-        "\nИстория:\n" +
-        chatHistory
+        "\nПоследние сообщения (только для контекста):\n" +
+        last4
           .map((m) => `${m.sender === "user" ? character?.name || "Бабай" : m.sender}: ${m.text}`)
           .join("\n") +
         "\n";
@@ -295,11 +297,11 @@ export async function generateFriendChat(
       const basePrompt =
         settings?.prompt ||
         "Ты ДанИИл, дух-начальник (ИИ), который контролирует Бабаев. Стиль: строгий, саркастичный, требует отчётов о выселении жильцов. Ты используешь технический жаргон и любишь называть всех по номерам.";
-      const promptText = `${basePrompt} Стиль мира: ${style}.${loreLine} Бабай по имени ${character?.name || "Неизвестный"} пишет: "${message}".${historyText} Ответь коротко (1-2 предложения) в характере ДанИИла.`;
+      const promptText = `${basePrompt} Стиль мира: ${style}.${loreLine} Бабай по имени ${character?.name || "Неизвестный"} пишет: "${message}".${historyText}\nОтветь ТОЛЬКО на последнее сообщение «${message}». Коротко (1-2 предложения) в характере ДанИИла.`;
       const { text } = await callAI(service, promptText, telegramId);
       return text.trim() || "Продолжай работать.";
     } else {
-      const promptText = `Ты — ИИ-заместитель друга по имени ${friendName}. Твой собеседник — Бабай ${character?.name || "Неизвестный"}.${loreLine} Стиль мира: ${style}. Игрок пишет: "${message}".${historyText} Ответь коротко (1-3 предложения).`;
+      const promptText = `Ты — ИИ-заместитель друга по имени ${friendName}. Твой собеседник — Бабай ${character?.name || "Неизвестный"}.${loreLine} Стиль мира: ${style}.${historyText}\nПоследнее сообщение от собеседника (ответь ИМЕННО на него): «${message}»\nОтветь коротко (1-3 предложения) в образе ${friendName}. Без кавычек, без пояснений.`;
       const { text } = await callAI("protalk-text", promptText, telegramId);
       return text.trim() || "Продолжай работать.";
     }
@@ -328,17 +330,21 @@ export async function generateMyAiReply(
   telegramId?: number,
 ): Promise<string> {
   try {
+    // Only last 4 messages for context
+    const last4 = chatHistory.slice(-4);
     let historyText = "";
-    if (chatHistory.length > 0) {
+    if (last4.length > 0) {
       historyText =
-        "\nИстория переписки:\n" +
-        chatHistory
+        "\nПоследние сообщения (только для контекста):\n" +
+        last4
           .map((m) => `${m.sender === "user" ? character?.name || "Я" : m.sender}: ${m.text}`)
           .join("\n") +
         "\n";
     }
+    const lastFriendMsg = last4.filter(m => m.sender !== 'user').pop();
+    const lastMsgLine = lastFriendMsg ? `\nПоследнее сообщение от ${friendName}: «${lastFriendMsg.text}» — ответь ИМЕННО на него.` : "";
     const loreLine = character?.lore ? `\nЛор Бабая: ${character.lore}` : "";
-    const prompt = `Ты — ИИ-заместитель игрока по имени ${character?.name || "Бабай"} (пол: ${character?.gender || "Бабай"}, стиль мира: ${character?.style || "Хоррор"}).${loreLine} Твой друг — ${friendName}. Последние сообщения в чате:${historyText} Напиши короткий (1-3 предложения) ответ от лица игрока ${character?.name || "Бабай"} другу ${friendName}. Говори в стиле Бабая, в образе персонажа, без кавычек, без пояснений.`;
+    const prompt = `Ты — ИИ-заместитель игрока по имени ${character?.name || "Бабай"} (пол: ${character?.gender || "Бабай"}, стиль мира: ${character?.style || "Хоррор"}).${loreLine} Твой друг — ${friendName}.${historyText}${lastMsgLine}\nНапиши короткий (1-3 предложения) ответ от лица ${character?.name || "Бабай"} другу ${friendName}. В стиле персонажа, без кавычек, без пояснений.`;
     const { text } = await callAI("protalk-text", prompt, telegramId);
     return text.trim() || "Привет!";
   } catch (e) {
