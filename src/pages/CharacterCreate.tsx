@@ -295,28 +295,45 @@ export default function CharacterCreate() {
       }
     }
 
-    // Referral bonus
+    // Referral bonus (by telegram_id, only once)
     if (profile?.referral_code && tgId) {
       try {
-        const { data: inviterProfile } = await supabase
-          .from("profiles").select("telegram_id")
-          .eq("username", profile.referral_code).single();
-        if (inviterProfile?.telegram_id) {
-          const { data: inviterStats } = await supabase
-            .from("player_stats").select("telekinesis_level, fear, energy")
-            .eq("telegram_id", inviterProfile.telegram_id).single();
-          addFear(100);
-          addEnergy(100);
-          const bonus = 100 * Math.max(1, inviterStats?.telekinesis_level || 1);
-          await supabase.from("player_stats").update({
-            fear: (inviterStats?.fear || 0) + bonus,
-            energy: (inviterStats?.energy || 0) + bonus,
-          }).eq("telegram_id", inviterProfile.telegram_id);
+        // referral_code may be telegram_id (new format) or username (legacy)
+        let inviterTgId: number | null = null;
+        if (/^\d+$/.test(profile.referral_code)) {
+          inviterTgId = parseInt(profile.referral_code, 10);
+        } else {
+          const { data: inviterByUsername } = await supabase
+            .from("profiles").select("telegram_id").eq("username", profile.referral_code).single();
+          if (inviterByUsername?.telegram_id) inviterTgId = inviterByUsername.telegram_id;
+        }
+
+        if (inviterTgId && inviterTgId !== tgId) {
+          // Check if bonus was already claimed
+          const { data: myStats } = await supabase
+            .from("player_stats").select("referral_bonus_claimed").eq("telegram_id", tgId).single();
+
+          if (!myStats?.referral_bonus_claimed) {
+            const { data: inviterStats } = await supabase
+              .from("player_stats").select("telekinesis_level, fear, energy").eq("telegram_id", inviterTgId).single();
+            const bonus = 100 * Math.max(1, inviterStats?.telekinesis_level || 1);
+            // Give bonus to new player
+            addFear(100);
+            addEnergy(100);
+            // Give bonus to inviter
+            await supabase.from("player_stats").update({
+              fear: (inviterStats?.fear || 0) + bonus,
+              energy: (inviterStats?.energy || 0) + bonus,
+            }).eq("telegram_id", inviterTgId);
+            // Mark claimed so it won't repeat
+            await supabase.from("player_stats").update({ referral_bonus_claimed: true }).eq("telegram_id", tgId);
+          }
         }
       } catch (e) {
         console.error("[Create] referral error:", e);
       }
     }
+
 
     setIsSaving(false);
     navigate("/hub");
