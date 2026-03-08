@@ -35,6 +35,9 @@ export default function Game() {
   } = usePlayerStore();
   const { profile } = useTelegram();
   const tgId = profile?.telegram_id;
+  // Always-fresh ref so async callbacks get the latest telegram_id regardless of closure staleness
+  const tgIdRef = useRef<number | undefined>(undefined);
+  useEffect(() => { tgIdRef.current = profile?.telegram_id; }, [profile?.telegram_id]);
 
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [stage, setStage] = useState(1);
