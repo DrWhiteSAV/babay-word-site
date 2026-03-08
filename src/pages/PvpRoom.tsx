@@ -256,6 +256,24 @@ export default function PvpRoom() {
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   };
 
+  const checkConnection = async () => {
+    setConnStatus("checking");
+    setConnMessage("");
+    try {
+      const reply = await protalkGenerateText("Ответь одним словом: готов", tgId);
+      if (reply && reply.trim().length > 0) {
+        setConnStatus("ok");
+        setConnMessage(reply.trim());
+      } else {
+        setConnStatus("error");
+        setConnMessage("Пустой ответ");
+      }
+    } catch (e: any) {
+      setConnStatus("error");
+      setConnMessage(e?.message || "Нет связи с ProTalk");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
