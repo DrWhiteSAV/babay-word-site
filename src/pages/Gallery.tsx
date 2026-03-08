@@ -52,7 +52,7 @@ export default function Gallery() {
 
     const { data, error } = await supabase
       .from("gallery")
-      .select("id, image_url, label, created_at")
+      .select("id, image_url, label, prompt, created_at")
       .eq("telegram_id", tgId)
       .order("created_at", { ascending: false })
       .limit(200);
