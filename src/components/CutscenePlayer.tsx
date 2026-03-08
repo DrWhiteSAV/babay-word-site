@@ -197,7 +197,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
           backdropFilter: "blur(4px)",
           border: "1px solid rgba(255,255,255,0.12)",
         }}
-        className="cutscene-skip-btn absolute top-4 right-4 z-30 text-white/60 hover:text-white/90 px-3 py-1.5 flex items-center gap-1.5 transition-colors text-xs"
+        className="cutscene-skip-btn absolute top-16 right-4 z-30 text-white/60 hover:text-white/90 px-3 py-1.5 flex items-center gap-1.5 transition-colors text-xs"
       >
         <span>Пропустить</span>
         <SkipForward size={13} />
