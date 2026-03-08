@@ -480,7 +480,7 @@ export default function AdminNotifications() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+            <textarea ref={msgRef} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               placeholder="Текст уведомления..."
               rows={4}
               className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-red-900 resize-none" />
