@@ -311,6 +311,9 @@ export default function Chat() {
     }
   }, [messages.length, chatKey, profile?.telegram_id]);
 
+  // Local countdown interval ref for the receiver side
+  const aiSubReceiverIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // ── AI-Substitute: listen for typing broadcasts from the OTHER side ──
   useEffect(() => {
     if (!chatKey || !profile?.telegram_id) return;
@@ -321,13 +324,31 @@ export default function Chat() {
       .on('broadcast', { event: 'ai_sub_typing' }, ({ payload }: { payload: { remaining: number; senderTid: number } }) => {
         // Only show typing for messages FROM the other user (not ourselves)
         if (payload.senderTid === profile.telegram_id) return;
+        if (payload.remaining <= 0) {
+          // AI finished — stop countdown
+          if (aiSubReceiverIntervalRef.current) clearInterval(aiSubReceiverIntervalRef.current);
+          setAiSubTypingCountdown(0);
+          return;
+        }
+        // Start/reset local countdown from the received value
+        if (aiSubReceiverIntervalRef.current) clearInterval(aiSubReceiverIntervalRef.current);
         setAiSubTypingCountdown(payload.remaining);
+        let remaining = payload.remaining;
+        aiSubReceiverIntervalRef.current = setInterval(() => {
+          remaining -= 1;
+          setAiSubTypingCountdown(remaining);
+          if (remaining <= 0) {
+            clearInterval(aiSubReceiverIntervalRef.current!);
+            aiSubReceiverIntervalRef.current = null;
+          }
+        }, 1000);
       })
       .subscribe();
     if (aiSubBroadcastChannelRef.current) supabase.removeChannel(aiSubBroadcastChannelRef.current);
     aiSubBroadcastChannelRef.current = typingCh;
     return () => {
       supabase.removeChannel(typingCh);
+      if (aiSubReceiverIntervalRef.current) clearInterval(aiSubReceiverIntervalRef.current);
       aiSubBroadcastChannelRef.current = null;
     };
   }, [chatKey, profile?.telegram_id]);
