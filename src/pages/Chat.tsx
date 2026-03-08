@@ -355,6 +355,8 @@ export default function Chat() {
   const getAvatarUrl = (sender: string) => {
     if (sender === "user") return character?.avatarUrl || "https://i.ibb.co/BVgY7XrT/babai.png";
     if (sender === "ДанИИл") return "https://i.ibb.co/rKGSq544/image.png";
+    // Use cached avatar from DB if available
+    if (avatarCache[sender]) return avatarCache[sender];
     return `https://picsum.photos/seed/${sender}/100/100`;
   };
 
