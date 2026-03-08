@@ -16,6 +16,7 @@ import { NotificationPopupProvider } from "./components/NotificationPopup";
 import { useOnlinePresence } from "./hooks/useOnlinePresence";
 import { useAchievements } from "./hooks/useAchievements";
 import { usePlayerStatsSync } from "./hooks/usePlayerStatsSync";
+import AssetPreloader from "./components/AssetPreloader";
 
 // Pages
 import Home from "./pages/Home";
