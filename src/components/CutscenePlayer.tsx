@@ -42,17 +42,23 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   const [needsInteraction, setNeedsInteraction] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const videosLoadedRef = useRef(false);
+
   useEffect(() => {
     const isPortrait = window.innerHeight > window.innerWidth;
     const videos = isPortrait ? videoCutscenes.vertical : videoCutscenes.horizontal;
     
     if (videos && videos.length > 0) {
+      videosLoadedRef.current = true;
       const raw = videos[Math.floor(Math.random() * videos.length)];
       // Use cached version if already downloaded, else direct URL (fallback)
       resolveUrl(raw).then(resolved => setVideoUrl(resolved));
-    } else {
-      // Fallback if no videos are configured
-      onComplete();
+    } else if (!videosLoadedRef.current) {
+      // Videos not yet loaded from DB — wait up to 3s before falling back
+      const fallbackTimer = setTimeout(() => {
+        if (!videosLoadedRef.current) onComplete();
+      }, 3000);
+      return () => clearTimeout(fallbackTimer);
     }
   }, [videoCutscenes, onComplete]);
 
