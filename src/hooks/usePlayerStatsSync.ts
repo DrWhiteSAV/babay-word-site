@@ -98,14 +98,11 @@ export function usePlayerStatsSync() {
           }
         }
 
-        // Friends from DB
-        const dbFriends = (friendsResult.data || []).map(f => ({
+        // Friends from DB — use EXACTLY what's in DB, no injections
+        const friendsList = (friendsResult.data || []).map(f => ({
           name: f.friend_name,
           isAiEnabled: f.is_ai_enabled ?? false,
         }));
-        // Always include ДанИИл as AI friend
-        const hasAI = dbFriends.some(f => f.name === "ДанИИл");
-        const friendsList = hasAI ? dbFriends : [{ name: "ДанИИл", isAiEnabled: true }, ...dbFriends];
 
         // No row yet → new user
         if (!data) {

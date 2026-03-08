@@ -137,21 +137,52 @@ export function useTelegramAuth() {
         if (startParam) referralCode = startParam;
       } catch (_) {}
 
-      const upsertData = {
-        telegram_id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name ?? null,
-        username: user.username ?? null,
-        profile_url: profileUrl,
-        photo_url: user.photo_url ?? null,
-        ...(referralCode ? { referral_code: referralCode } : {}),
-      };
-
-      const { data, error } = await supabase
+      // Check if profile already exists first
+      const { data: existing } = await supabase
         .from("profiles")
-        .upsert(upsertData, { onConflict: "telegram_id", ignoreDuplicates: false })
-        .select()
-        .single();
+        .select("*")
+        .eq("telegram_id", user.id)
+        .maybeSingle();
+
+      let data: any = null;
+      let error: any = null;
+
+      if (existing) {
+        // Profile exists — ONLY update safe display fields, NEVER touch role or referral_code
+        const updateData: Record<string, unknown> = {
+          first_name: user.first_name,
+          last_name: user.last_name ?? null,
+          username: user.username ?? null,
+          profile_url: profileUrl,
+          photo_url: user.photo_url ?? null,
+        };
+        const { data: updated, error: updateErr } = await supabase
+          .from("profiles")
+          .update(updateData)
+          .eq("telegram_id", user.id)
+          .select()
+          .single();
+        data = updated;
+        error = updateErr;
+      } else {
+        // New profile — insert with all fields including referral_code if provided
+        const insertData = {
+          telegram_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name ?? null,
+          username: user.username ?? null,
+          profile_url: profileUrl,
+          photo_url: user.photo_url ?? null,
+          ...(referralCode ? { referral_code: referralCode } : {}),
+        };
+        const { data: inserted, error: insertErr } = await supabase
+          .from("profiles")
+          .insert(insertData)
+          .select()
+          .single();
+        data = inserted;
+        error = insertErr;
+      }
 
       if (error) {
         console.error("Telegram profile upsert error:", error);
