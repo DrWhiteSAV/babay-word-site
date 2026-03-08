@@ -7,6 +7,9 @@ import Header from "../components/Header";
 import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 
+// Video cache key — preserved on progress reset
+const VIDEO_CACHE_KEY = "babai_video_cache";
+
 interface GalleryItem {
   id: string;
   image_url: string;
