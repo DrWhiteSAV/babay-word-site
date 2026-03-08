@@ -158,7 +158,7 @@ export interface PlayerState {
 
 export const DEFAULT_SETTINGS = {
   buttonSize: "small" as ButtonSize,
-  fontFamily: "JetBrains Mono" as FontFamily,
+  fontFamily: "Russo One" as FontFamily,
   fontSize: 12,
   fontBrightness: 100,
   theme: "normal" as Theme,
@@ -233,11 +233,12 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
   updateSettings: (newSettings) =>
     set((state) => {
       const updated = { ...state.settings, ...newSettings };
+      // Only auto-switch font if user explicitly changes theme AND has not set a custom font
       if (newSettings.theme === "cyberpunk" && state.settings.theme !== "cyberpunk") {
         updated.fontFamily = "Tektur";
-      } else if (newSettings.theme === "normal" && state.settings.theme !== "normal") {
-        updated.fontFamily = "JetBrains Mono";
       }
+      // NOTE: switching back to 'normal' theme does NOT reset fontFamily
+      // so user's chosen font is preserved
       return { settings: updated };
     }),
   setGlobalBackgroundUrl: (url) => set({ globalBackgroundUrl: url }),

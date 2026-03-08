@@ -7,7 +7,7 @@ const FALLBACK_AVATAR = "https://i.ibb.co/BVgY7XrT/babai.png";
 
 const DEFAULT_SETTINGS = {
   buttonSize: "small" as ButtonSize,
-  fontFamily: "JetBrains Mono" as FontFamily,
+  fontFamily: "Russo One" as FontFamily,
   fontSize: 12,
   fontBrightness: 100,
   theme: "normal" as Theme,
@@ -255,6 +255,15 @@ export function usePlayerStatsSync() {
 
     const payload = JSON.parse(snapshot);
     const timer = setTimeout(async () => {
+      console.log(`[DB WRITE] 📝 player_stats UPDATE for telegram_id=${telegramId}`, {
+        fear: payload.fear,
+        watermelons: payload.watermelons,
+        boss_level: payload.boss_level,
+        telekinesis_level: payload.telekinesis_level,
+        custom_settings: payload.custom_settings,
+        timestamp: new Date().toISOString(),
+      });
+
       // UPDATE only safe fields — no character/avatar fields touched
       const { error } = await supabase
         .from("player_stats")
@@ -267,7 +276,11 @@ export function usePlayerStatsSync() {
         })
         .eq("telegram_id", telegramId);
 
-      if (error) console.error("[sync] write error:", error.message);
+      if (error) {
+        console.error("[DB WRITE] ❌ player_stats UPDATE error:", error.message);
+      } else {
+        console.log("[DB WRITE] ✅ player_stats UPDATE success");
+      }
 
       // Leaderboard cache — uses current store values
       const storeNow = usePlayerStore.getState();
@@ -275,13 +288,26 @@ export function usePlayerStatsSync() {
         ? storeNow.character!.avatarUrl
         : FALLBACK_AVATAR;
 
-      await supabase.from("leaderboard_cache").upsert({
+      console.log(`[DB WRITE] 📝 leaderboard_cache UPSERT for telegram_id=${telegramId}`, {
+        display_name: storeNow.character?.name,
+        fear: storeNow.fear,
+        telekinesis_level: storeNow.character?.telekinesisLevel,
+        avatar_url: avatarForLeader?.substring(0, 60),
+      });
+
+      const { error: lbError } = await supabase.from("leaderboard_cache").upsert({
         telegram_id: telegramId,
         display_name: storeNow.character?.name || "Безымянный",
         fear: storeNow.fear,
         telekinesis_level: storeNow.character?.telekinesisLevel ?? 1,
         avatar_url: avatarForLeader,
       }, { onConflict: "telegram_id" });
+
+      if (lbError) {
+        console.error("[DB WRITE] ❌ leaderboard_cache UPSERT error:", lbError.message);
+      } else {
+        console.log("[DB WRITE] ✅ leaderboard_cache UPSERT success");
+      }
     }, 2000);
 
     return () => clearTimeout(timer);

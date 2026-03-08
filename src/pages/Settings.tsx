@@ -39,29 +39,32 @@ export default function Settings() {
 
         const existingCs = (existing?.custom_settings as Record<string, unknown>) || {};
 
+        const newCs = {
+          ...existingCs,
+          buttonSize: settings.buttonSize,
+          fontFamily: settings.fontFamily,
+          fontSize: settings.fontSize,
+          fontBrightness: settings.fontBrightness,
+          theme: settings.theme,
+          musicVolume: settings.musicVolume,
+          ttsEnabled: settings.ttsEnabled,
+        };
+
+        console.log(`[DB WRITE] 📝 Settings SAVE for telegram_id=${telegramId}`, newCs);
+
         // UPDATE only custom_settings — NEVER touch avatar_url or character fields
         const { error } = await supabase
           .from("player_stats")
-          .update({
-            custom_settings: {
-              ...existingCs,
-              buttonSize: settings.buttonSize,
-              fontFamily: settings.fontFamily,
-              fontSize: settings.fontSize,
-              fontBrightness: settings.fontBrightness,
-              theme: settings.theme,
-              musicVolume: settings.musicVolume,
-              ttsEnabled: settings.ttsEnabled,
-            },
-          })
+          .update({ custom_settings: newCs })
           .eq("telegram_id", telegramId);
 
         if (error) throw error;
+        console.log("[DB WRITE] ✅ Settings saved to DB successfully");
       }
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 2000);
     } catch (e) {
-      console.error("Save settings error:", e);
+      console.error("[DB WRITE] ❌ Save settings error:", e);
     }
     setSaving(false);
   };
@@ -111,13 +114,13 @@ export default function Settings() {
             game_status: "reset",
             referral_bonus_claimed: false,
             custom_settings: {
-              buttonSize: DEFAULT_SETTINGS.buttonSize,
-              fontFamily: DEFAULT_SETTINGS.fontFamily,
-              fontSize: DEFAULT_SETTINGS.fontSize,
-              fontBrightness: DEFAULT_SETTINGS.fontBrightness,
-              theme: DEFAULT_SETTINGS.theme,
-              musicVolume: DEFAULT_SETTINGS.musicVolume,
-              ttsEnabled: DEFAULT_SETTINGS.ttsEnabled,
+              buttonSize: "small",
+              fontFamily: "Russo One",
+              fontSize: 12,
+              fontBrightness: 100,
+              theme: "normal",
+              musicVolume: 50,
+              ttsEnabled: false,
               wishes: [],
               inventory: [],
             },
@@ -126,6 +129,7 @@ export default function Settings() {
           supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
           supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
         ]);
+        console.log("[DB WRITE] ✅ player_stats RESET complete for telegram_id:", telegramId);
       }
     } catch (e) {
       console.error("Reset error:", e);
@@ -140,9 +144,17 @@ export default function Settings() {
       lastEnergyUpdate: Date.now(),
       inventory: [],
       achievements: [],
-      friends: [{ name: "ДанИИл", isAiEnabled: true }],
+      friends: [],
       quests: [],
-      settings: { ...DEFAULT_SETTINGS },
+      settings: {
+        buttonSize: "small",
+        fontFamily: "Russo One",
+        fontSize: 12,
+        fontBrightness: 100,
+        theme: "normal",
+        musicVolume: 50,
+        ttsEnabled: false,
+      },
       dbLoaded: false,
     });
     setResetting(false);
