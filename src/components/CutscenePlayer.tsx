@@ -41,6 +41,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   const [needsInteraction, setNeedsInteraction] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videosLoadedRef = useRef(false);
+  const hasTriedPlayRef = useRef(false);
 
   useEffect(() => {
     const isPortrait = window.innerHeight > window.innerWidth;
@@ -49,7 +50,6 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     if (videos && videos.length > 0) {
       videosLoadedRef.current = true;
       const raw = videos[Math.floor(Math.random() * videos.length)];
-      // Use direct URL — no cache resolution needed
       setVideoUrl(raw);
     } else if (!videosLoadedRef.current) {
       const fallbackTimer = setTimeout(() => {
@@ -59,29 +59,44 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     }
   }, [videoCutscenes, onComplete]);
 
+  // Show "tap to start" immediately — don't wait for canplay
   useEffect(() => {
+    if (!videoUrl) return;
     const timeout = setTimeout(() => {
       if (isLoading) {
         setIsLoading(false);
         setNeedsInteraction(true);
       }
-    }, 2000);
+    }, 800);
     return () => clearTimeout(timeout);
-  }, [isLoading]);
+  }, [videoUrl, isLoading]);
+
+  const tryAutoPlay = () => {
+    if (!videoRef.current || hasTriedPlayRef.current) return;
+    hasTriedPlayRef.current = true;
+    const playPromise = videoRef.current.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          setIsLoading(false);
+          setNeedsInteraction(false);
+        })
+        .catch(() => {
+          // Autoplay blocked — show tap-to-start overlay
+          setIsLoading(false);
+          setNeedsInteraction(true);
+        });
+    }
+  };
 
   const handleCanPlay = () => {
     setIsLoading(false);
-    if (videoRef.current) {
-      const hasInteracted =
-        (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
-      if (!hasInteracted) { setNeedsInteraction(true); return; }
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) playPromise.catch(() => setNeedsInteraction(true));
-    }
+    tryAutoPlay();
   };
 
   const handleManualPlay = () => {
     setNeedsInteraction(false);
+    hasTriedPlayRef.current = false; // allow retry
     if (videoRef.current) {
       videoRef.current.play().catch(() => {});
     }

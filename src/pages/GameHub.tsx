@@ -119,28 +119,33 @@ export default function GameHub() {
           <span className="text-neutral-600 text-lg">›</span>
         </motion.button>
 
-        {/* Avatar / Profile block */}
+        {/* Avatar / Profile block — full-width card with large shadow */}
         <motion.button
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           onClick={() => navigate("/profile")}
-          className="w-full flex flex-col items-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-5 py-6 hover:border-red-900/40 active:scale-[0.98] transition-all"
+          className="w-full flex flex-col items-center bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl overflow-hidden hover:border-red-900/40 active:scale-[0.98] transition-all"
         >
-          <div className="w-28 h-28 rounded-full border-4 border-neutral-800 overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.12)] bg-neutral-900 mb-4 group relative">
+          {/* Large avatar area */}
+          <div className="relative w-full" style={{ paddingTop: "75%" }}>
             <img
               src={character.avatarUrl}
               alt={character.name}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              className="absolute inset-0 w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 ring-inset ring-1 ring-white/10 rounded-full pointer-events-none" />
+            {/* Deep shadow overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+            <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(220,38,38,0.25)] pointer-events-none" />
           </div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-wider">{character.name}</h2>
-          <p className="text-red-500 text-xs mt-1.5 uppercase tracking-widest">
-            {character.style} · Ур. Телекинеза: {character.telekinesisLevel}
-          </p>
-          <p className="text-neutral-500 text-[10px] mt-2">Нажмите для перехода в профиль →</p>
+          <div className="w-full px-5 py-4">
+            <h2 className="text-2xl font-black text-white uppercase tracking-wider">{character.name}</h2>
+            <p className="text-red-500 text-xs mt-1 uppercase tracking-widest">
+              {character.style} · Ур. Телекинеза: {character.telekinesisLevel}
+            </p>
+            <p className="text-neutral-500 text-[10px] mt-2">Нажмите для перехода в профиль →</p>
+          </div>
         </motion.button>
 
         {/* Play button */}
@@ -203,6 +208,24 @@ export default function GameHub() {
             <p className="text-[10px] text-neutral-500 mt-1">Чаты и команда</p>
           </button>
         </motion.div>
+
+        {/* SAV AI footer */}
+        <motion.a
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          href="https://t.me/SAV_AIbot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center gap-2 py-4 opacity-70 hover:opacity-100 transition-opacity"
+        >
+          <img
+            src="https://i.ibb.co/BVgY7XrT/babai.png"
+            alt="BABAI"
+            className="w-10 h-10 object-contain grayscale"
+          />
+          <span className="text-[10px] text-neutral-500 tracking-widest uppercase">Сделано SAV AI</span>
+        </motion.a>
 
       </div>
 

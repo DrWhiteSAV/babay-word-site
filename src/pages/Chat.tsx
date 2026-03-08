@@ -665,11 +665,15 @@ export default function Chat() {
                   >{msg.sender}</span>
                 )}
 
-                {/* AI-generated badge */}
+                {/* AI-generated badge — shows friend's avatar + name + "ИИ" */}
                 {msg.isAiGenerated && (
-                  <div className={`flex items-center gap-1 mb-1 ${isUser ? "mr-1" : "ml-1"}`}>
-                    <Bot size={10} className="text-green-400" />
-                    <span className="text-[9px] text-green-400 font-semibold tracking-wide">ИИ-заместитель</span>
+                  <div className={`flex items-center gap-1.5 mb-1 ${isUser ? "mr-1" : "ml-1"}`}>
+                    <img
+                      src={getAvatarUrl(chatTitle || "user")}
+                      alt="ai"
+                      className="w-4 h-4 rounded-full object-cover border border-green-500/40"
+                    />
+                    <span className="text-[9px] text-green-400 font-semibold tracking-wide">{chatTitle} · ИИ</span>
                   </div>
                 )}
 
