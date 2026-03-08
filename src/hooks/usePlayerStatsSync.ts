@@ -26,6 +26,9 @@ const THEMES: Theme[] = ["normal", "cyberpunk"];
 const isHttpUrl = (value: unknown): value is string =>
   typeof value === "string" && /^https?:\/\//i.test(value.trim());
 
+const isRealAvatar = (url: unknown): url is string =>
+  isHttpUrl(url) && url !== FALLBACK_AVATAR;
+
 const normalizeSettings = (raw: unknown) => {
   const cs = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return {
@@ -39,23 +42,23 @@ const normalizeSettings = (raw: unknown) => {
   };
 };
 
+export { DEFAULT_SETTINGS, FALLBACK_AVATAR };
+
 export function usePlayerStatsSync() {
   const { profile, isLoading: tgLoading } = useTelegram();
 
-  // ─── FALLBACK: if TG auth finished but no telegram_id (browser mode) ────────
+  // ─── FALLBACK: browser mode without telegram_id ──────────────────────────────
   useEffect(() => {
     if (tgLoading) return;
-    if (profile?.telegram_id) return; // handled by main load effect
-    // No telegram_id after auth finished → mark as loaded to unblock pages
+    if (profile?.telegram_id) return;
     usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
   }, [tgLoading, profile?.telegram_id]);
 
-  // ─── LOAD FROM DB ───────────────────────────────────────────────────────────
+  // ─── LOAD FROM DB ────────────────────────────────────────────────────────────
   useEffect(() => {
     const telegramId = profile?.telegram_id;
     if (!telegramId) return;
 
-    // Mark as loading so pages wait before redirecting
     usePlayerStore.setState({ dbLoaded: false, gameStatus: "loading" });
 
     let cancelled = false;
@@ -65,7 +68,7 @@ export function usePlayerStatsSync() {
         const [statsResult, galleryResult, friendsResult] = await Promise.all([
           supabase.from("player_stats").select("*").eq("telegram_id", telegramId).maybeSingle(),
           supabase.from("gallery").select("image_url, label, created_at")
-            .eq("telegram_id", telegramId).order("created_at", { ascending: false }).limit(12),
+            .eq("telegram_id", telegramId).order("created_at", { ascending: false }).limit(50),
           supabase.from("friends").select("friend_name, is_ai_enabled")
             .eq("telegram_id", telegramId),
         ]);
@@ -80,31 +83,28 @@ export function usePlayerStatsSync() {
           return;
         }
 
-        // Gallery
+        // Gallery — build list and find latest real avatar
         let latestAvatarFromGallery: string | null = null;
         if (galleryResult.data && galleryResult.data.length > 0) {
-          const urls = galleryResult.data
-            .map(r => r.image_url)
-            .filter(isHttpUrl);
+          const urls = galleryResult.data.map(r => r.image_url).filter(isHttpUrl);
           if (urls.length > 0) {
             usePlayerStore.setState({ gallery: Array.from(new Set(urls)) });
           }
+          // Find most recent avatar entry in gallery (newest first)
           const avatarRow = galleryResult.data.find(r => {
             const lbl = (r.label || "").toLowerCase();
             return lbl.includes("[avatars]") || lbl.includes("[avatar]") || lbl.includes("аватар");
           });
-          if (avatarRow?.image_url && isHttpUrl(avatarRow.image_url)) {
+          if (avatarRow?.image_url && isRealAvatar(avatarRow.image_url)) {
             latestAvatarFromGallery = avatarRow.image_url;
           }
         }
 
-        // Friends from DB — use EXACTLY what's in DB, no injections
         const friendsList = (friendsResult.data || []).map(f => ({
           name: f.friend_name,
           isAiEnabled: f.is_ai_enabled ?? false,
         }));
 
-        // No row yet → new user
         if (!data) {
           usePlayerStore.setState({
             character: null,
@@ -120,7 +120,6 @@ export function usePlayerStatsSync() {
 
         const gameStatus = data.game_status || "playing";
 
-        // Reset state → send to /create, don't load old data
         if (gameStatus === "reset") {
           usePlayerStore.setState({
             character: null,
@@ -149,9 +148,21 @@ export function usePlayerStatsSync() {
             ? (cs.wishes as unknown[]).filter((x): x is string => typeof x === "string")
             : [];
 
+          // Avatar priority:
+          // 1. Real URL stored in player_stats.avatar_url
+          // 2. Latest avatar from gallery
+          // 3. Fallback
           let avatarUrl = FALLBACK_AVATAR;
-          if (isHttpUrl(data.avatar_url)) avatarUrl = data.avatar_url;
-          else if (latestAvatarFromGallery) avatarUrl = latestAvatarFromGallery;
+          if (isRealAvatar(data.avatar_url)) {
+            avatarUrl = data.avatar_url;
+          } else if (latestAvatarFromGallery) {
+            avatarUrl = latestAvatarFromGallery;
+            // Persist the gallery avatar back to player_stats silently
+            supabase.from("player_stats")
+              .update({ avatar_url: latestAvatarFromGallery })
+              .eq("telegram_id", telegramId)
+              .then(() => console.log("[sync] ✅ restored avatar from gallery to player_stats"));
+          }
 
           character = {
             name: data.character_name,
@@ -166,8 +177,9 @@ export function usePlayerStatsSync() {
 
         console.log("[sync] ✅ loaded from DB:", {
           name: character?.name,
-          avatar: character?.avatarUrl,
+          avatar: character?.avatarUrl?.substring(0, 60),
           fontSize: settings.fontSize,
+          fontFamily: settings.fontFamily,
           buttonSize: settings.buttonSize,
           gameStatus,
         });
@@ -197,14 +209,13 @@ export function usePlayerStatsSync() {
     return () => { cancelled = true; };
   }, [profile?.telegram_id]);
 
-  // ─── SYNC TO DB ─────────────────────────────────────────────────────────────
-  // Only writes when the user actually changes something meaningful.
-  // We track a "last written" snapshot and only write when it differs.
+  // ─── AUTO-SYNC TO DB ─────────────────────────────────────────────────────────
+  // CRITICAL: This effect ONLY writes safe gameplay fields + custom_settings.
+  // It NEVER touches: avatar_url, character_name, character_gender, character_style, lore.
+  // Those fields are written ONLY by explicit user actions (CharacterCreate, Gallery, Settings reset).
   const lastWrittenRef = useRef<string | null>(null);
-  // Flag: has the initial DB load completed for this session?
   const loadedRef = useRef(false);
 
-  // Reset tracking on user change
   useEffect(() => {
     lastWrittenRef.current = null;
     loadedRef.current = false;
@@ -215,22 +226,21 @@ export function usePlayerStatsSync() {
   useEffect(() => {
     const telegramId = profile?.telegram_id;
     if (!telegramId) return;
-    if (!store.dbLoaded) return;                         // wait for load
-    if (!store.character) return;                        // no character = nothing to sync
-    if (store.gameStatus !== "playing") return;          // only sync when playing
+    if (!store.dbLoaded) return;
+    if (!store.character) return;
+    if (store.gameStatus !== "playing") return;
 
-    // First time after load: record baseline, do NOT write to DB
+    const snapshot = buildSafeSnapshot(store);
+
     if (!loadedRef.current) {
       loadedRef.current = true;
-      lastWrittenRef.current = buildSnapshot(store, telegramId);
-      console.log("[sync] 📌 baseline snapshot saved, skipping write");
+      lastWrittenRef.current = snapshot;
+      console.log("[sync] 📌 baseline saved, no write");
       return;
     }
 
-    const snapshot = buildSnapshot(store, telegramId);
-    if (lastWrittenRef.current === snapshot) return;    // nothing changed
+    if (lastWrittenRef.current === snapshot) return;
 
-    // Something changed — schedule write
     const prev = lastWrittenRef.current;
     lastWrittenRef.current = snapshot;
 
@@ -239,23 +249,38 @@ export function usePlayerStatsSync() {
         const p = JSON.parse(prev) as Record<string, unknown>;
         const c = JSON.parse(snapshot) as Record<string, unknown>;
         const changed = Object.keys(c).filter(k => JSON.stringify(p[k]) !== JSON.stringify(c[k]));
-        console.log("[sync] 📝 writing to DB, changed fields:", changed);
+        console.log("[sync] 📝 writing safe fields to DB:", changed);
       } catch { /**/ }
     }
 
     const payload = JSON.parse(snapshot);
     const timer = setTimeout(async () => {
-      const { error } = await supabase.from("player_stats")
-        .upsert(payload, { onConflict: "telegram_id" });
+      // UPDATE only safe fields — no character/avatar fields touched
+      const { error } = await supabase
+        .from("player_stats")
+        .update({
+          fear: payload.fear,
+          watermelons: payload.watermelons,
+          boss_level: payload.boss_level,
+          telekinesis_level: payload.telekinesis_level,
+          custom_settings: payload.custom_settings,
+        })
+        .eq("telegram_id", telegramId);
+
       if (error) console.error("[sync] write error:", error.message);
 
-      // Update leaderboard cache
+      // Leaderboard cache — uses current store values
+      const storeNow = usePlayerStore.getState();
+      const avatarForLeader = isRealAvatar(storeNow.character?.avatarUrl)
+        ? storeNow.character!.avatarUrl
+        : FALLBACK_AVATAR;
+
       await supabase.from("leaderboard_cache").upsert({
         telegram_id: telegramId,
-        display_name: payload.character_name || "Безымянный",
-        fear: payload.fear,
-        telekinesis_level: payload.telekinesis_level,
-        avatar_url: payload.avatar_url,
+        display_name: storeNow.character?.name || "Безымянный",
+        fear: storeNow.fear,
+        telekinesis_level: storeNow.character?.telekinesisLevel ?? 1,
+        avatar_url: avatarForLeader,
       }, { onConflict: "telegram_id" });
     }, 2000);
 
@@ -266,11 +291,6 @@ export function usePlayerStatsSync() {
     store.gameStatus,
     store.bossLevel,
     store.character?.telekinesisLevel,
-    store.character?.name,
-    store.character?.gender,
-    store.character?.style,
-    store.character?.avatarUrl,
-    store.character?.lore,
     store.character?.wishes?.join(","),
     store.settings.buttonSize,
     store.settings.fontFamily,
@@ -283,24 +303,16 @@ export function usePlayerStatsSync() {
   ]);
 }
 
-function buildSnapshot(store: ReturnType<typeof usePlayerStore.getState>, telegramId: number): string {
-  const avatarUrl = isHttpUrl(store.character?.avatarUrl)
-    ? store.character!.avatarUrl
-    : FALLBACK_AVATAR;
-
+/**
+ * Snapshot of ONLY safe fields — no avatar_url, no character_name/gender/style/lore.
+ * These character identity fields must only be written by explicit user actions.
+ */
+function buildSafeSnapshot(store: ReturnType<typeof usePlayerStore.getState>): string {
   return JSON.stringify({
-    telegram_id: telegramId,
     fear: store.fear,
-    energy: store.energy,
     watermelons: store.watermelons,
     boss_level: store.bossLevel,
     telekinesis_level: store.character?.telekinesisLevel ?? 1,
-    character_name: store.character?.name ?? null,
-    character_gender: store.character?.gender ?? null,
-    character_style: store.character?.style ?? null,
-    avatar_url: avatarUrl,
-    lore: store.character?.lore ?? null,
-    game_status: "playing",
     custom_settings: {
       buttonSize: store.settings.buttonSize,
       fontFamily: store.settings.fontFamily,

@@ -30,34 +30,33 @@ export default function Settings() {
     try {
       const telegramId = profile?.telegram_id;
       if (telegramId) {
-        // Re-read FULL row from DB first to never accidentally overwrite character fields
+        // READ current custom_settings from DB first to preserve wishes/inventory
         const { data: existing } = await supabase
           .from("player_stats")
-          .select("custom_settings, character_name, character_gender, character_style, avatar_url, lore")
+          .select("custom_settings")
           .eq("telegram_id", telegramId)
           .single();
 
-        const existingCs = (existing?.custom_settings as any) || {};
-        // Only update settings keys — preserve wishes/inventory and character fields untouched
-        await supabase.from("player_stats").upsert({
-          telegram_id: telegramId,
-          // Preserve character fields from DB (not from store) to avoid race overwrite
-          ...(existing?.character_name ? { character_name: existing.character_name } : {}),
-          ...(existing?.character_gender ? { character_gender: existing.character_gender } : {}),
-          ...(existing?.character_style ? { character_style: existing.character_style } : {}),
-          ...(existing?.avatar_url ? { avatar_url: existing.avatar_url } : {}),
-          ...(existing?.lore ? { lore: existing.lore } : {}),
-          custom_settings: {
-            ...existingCs,
-            buttonSize: settings.buttonSize,
-            fontFamily: settings.fontFamily,
-            fontSize: settings.fontSize,
-            fontBrightness: settings.fontBrightness,
-            theme: settings.theme,
-            musicVolume: settings.musicVolume,
-            ttsEnabled: settings.ttsEnabled,
-          },
-        }, { onConflict: "telegram_id" });
+        const existingCs = (existing?.custom_settings as Record<string, unknown>) || {};
+
+        // UPDATE only custom_settings — NEVER touch avatar_url or character fields
+        const { error } = await supabase
+          .from("player_stats")
+          .update({
+            custom_settings: {
+              ...existingCs,
+              buttonSize: settings.buttonSize,
+              fontFamily: settings.fontFamily,
+              fontSize: settings.fontSize,
+              fontBrightness: settings.fontBrightness,
+              theme: settings.theme,
+              musicVolume: settings.musicVolume,
+              ttsEnabled: settings.ttsEnabled,
+            },
+          })
+          .eq("telegram_id", telegramId);
+
+        if (error) throw error;
       }
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 2000);
