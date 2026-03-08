@@ -365,7 +365,7 @@ export default function Game() {
 
       try {
         const bgPromise = generateBackgroundImage(1, character.style, charData, tgId);
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000));
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 120000));
         const bgResult = await Promise.race([bgPromise, timeoutPromise]);
 
         if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
