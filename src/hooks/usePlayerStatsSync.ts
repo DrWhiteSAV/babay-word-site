@@ -224,6 +224,7 @@ export function usePlayerStatsSync() {
         console.error("[usePlayerStatsSync] Unexpected error:", err);
         if (!cancelled && activeTelegramId.current === telegramId) {
           usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
+          dbLoadedAtRef.current = Date.now();
         }
       }
     };
@@ -232,35 +233,34 @@ export function usePlayerStatsSync() {
     return () => { cancelled = true; };
   }, [profile?.telegram_id]);
 
-  // ─── SYNC TO DB (debounced, only after DB hydration) ──────────────────────
-  // APPROACH: snapshot-based guard.
-  // After DB load, we take a JSON snapshot of all syncable fields.
-  // The sync effect only writes to DB if the current state DIFFERS from the snapshot.
-  // This is the only reliable way — refs + boolean flags have race conditions.
+  // ─── SYNC TO DB ──────────────────────────────────────────────────────────
+  // Uses snapshot-based comparison: only writes when user actually changed something.
+  // energy/fear/watermelons are in syncData payload but NOT in deps — they trigger
+  // writes only when a "real" field (character, settings) changes, preventing
+  // the every-second energy regen from firing constant DB writes on load.
   const dbSnapshotRef = useRef<string | null>(null);
 
-  // Clear snapshot whenever user/session changes — forces fresh DB load
   useEffect(() => {
     dbSnapshotRef.current = null;
-    console.log("[usePlayerStatsSync] snapshot cleared for new session");
+    dbLoadedAtRef.current = 0;
   }, [profile?.telegram_id]);
 
   useEffect(() => {
     if (!profile?.telegram_id) return;
-    if (!store.dbLoaded) return; // ← Gate #1: Wait for fresh DB load
-    if (!store.character) return; // ← Gate #2: No character = nothing to sync
-    // Gate #3: Never write to DB if game_status is blocked
-    if (store.gameStatus === "reset" || store.gameStatus === "loading" || store.gameStatus === "new") return;
+    if (!store.dbLoaded) return;       // Gate #1: wait for DB load
+    if (!store.character) return;      // Gate #2: no character = nothing to sync
+    if (store.gameStatus === "reset" || store.gameStatus === "loading" || store.gameStatus === "new") return; // Gate #3
+    // Gate #0: block writes for 5 seconds after DB load to prevent stale-store race writes
+    if (dbLoadedAtRef.current > 0 && Date.now() - dbLoadedAtRef.current < 5000) {
+      console.log("[usePlayerStatsSync] ⏳ write blocked — within 5s cooldown after DB load");
+      return;
+    }
 
     const currentAvatar = isHttpUrl(store.character.avatarUrl)
       ? store.character.avatarUrl
       : lastKnownAvatarUrl.current;
+    if (isHttpUrl(currentAvatar)) lastKnownAvatarUrl.current = currentAvatar;
 
-    if (isHttpUrl(currentAvatar)) {
-      lastKnownAvatarUrl.current = currentAvatar;
-    }
-
-    // Build the payload we'd write
     const syncData = {
       telegram_id: profile.telegram_id,
       fear: store.fear,
@@ -289,30 +289,26 @@ export function usePlayerStatsSync() {
 
     const currentSnapshot = JSON.stringify(syncData);
 
-    // Gate #4 (snapshot-based): If no snapshot yet — this is the FIRST fire after DB load.
-    // Save snapshot and skip write. On the NEXT fire, compare — only write if changed.
+    // Gate #4: first fire after DB load — save snapshot, skip write
     if (dbSnapshotRef.current === null) {
       dbSnapshotRef.current = currentSnapshot;
-      console.log("[usePlayerStatsSync] DB snapshot saved — skipping initial write for", store.character.name);
+      console.log("[usePlayerStatsSync] ✅ snapshot saved for", store.character.name);
       return;
     }
 
-    // Gate #5: Skip write if nothing actually changed vs DB snapshot
-    if (dbSnapshotRef.current === currentSnapshot) {
-      return;
-    }
+    // Gate #5: nothing changed vs snapshot
+    if (dbSnapshotRef.current === currentSnapshot) return;
 
-    // Something changed — log diff and write to DB
+    // Real change detected — log diff
+    const prevSnapshot = dbSnapshotRef.current;
     dbSnapshotRef.current = currentSnapshot;
-
-    // Debug: log which fields actually changed vs old snapshot
     try {
-      const prev = JSON.parse(dbSnapshotRef.current || "{}");
+      const prev = JSON.parse(prevSnapshot);
       const curr = syncData as Record<string, unknown>;
       const changed = Object.keys(curr).filter(k => JSON.stringify(prev[k]) !== JSON.stringify(curr[k]));
-      console.log("[usePlayerStatsSync] State changed — writing to DB for", store.character.name, "| changed fields:", changed);
+      console.log("[usePlayerStatsSync] 📝 writing to DB for", store.character.name, "| changed:", changed);
     } catch {
-      console.log("[usePlayerStatsSync] State changed — writing to DB for", store.character.name);
+      console.log("[usePlayerStatsSync] 📝 writing to DB for", store.character.name);
     }
 
     const timer = setTimeout(async () => {
@@ -337,9 +333,9 @@ export function usePlayerStatsSync() {
   }, [
     profile?.telegram_id,
     store.dbLoaded,
-    store.fear,
-    store.energy,
-    store.watermelons,
+    // ← energy/fear/watermelons NOT in deps: they change every second via updateEnergy
+    // and would fire constant writes. They are included in syncData payload and will
+    // be written when a real field (character, settings) triggers a sync.
     store.bossLevel,
     store.character?.telekinesisLevel,
     store.character?.name,
@@ -347,7 +343,6 @@ export function usePlayerStatsSync() {
     store.character?.style,
     store.character?.avatarUrl,
     store.character?.lore,
-    // ← FIX: wishes — массив, нестабильная ссылка. Используем стабильную строку вместо ссылки на массив
     store.character?.wishes?.join(","),
     store.settings.buttonSize,
     store.settings.fontFamily,
@@ -356,8 +351,6 @@ export function usePlayerStatsSync() {
     store.settings.theme,
     store.settings.musicVolume,
     store.settings.ttsEnabled,
-    // ← FIX: inventory — массив, нестабильная ссылка. Используем стабильную строку
     store.inventory?.join(","),
-    // ← FIX: gameStatus убран из deps — Gate #3 уже проверяет внутри эффекта
   ]);
 }
