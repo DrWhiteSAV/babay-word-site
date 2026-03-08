@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Bell, Plus, Trash2, Send, Loader2, RefreshCw, ChevronDown, ChevronUp,
