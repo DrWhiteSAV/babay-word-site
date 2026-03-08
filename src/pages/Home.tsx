@@ -1,13 +1,25 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion } from "motion/react";
-import { Play, Settings as SettingsIcon, User } from "lucide-react";
+import { Play, Settings as SettingsIcon, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "../integrations/supabase/client";
+import { useTelegram } from "../context/TelegramContext";
 
 export default function Home() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { character, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
-    
+  const { character, dbLoaded } = usePlayerStore();
+  const { profile, isLoading: tgLoading } = useTelegram();
+  const [checking, setChecking] = useState(true);
+
+  // Once DB is loaded, decide routing
+  useEffect(() => {
+    if (tgLoading) return;
+    if (!dbLoaded) return; // wait for DB hydration
+
+    setChecking(false);
+  }, [dbLoaded, tgLoading]);
+
   const handlePlay = () => {
     if (character) {
       navigate("/hub");
@@ -16,6 +28,26 @@ export default function Home() {
     }
   };
 
+  if (tgLoading || !dbLoaded || checking) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-transparent">
+        <div className="fog-container">
+          <div className="fog-layer"></div>
+          <div className="fog-layer-2"></div>
+        </div>
+        <img
+          src="https://i.ibb.co/BVgY7XrT/babai.png"
+          alt="Бабай"
+          className="w-40 drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] animate-pulse mb-6"
+        />
+        <div className="flex items-center gap-2 text-neutral-500 text-sm">
+          <Loader2 size={16} className="animate-spin" />
+          Пробуждение духа...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -23,7 +55,6 @@ export default function Home() {
       exit={{ opacity: 0 }}
       className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden bg-transparent"
     >
-            
       <div className="fog-container">
         <div className="fog-layer"></div>
         <div className="fog-layer-2"></div>
