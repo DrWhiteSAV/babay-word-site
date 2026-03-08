@@ -82,10 +82,14 @@ serve(async (req) => {
       });
     }
 
-    // Use chatKey-based stable chat_id if provided — same prefix as ai-substitute-worker
-    // so both online and offline paths share the same ProTalk session.
-    const chatId = chatKey
-      ? `aisub_${String(chatKey).replace(/[^a-z0-9_]/gi, "_")}`
+    // Use chatKey-based stable chat_id if provided.
+    // If caller already passes an aisub_-prefixed key (online path), use it as-is.
+    // Otherwise normalise plain chatKey with aisub_ prefix — matches ai-substitute-worker format.
+    const normalizedKey = chatKey ? String(chatKey) : null;
+    const chatId = normalizedKey
+      ? (normalizedKey.startsWith("aisub_")
+          ? normalizedKey
+          : `aisub_${normalizedKey.replace(/[^a-z0-9_]/gi, "_")}`)
       : generateChatId(telegramId, PROTALK_BOT_ID);
     const socialId = generateSocialId(telegramId);
     const botIdNum = parseInt(PROTALK_BOT_ID);
