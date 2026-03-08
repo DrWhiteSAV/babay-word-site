@@ -174,26 +174,11 @@ function AppContent() {
 
   const currentPath = location.pathname;
   const customBg = pageBackgrounds?.[currentPath];
-  const rawBgUrl = customBg?.url || globalBackgroundUrl;
-
-  // Resolve background to cached blob URL when available
-  useEffect(() => {
-    if (!rawBgUrl) { setResolvedBgUrl(null); return; }
-    resolveUrl(rawBgUrl).then(url => setResolvedBgUrl(url));
-  }, [rawBgUrl]);
-
-  const activeBgUrl = resolvedBgUrl ?? rawBgUrl;
+  const activeBgUrl = customBg?.url || globalBackgroundUrl;
 
   // Calculate dimming values based on customBg.dimming (0-100)
-  // If no custom dimming, use default 80% to 95% gradient
   const dimmingTop = customBg ? customBg.dimming / 100 : 0.8;
   const dimmingBottom = customBg ? Math.min(1, (customBg.dimming + 15) / 100) : 0.95;
-
-  // Show warning page for plain browser access (not Lovable editor, not Telegram)
-  // NOTE: browser mode is allowed for testing — in production Telegram enforces auth
-  // if (!isLoading && entryMode === "browser") {
-  //   return <TelegramOnly />;
-  // }
 
   return (
     <>
@@ -258,9 +243,7 @@ export default function App() {
   return (
     <Router>
       <TelegramProvider>
-        <AssetPreloaderProvider>
-          <AppContent />
-        </AssetPreloaderProvider>
+        <AppContent />
       </TelegramProvider>
     </Router>
   );
