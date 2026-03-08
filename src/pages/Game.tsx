@@ -438,7 +438,8 @@ export default function Game() {
         bgGenResolvedRef.current = true;
         setBgImage(bgResult.url);
         setBgGenRetry(false);
-        const activeTgId = tgIdRef.current ?? tgId;
+        const charTgId2 = Number(charData?.telegram_id) || undefined;
+        const activeTgId = tgIdRef.current ?? tgId ?? charTgId2;
         console.log(`[Game] 🔁 retry bg ready, tgId=${activeTgId}, saving to gallery...`);
         if (activeTgId) {
           saveImageToGallery(bgResult.url, activeTgId, `[backgrounds] Фон: ${diff}`, bgResult.prompt)
