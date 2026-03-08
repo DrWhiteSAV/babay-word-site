@@ -150,7 +150,7 @@ export async function generateAvatarWithItem(
     const genderDesc = genderWord(character.gender || "Бабай");
     const basePrompt =
       settings?.prompt ||
-      `Обнови горизонтальный портрет славянского духа по имени {name} (пол: ${genderDesc}), стиль: {style}. Лор: {lore}. Ранее купленные предметы: {inventory}. НОВЫЙ предмет: {new_item}. Нарисуй обновлённый портрет с новым предметом. Особые приметы: {wishes}. Горизонтальная ориентация. Высокое качество.`;
+      `Обнови горизонтальный портрет славянского духа по имени {name} (пол: ${genderDesc}), стиль: {style}. Лор: {lore}. Ранее купленные предметы: {inventory}. НОВЫЙ предмет: {new_item}. Нарисуй обновлённый портрет с новым предметом. Особые приметы: {wishes}. Горизонтальная ориентация. Высокое качество. ОБЯЗАТЕЛЬНО верни прямую ссылку на сгенерированное изображение.`;
     const prompt = applyMacros(basePrompt, {
       name: character.name || "",
       gender: character.gender || "",
