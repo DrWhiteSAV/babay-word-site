@@ -57,6 +57,9 @@ function AppContent() {
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
 
+  // Resolved (potentially blob:) URLs for background and audio
+  const [resolvedBgUrl, setResolvedBgUrl] = useState<string | null>(null);
+
   // Sync player stats and achievements
   usePlayerStatsSync();
   useOnlinePresence();
