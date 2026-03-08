@@ -381,14 +381,20 @@ export default function Game() {
           const bgUrl = (bgResult as any).url;
           setBgImage(bgUrl);
           setBgGenRetry(false);
-          // Save to gallery [backgrounds] — save-to-gallery uploads to ImgBB automatically
+          // Save to gallery [backgrounds] via save-to-gallery (handles ImgBB + DB insert with telegram_id)
           if (tgId) {
-            saveImageToGallery(
-              bgUrl,
-              tgId,
-              `[backgrounds] Фон: ${diff}`,
-              (bgResult as any).prompt,
-            ).catch(console.error);
+            const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+            const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+            fetch(`${SUPABASE_URL}/functions/v1/save-to-gallery`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({
+                imageUrl: bgUrl,
+                telegramId: tgId,
+                label: `[backgrounds] Фон: ${diff}`,
+                prompt: (bgResult as any).prompt,
+              }),
+            }).catch(console.error);
           }
         } else {
           if (!bgGenResolvedRef.current) setBgGenRetry(true);
