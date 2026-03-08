@@ -83,15 +83,6 @@ function AppContent() {
     loadRemoteData();
   }, []);
 
-  useEffect(() => {
-    const { friends, addFriend, toggleFriendAi } = usePlayerStore.getState();
-    const danil = friends.find(f => f.name === "ДанИИл");
-    if (!danil) {
-      addFriend("ДанИИл");
-    } else if (!danil.isAiEnabled) {
-      toggleFriendAi("ДанИИл");
-    }
-  }, []);
 
   useEffect(() => {
     if (!bgMusicRef.current) {
