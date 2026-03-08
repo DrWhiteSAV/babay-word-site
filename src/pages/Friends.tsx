@@ -617,102 +617,99 @@ export default function Friends() {
             {/* Regular friends */}
             {friends.filter(f => f.name !== "ДанИИл").map((friend) => {
                   const meta = friendsMeta[friend.name] || {};
-                const isDanil = friend.name === "ДанИИл";
-                const avatarSrc = isDanil ? "https://i.ibb.co/rKGSq544/image.png" : (meta.avatar_url || `https://picsum.photos/seed/${friend.name}/100/100`);
-                const tgLink = meta.username ? `https://t.me/${meta.username}` : null;
-                const isOnline = meta.telegram_id ? !!onlineMap[meta.telegram_id] : false;
+            {/* Regular friends */}
+            {friends.filter(f => f.name !== "ДанИИл").map((friend) => {
+                const meta = friendsMeta[friend.name] || {};
+              const avatarSrc = meta.avatar_url || `https://picsum.photos/seed/${friend.name}/100/100`;
+              const tgLink = meta.username ? `https://t.me/${meta.username}` : null;
+              const isOnline = meta.telegram_id ? !!onlineMap[meta.telegram_id] : false;
 
-                return (
-                  <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-xl border border-neutral-800 flex flex-col gap-2">
-                    {/* Top row: avatar + names + buttons */}
-                    <div className="flex items-center gap-2 w-full min-w-0">
-                      {/* Avatar with online dot */}
-                      <div className="relative shrink-0">
-                        <img
-                          src={avatarSrc}
-                          alt="avatar"
-                          className="w-10 h-10 rounded-full object-cover border border-neutral-700 cursor-pointer"
-                          onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
-                        />
-                        <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-neutral-900 ${isDanil ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : isOnline ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : 'bg-neutral-600'}`} />
-                      </div>
-
-                      {/* Name block */}
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer overflow-hidden"
+              return (
+                <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-xl border border-neutral-800 flex flex-col gap-2">
+                  {/* Top row: avatar + names + buttons */}
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    {/* Avatar with online dot */}
+                    <div className="relative shrink-0">
+                      <img
+                        src={avatarSrc}
+                        alt="avatar"
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-700 cursor-pointer"
                         onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
-                      >
-                        {!isDanil && (meta.first_name || meta.username) && (
-                          <p className="text-[11px] text-neutral-400 truncate leading-tight">
-                            {meta.first_name}{meta.last_name ? ` ${meta.last_name}` : ""}
-                            {meta.username && tgLink && (
-                              <a
-                                href={tgLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-400 hover:underline ml-1"
-                                onClick={e => e.stopPropagation()}
-                              >@{meta.username}</a>
-                            )}
-                          </p>
-                        )}
-                        <p className="font-bold text-white text-sm truncate leading-tight">
-                          {friend.name}
-                          {isDanil && <span className="text-xs text-green-400 font-normal ml-1">ИИ-куратор</span>}
-                          {!isDanil && <span className="text-neutral-500 font-normal text-xs ml-1">· тк. {meta.telekinesis_level ?? 1}</span>}
-                        </p>
-                      </div>
+                      />
+                      <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-neutral-900 ${isOnline ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : 'bg-neutral-600'}`} />
+                    </div>
 
-                      {/* Action buttons */}
-                      <div className="flex gap-1 shrink-0 items-center">
-                        <button
-                          onClick={() => setEnergyModal({ friendName: friend.name, telegramId: meta.telegram_id })}
-                          className="p-2 bg-neutral-800 hover:bg-yellow-900/40 rounded-lg text-yellow-500 transition-colors"
-                          title="Поделиться энергией"
-                        ><Zap size={15} /></button>
-                        {/* Chat button with per-chat unread badge */}
-                        {(() => {
-                          const dmKey = meta.telegram_id
-                            ? [String(profile?.telegram_id), String(meta.telegram_id)].sort().join("_")
-                            : null;
-                          const unread = dmKey ? (perChatUnread[dmKey] || 0) : 0;
-                          return (
-                            <button
-                              onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
-                              className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
-                              title="Чат"
-                            >
-                              <MessageSquare size={15} />
-                              {unread > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
-                                  {unread > 99 ? "99+" : unread}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })()}
-                        {!isDanil && (
+                    {/* Name block */}
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer overflow-hidden"
+                      onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
+                    >
+                      {(meta.first_name || meta.username) && (
+                        <p className="text-[11px] text-neutral-400 truncate leading-tight">
+                          {meta.first_name}{meta.last_name ? ` ${meta.last_name}` : ""}
+                          {meta.username && tgLink && (
+                            <a
+                              href={tgLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-400 hover:underline ml-1"
+                              onClick={e => e.stopPropagation()}
+                            >@{meta.username}</a>
+                          )}
+                        </p>
+                      )}
+                      <p className="font-bold text-white text-sm truncate leading-tight">
+                        {friend.name}
+                        <span className="text-neutral-500 font-normal text-xs ml-1">· тк. {meta.telekinesis_level ?? 1}</span>
+                      </p>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-1 shrink-0 items-center">
+                      <button
+                        onClick={() => setEnergyModal({ friendName: friend.name, telegramId: meta.telegram_id })}
+                        className="p-2 bg-neutral-800 hover:bg-yellow-900/40 rounded-lg text-yellow-500 transition-colors"
+                        title="Поделиться энергией"
+                      ><Zap size={15} /></button>
+                      {(() => {
+                        const dmKey = meta.telegram_id
+                          ? [String(profile?.telegram_id), String(meta.telegram_id)].sort().join("_")
+                          : null;
+                        const unread = dmKey ? (perChatUnread[dmKey] || 0) : 0;
+                        return (
                           <button
-                            onClick={async () => {
-                              if (!confirm(`Удалить ${friend.name}?`)) return;
-                              deleteFriend(friend.name);
-                              if (profile?.telegram_id) {
-                                await supabase.from("friends").delete()
-                                  .eq("telegram_id", profile.telegram_id)
-                                  .eq("friend_name", friend.name);
-                                setFriendsMeta(prev => { const n = { ...prev }; delete n[friend.name]; return n; });
-                              }
-                            }}
-                            className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"
-                          ><Trash2 size={15} /></button>
-                        )}
-                      </div>
+                            onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
+                            className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
+                            title="Чат"
+                          >
+                            <MessageSquare size={15} />
+                            {unread > 0 && (
+                              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
+                                {unread > 99 ? "99+" : unread}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })()}
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Удалить ${friend.name}?`)) return;
+                          deleteFriend(friend.name);
+                          if (profile?.telegram_id) {
+                            await supabase.from("friends").delete()
+                              .eq("telegram_id", profile.telegram_id)
+                              .eq("friend_name", friend.name);
+                            setFriendsMeta(prev => { const n = { ...prev }; delete n[friend.name]; return n; });
+                          }
+                        }}
+                        className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"
+                      ><Trash2 size={15} /></button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+          </div>
         </section>
 
       </div>
