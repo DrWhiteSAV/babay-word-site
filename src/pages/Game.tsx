@@ -54,9 +54,13 @@ export default function Game() {
   const [showSuccessAvatar, setShowSuccessAvatar] = useState(false);
   const [showCutscene, setShowCutscene] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [aiRetry, setAiRetry] = useState(false); // show "AI тупит" button
+  const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [pendingRetryStage, setPendingRetryStage] = useState<number | null>(null);
 
   // Game phase: after difficulty chosen but before world is generated
   const [isGeneratingWorld, setIsGeneratingWorld] = useState(false);
+
 
   useEffect(() => {
     const calculateTimeLeft = () => {
