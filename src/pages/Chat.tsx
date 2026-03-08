@@ -237,6 +237,7 @@ export default function Chat() {
             sender,
             text: decoded.text,
             imageUrl: decoded.imageUrl,
+            pvpRoomId: decoded.pvpRoomId,
             sender_telegram_id: senderId,
             read_at: (m as any).read_at,
             created_at: m.created_at,
