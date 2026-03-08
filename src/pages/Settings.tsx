@@ -233,30 +233,30 @@ export default function Settings() {
           });
         }
 
-        await Promise.all([
-          supabase.from("player_stats").update({
-            fear: 0, watermelons: 0, energy: 100, boss_level: 0,
-            telekinesis_level: 1, total_clicks: 0,
-            character_name: null, character_gender: null, character_style: null,
-            avatar_url: null, lore: null,
-            game_status: "reset",
-            referral_bonus_claimed: false,
-            custom_settings: {
-              buttonSize: "small",
-              fontFamily: "Russo One",
-              fontSize: 12,
-              fontBrightness: 100,
-              theme: "normal",
-              musicVolume: 50,
-              ttsEnabled: false,
-              wishes: [],
-              inventory: [],
-            },
-          }).eq("telegram_id", telegramId),
-          supabase.from("player_inventory").delete().eq("telegram_id", telegramId),
-          supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
-          supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
-        ]);
+          await Promise.all([
+            supabase.from("player_stats").update({
+              fear: 0, watermelons: 0, energy: 100, boss_level: 1,
+              telekinesis_level: 1, total_clicks: 0,
+              character_name: null, character_gender: null, character_style: null,
+              avatar_url: null, lore: null,
+              game_status: "reset",
+              referral_bonus_claimed: false,
+              custom_settings: {
+                buttonSize: "small",
+                fontFamily: "Russo One",
+                fontSize: 12,
+                fontBrightness: 100,
+                theme: "normal",
+                musicVolume: 50,
+                ttsEnabled: false,
+                wishes: [],
+                inventory: [],
+              },
+            }).eq("telegram_id", telegramId),
+            supabase.from("player_inventory").delete().eq("telegram_id", telegramId),
+            supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
+            supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
+          ]);
         console.log("[DB WRITE] ✅ player_stats RESET complete for telegram_id:", telegramId);
       }
     } catch (e) {
@@ -267,7 +267,7 @@ export default function Settings() {
       fear: 0,
       energy: 100,
       watermelons: 0,
-      bossLevel: 0,
+      bossLevel: 1,
       lastEnergyUpdate: Date.now(),
       inventory: [],
       achievements: [],
@@ -282,6 +282,7 @@ export default function Settings() {
         musicVolume: 50,
         ttsEnabled: false,
       },
+      gameStatus: "reset",
       dbLoaded: false,
     });
     setSnapshotName("");

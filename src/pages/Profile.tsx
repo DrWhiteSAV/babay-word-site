@@ -427,7 +427,7 @@ export default function Profile() {
 
           {/* Beautiful invite text */}
           <div className="bg-neutral-950 border border-neutral-700 rounded-xl p-4 text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap font-mono">
-            {`👻 Привет! Я — ${character.name}, бессмертный кибер-дух Бабай!\n\n🔥 Приглашаю тебя в игру «Бабай» — стань своим Бабаем, пугай жильцов и собирай арбузы!\n\n⚡ Если зайдёшь по моей ссылке — получишь бонус ${100 * Math.max(1, character.telekinesisLevel)} энергии!\n\n👇 Жми сюда:\n${referralLink}`}
+            {`👻 Привет! Я — ${character.name}, бессмертный дух Бабай!\n\n🔥 Приглашаю тебя в игру «Bab-AI» — создай своего Бабая, пугай жильцов и собирай арбузы!\n\n⚡ Зайди по моей ссылке и получи бонус: +100 страха и +100 энергии!\n\n👇 Жми сюда:\n${referralLink}`}
           </div>
           <button
             onClick={handleCopyRef}

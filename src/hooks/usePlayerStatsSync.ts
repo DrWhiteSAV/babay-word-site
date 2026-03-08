@@ -108,7 +108,7 @@ export function usePlayerStatsSync() {
         if (!data) {
           usePlayerStore.setState({
             character: null,
-            fear: 0, energy: 100, watermelons: 0, bossLevel: 0,
+            fear: 0, energy: 100, watermelons: 0, bossLevel: 1,
             inventory: [],
             friends: friendsList,
             settings: { ...DEFAULT_SETTINGS },
@@ -123,7 +123,7 @@ export function usePlayerStatsSync() {
         if (gameStatus === "reset") {
           usePlayerStore.setState({
             character: null,
-            fear: 0, energy: 100, watermelons: 0, bossLevel: 0,
+            fear: 0, energy: 100, watermelons: 0, bossLevel: 1,
             inventory: [],
             friends: friendsList,
             settings: { ...DEFAULT_SETTINGS },
@@ -186,7 +186,7 @@ export function usePlayerStatsSync() {
           fear: typeof data.fear === "number" ? data.fear : 0,
           energy: typeof data.energy === "number" ? data.energy : 100,
           watermelons: typeof data.watermelons === "number" ? data.watermelons : 0,
-          bossLevel: typeof data.boss_level === "number" ? data.boss_level : 0,
+          bossLevel: typeof data.boss_level === "number" ? Math.max(1, data.boss_level) : 1,
           settings,
           inventory,
           friends: friendsList,

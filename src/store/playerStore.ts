@@ -172,7 +172,7 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
   fear: 0,
   energy: 100,
   watermelons: 0,
-  bossLevel: 1,
+  bossLevel: 1, // starts at 1
   lastEnergyUpdate: Date.now(),
   inventory: [],
   gallery: DEFAULT_GALLERY_IMAGES,
