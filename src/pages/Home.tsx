@@ -8,18 +8,19 @@ import { useTelegram } from "../context/TelegramContext";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { character } = usePlayerStore();
+  const { character } = usePlayerStore(); // used only for avatar preview on Home buttons
   const { profile, isLoading: tgLoading } = useTelegram();
 
   // null = still checking, true = has character, false = no character
   const [hasCharacter, setHasCharacter] = useState<boolean | null>(null);
 
-  // Direct DB check — source of truth, no cache involved
+  // Direct DB check — always authoritative, bypasses any cache
   useEffect(() => {
     if (tgLoading) return;
     if (!profile?.telegram_id) return;
 
     let cancelled = false;
+    setHasCharacter(null); // reset on every check
 
     const checkDB = async () => {
       try {
@@ -33,18 +34,20 @@ export default function Home() {
 
         if (error) {
           console.error("[Home] DB check error:", error.message);
-          // Fall back to local store state if DB fails
-          setHasCharacter(!!character);
+          setHasCharacter(false); // safer to send to /create than loop
           return;
         }
 
-        // game_status='reset' means user reset but didn't finish — treat as new
-        const isReset = data?.game_status === "reset";
-        const exists = !isReset && !!(data?.character_name && data.character_name.trim().length > 0);
+        // game_status='reset' or 'creating'/'new' → treat as new user
+        const blockedStatuses = ["reset", "creating", "new"];
+        const isBlocked = blockedStatuses.includes(data?.game_status ?? "");
+        const hasName = !!(data?.character_name && data.character_name.trim().length > 0);
+        // Only show CONTINUE if status is explicitly 'playing' AND name exists
+        const exists = !isBlocked && hasName && data?.game_status === "playing";
         setHasCharacter(exists);
       } catch (err) {
         console.error("[Home] Unexpected error:", err);
-        if (!cancelled) setHasCharacter(!!character);
+        if (!cancelled) setHasCharacter(false);
       }
     };
 
