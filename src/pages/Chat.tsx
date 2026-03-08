@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, ChangeEvent } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion, AnimatePresence } from "motion/react";
-import { MessageSquare, Send, ImagePlus, X, Users, Settings, Reply, Check, CheckCheck } from "lucide-react";
+import { MessageSquare, Send, ImagePlus, X, Users, Settings, Reply, Check, CheckCheck, RefreshCw, AlertTriangle } from "lucide-react";
 import { generateFriendChat } from "../services/ai";
 import ProfilePopup from "../components/ProfilePopup";
 import Header from "../components/Header";
@@ -10,6 +10,8 @@ import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
 import { pushNotification } from "../components/NotificationPopup";
+
+const AI_REPLY_TIMEOUT = 20; // seconds
 
 interface Message {
   id: string;
@@ -20,6 +22,15 @@ interface Message {
   sender_telegram_id?: number;
   read_at?: string | null;
   created_at?: string;
+}
+
+// Pending retry context
+interface PendingRetry {
+  userMessage: string;
+  imageToSend: string | null;
+  replyToMsgId: string | null;
+  responder: string;
+  recentMessages: { sender: string; text: string }[];
 }
 
 export default function Chat() {
@@ -44,18 +55,23 @@ export default function Chat() {
   const [mentionFilter, setMentionFilter] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // AI timeout state
+  const [aiCountdown, setAiCountdown] = useState(0);
+  const [aiTimedOut, setAiTimedOut] = useState(false);
+  const [pendingRetry, setPendingRetry] = useState<PendingRetry | null>(null);
+  const aiIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const aiResolvedRef = useRef(false);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Build chat_key for DB persistence
   const chatKey = groupId
     ? `group_${groupId}`
     : profile?.telegram_id && friend
     ? [profile.telegram_id, friendName].sort().join('_')
     : null;
 
-  // Get friend's telegram_id for online status check
   const [friendTelegramId, setFriendTelegramId] = useState<number | null>(null);
   useEffect(() => {
     if (!friendName) return;
@@ -70,7 +86,6 @@ export default function Chat() {
     if (!character || (!friendName && !groupId)) navigate("/friends");
   }, [character, friendName, groupId, navigate]);
 
-  // Load messages from DB
   useEffect(() => {
     if (!chatKey) return;
     const load = async () => {
@@ -93,7 +108,6 @@ export default function Chat() {
     };
     load();
 
-    // Realtime subscription
     const channel = supabase.channel(`chat_${chatKey}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `chat_key=eq.${chatKey}` },
         (payload) => {
@@ -110,7 +124,6 @@ export default function Chat() {
             if (prev.some(p => p.id === msg.id)) return prev;
             return [...prev, msg];
           });
-          // Show popup if it's from someone else
           if (m.sender_telegram_id !== profile?.telegram_id) {
             pushNotification({
               type: 'chat',
@@ -124,7 +137,6 @@ export default function Chat() {
     return () => { supabase.removeChannel(channel); };
   }, [chatKey, profile?.telegram_id]);
 
-  // Mark messages as read
   useEffect(() => {
     if (!chatKey || !profile?.telegram_id || messages.length === 0) return;
     const unread = messages.filter(m => m.sender_telegram_id !== profile.telegram_id && !m.read_at);
@@ -142,13 +154,123 @@ export default function Chat() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
+    };
+  }, []);
+
+  const startAiCountdown = useCallback(() => {
+    if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
+    aiResolvedRef.current = false;
+    setAiTimedOut(false);
+    setAiCountdown(AI_REPLY_TIMEOUT);
+    let remaining = AI_REPLY_TIMEOUT;
+    aiIntervalRef.current = setInterval(() => {
+      remaining -= 1;
+      setAiCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(aiIntervalRef.current!);
+        if (!aiResolvedRef.current) {
+          setAiTimedOut(true);
+          setIsAiTyping(false);
+          setAiCountdown(0);
+        }
+      }
+    }, 1000);
+  }, []);
+
+  const stopAiCountdown = useCallback(() => {
+    if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
+    aiResolvedRef.current = true;
+    setAiCountdown(0);
+  }, []);
+
+  const saveMessageToDB = async (msg: Message, role: string, senderName: string) => {
+    if (!chatKey) return;
+    await supabase.from("chat_messages").insert({
+      telegram_id: profile?.telegram_id || 0,
+      content: msg.text || '',
+      role,
+      friend_name: senderName,
+      chat_key: chatKey,
+      sender_telegram_id: role === 'user' ? profile?.telegram_id : null,
+    } as any);
+  };
+
+  const doAiReply = useCallback(async (
+    userMessage: string,
+    imageToSend: string | null,
+    replyToMsgId: string | null,
+    responder: string,
+    recentMessages: { sender: string; text: string }[],
+    isRetry = false,
+  ) => {
+    setIsAiTyping(true);
+    setAiTimedOut(false);
+    if (!isRetry) setPendingRetry(null);
+
+    startAiCountdown();
+
+    try {
+      const responseText = await generateFriendChat(
+        userMessage, responder, character!, character?.style || "Обычная",
+        recentMessages, imageToSend || undefined, profile?.telegram_id
+      );
+
+      if (aiResolvedRef.current && isRetry === false) {
+        // timed out before we got here
+        return;
+      }
+
+      stopAiCountdown();
+      aiResolvedRef.current = true;
+
+      // Validate: must be non-empty string
+      if (!responseText || typeof responseText !== "string" || responseText.trim().length === 0) {
+        setAiTimedOut(true);
+        setIsAiTyping(false);
+        setPendingRetry({ userMessage, imageToSend, replyToMsgId, responder, recentMessages });
+        return;
+      }
+
+      const aiMsg: Message = { id: Date.now().toString(), sender: responder, text: responseText, replyTo: replyToMsgId || undefined };
+      setMessages(prev => [...prev, aiMsg]);
+      await saveMessageToDB(aiMsg, 'assistant', responder);
+      setPendingRetry(null);
+    } catch (e) {
+      stopAiCountdown();
+      aiResolvedRef.current = true;
+      setAiTimedOut(true);
+      setPendingRetry({ userMessage, imageToSend, replyToMsgId, responder, recentMessages });
+    } finally {
+      if (aiResolvedRef.current) {
+        setIsAiTyping(false);
+      }
+    }
+  }, [character, profile?.telegram_id, startAiCountdown, stopAiCountdown]);
+
+  const handleRetryAi = useCallback(() => {
+    if (!pendingRetry) return;
+    setAiTimedOut(false);
+    const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
+    doAiReply(
+      pendingRetry.userMessage,
+      pendingRetry.imageToSend,
+      pendingRetry.replyToMsgId,
+      pendingRetry.responder,
+      recentMessages,
+      true,
+    );
+  }, [pendingRetry, messages, doAiReply]);
+
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        // Upload to ImgBB for a shareable direct link
         try {
           const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
           const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
@@ -171,18 +293,6 @@ export default function Chat() {
     }
   };
 
-  const saveMessageToDB = async (msg: Message, role: string, senderName: string) => {
-    if (!chatKey) return;
-    await supabase.from("chat_messages").insert({
-      telegram_id: profile?.telegram_id || 0,
-      content: msg.text || '',
-      role,
-      friend_name: senderName,
-      chat_key: chatKey,
-      sender_telegram_id: role === 'user' ? profile?.telegram_id : null,
-    } as any);
-  };
-
   const handleSend = async () => {
     if ((!input.trim() && !selectedImage) || (!friend && !group)) return;
 
@@ -197,29 +307,14 @@ export default function Chat() {
     setReplyToMsg(null);
     setShowMentions(false);
 
-    // Save user message
     await saveMessageToDB(newMsg, 'user', character?.name || 'user');
 
-    // AI response only if friend is offline or AI enabled
     const shouldUseAI = friend?.isAiEnabled && (!friendTelegramId || !isFriendOnline);
 
     if (shouldUseAI) {
-      setIsAiTyping(true);
-      try {
-        const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-        const responseText = await generateFriendChat(
-          userMessage, friend!.name, character!, character?.style || "Обычная",
-          recentMessages, imageToSend || undefined, profile?.telegram_id
-        );
-        const aiMsg: Message = { id: Date.now().toString(), sender: friend!.name, text: responseText, replyTo: newMsg.id };
-        setMessages(prev => [...prev, aiMsg]);
-        await saveMessageToDB(aiMsg, 'assistant', friend!.name);
-      } catch (e) {
-        const errMsg: Message = { id: Date.now().toString(), sender: friend!.name, text: "Связь прервалась. Попробуй позже." };
-        setMessages(prev => [...prev, errMsg]);
-      } finally {
-        setIsAiTyping(false);
-      }
+      const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
+      setPendingRetry({ userMessage, imageToSend, replyToMsgId: newMsg.id, responder: friend!.name, recentMessages });
+      await doAiReply(userMessage, imageToSend, newMsg.id, friend!.name, recentMessages);
     } else if (group) {
       const aiMembers = group.members.filter(m => friends.find(f => f.name === m)?.isAiEnabled);
       const mentionedAIs = aiMembers.filter(m => userMessage.includes(`@${m}`));
@@ -232,19 +327,12 @@ export default function Chat() {
         responders = [aiMembers[Math.floor(Math.random() * aiMembers.length)]];
       }
       if (responders.length > 0) {
-        setIsAiTyping(true);
+        const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
+        const firstResponder = responders[0];
+        setPendingRetry({ userMessage, imageToSend, replyToMsgId: newMsg.id, responder: firstResponder, recentMessages });
         for (const responder of responders) {
-          try {
-            const recentMessages = messages.slice(-10).map(m => ({ sender: m.sender, text: m.text }));
-            const responseText = await generateFriendChat(
-              userMessage, responder, character!, character?.style || "Обычная",
-              recentMessages, imageToSend || undefined, profile?.telegram_id
-            );
-            const aiMsg: Message = { id: Date.now().toString() + responder, sender: responder, text: responseText, replyTo: newMsg.id };
-            setMessages(prev => [...prev, aiMsg]);
-          } catch (e) { console.error(e); }
+          await doAiReply(userMessage, imageToSend, newMsg.id, responder, recentMessages);
         }
-        setIsAiTyping(false);
       }
     }
   };
@@ -361,13 +449,43 @@ export default function Chat() {
             </div>
           );
         })}
+
+        {/* AI typing indicator with countdown */}
         {isAiTyping && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] p-3 rounded-2xl bg-neutral-800 text-neutral-400 rounded-tl-sm flex gap-1">
+          <div className="flex justify-start items-end gap-2">
+            <div className="max-w-[80%] p-3 rounded-2xl bg-neutral-800 text-neutral-400 rounded-tl-sm flex items-center gap-2">
               <span className="animate-bounce">.</span><span className="animate-bounce delay-100">.</span><span className="animate-bounce delay-200">.</span>
+              {aiCountdown > 0 && (
+                <span className="text-xs font-mono text-red-400 ml-1 bg-red-900/30 px-1.5 py-0.5 rounded">
+                  {aiCountdown}с
+                </span>
+              )}
             </div>
           </div>
         )}
+
+        {/* AI timeout retry */}
+        {aiTimedOut && !isAiTyping && pendingRetry && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-start"
+          >
+            <div className="max-w-[85%] p-3 rounded-2xl bg-yellow-900/20 border border-yellow-600/40 rounded-tl-sm space-y-2">
+              <div className="flex items-center gap-2 text-yellow-400">
+                <AlertTriangle size={14} />
+                <span className="text-xs font-bold">ИИ тупит, Давай ещё раз?</span>
+              </div>
+              <button
+                onClick={handleRetryAi}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600/20 border border-yellow-600/50 text-yellow-300 rounded-xl text-xs font-bold hover:bg-yellow-600/30 transition-all"
+              >
+                <RefreshCw size={12} /> Повторить
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         <div ref={chatEndRef} />
       </div>
 
@@ -396,53 +514,89 @@ export default function Chat() {
             ))}
           </div>
         )}
-        <div className="flex gap-2 items-end">
-          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
-          <button onClick={() => fileInputRef.current?.click()} className="p-3 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-colors flex items-center justify-center">
-            <ImagePlus size={20} className="text-neutral-400" />
+        <div className="flex gap-3 items-center">
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          <button onClick={() => fileInputRef.current?.click()} className="p-2 text-neutral-500 hover:text-white transition-colors flex-shrink-0">
+            <ImagePlus size={20} />
           </button>
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={handleInputChange}
-            onKeyDown={e => e.key === "Enter" && handleSend()}
-            placeholder={friend && !isFriendOnline && friend.isAiEnabled ? `${friend.name} оффлайн — ответит ИИ` : "Сообщение..."}
-            className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-900 transition-colors"
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder={`Написать ${chatTitle}...`}
+            className="flex-1 bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-red-600"
           />
           <button
             onClick={handleSend}
-            disabled={(!input.trim() && !selectedImage) || isAiTyping}
-            className="p-3 bg-red-700 hover:bg-red-600 rounded-xl disabled:opacity-50 transition-colors flex items-center justify-center"
+            disabled={!input.trim() && !selectedImage}
+            className="p-3 bg-red-700 hover:bg-red-600 disabled:bg-neutral-800 disabled:text-neutral-600 text-white rounded-xl transition-colors flex-shrink-0"
           >
-            <Send size={20} className="text-white" />
+            <Send size={18} />
           </button>
         </div>
       </div>
 
-      {showMembersModal && group && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 max-w-sm w-full">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-bold text-white uppercase tracking-wider">Участники</h2>
-              <button onClick={() => setShowMembersModal(false)} className="text-neutral-500 hover:text-white"><X size={24} /></button>
-            </div>
-            <div className="max-h-60 overflow-y-auto space-y-2 mb-4 pr-2">
-              {friends.map(f => (
-                <label key={f.name} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${f.name === "ДанИИл" ? 'bg-neutral-800/30 opacity-70' : 'bg-neutral-800/50 hover:bg-neutral-800'}`}>
-                  <input type="checkbox" checked={selectedFriends.includes(f.name) || f.name === "ДанИИл"} onChange={() => { if (f.name !== "ДанИИл") setSelectedFriends(prev => prev.includes(f.name) ? prev.filter(x => x !== f.name) : [...prev, f.name]); }} disabled={f.name === "ДанИИл"} className="accent-red-600 w-4 h-4" />
-                  <img src={getAvatarUrl(f.name)} alt="" className="w-8 h-8 rounded-full object-cover" />
-                  <span className="text-white">{f.name}</span>
-                  {f.name === "ДанИИл" && <span className="ml-auto text-xs text-neutral-500">ИИ</span>}
-                </label>
-              ))}
-            </div>
-            <button onClick={handleUpdateMembers} className="w-full py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold transition-colors">Сохранить</button>
-          </motion.div>
-        </div>
-      )}
+      {/* Profile popup */}
+      <AnimatePresence>
+        {showProfilePopup && (
+          <ProfilePopup
+            name={showProfilePopup === "user" ? (character?.name || "Ты") : showProfilePopup}
+            onClose={() => setShowProfilePopup(null)}
+          />
+        )}
+      </AnimatePresence>
 
-      {showProfilePopup && <ProfilePopup name={showProfilePopup} onClose={() => setShowProfilePopup(null)} />}
+      {/* Group members modal */}
+      <AnimatePresence>
+        {showMembersModal && group && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 z-50 flex items-end"
+            onClick={() => setShowMembersModal(false)}
+          >
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full bg-neutral-900 rounded-t-3xl p-6 space-y-4 max-h-[70vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Settings size={18} /> Участники группы</h3>
+                <button onClick={() => setShowMembersModal(false)} className="text-neutral-500"><X size={20} /></button>
+              </div>
+              <div className="space-y-2">
+                {friends.map(f => (
+                  <label key={f.name} className="flex items-center gap-3 p-3 bg-neutral-800 rounded-xl cursor-pointer hover:bg-neutral-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedFriends.includes(f.name)}
+                      onChange={e => {
+                        if (e.target.checked) setSelectedFriends(prev => [...prev, f.name]);
+                        else setSelectedFriends(prev => prev.filter(n => n !== f.name));
+                      }}
+                      className="w-4 h-4 accent-red-600"
+                    />
+                    <img src={getAvatarUrl(f.name)} alt="" className="w-8 h-8 rounded-full" />
+                    <span className="text-white font-medium">{f.name}</span>
+                    {f.isAiEnabled && <span className="ml-auto text-xs text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full">ИИ</span>}
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={handleUpdateMembers}
+                className="w-full py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold transition-colors"
+              >
+                Сохранить состав
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
