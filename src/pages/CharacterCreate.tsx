@@ -126,7 +126,7 @@ export default function CharacterCreate() {
       setNameLocked(true); // Lock after first generation
     } catch (e) {
       console.error("[Create] name gen error:", e);
-      setGeneratedName(g === "Бабай" ? "Бурьяник" : "Тьмарица");
+      setGeneratedName(g === "Бабай" ? "Бурьяник Лунный" : "Тьмарица Сырая");
       setNameLocked(true);
     } finally {
       setIsGeneratingName(false);
