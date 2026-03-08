@@ -419,5 +419,6 @@ export const usePlayerStore = create<PlayerState>()(
 if (typeof window !== "undefined") {
   try { localStorage.removeItem("babai-ui-prefs"); } catch {}
   try { localStorage.removeItem("babai-ui-prefs-v2"); } catch {}
+  try { localStorage.removeItem("babai-ui-prefs-v3"); } catch {}
 }
 
