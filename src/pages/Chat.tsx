@@ -357,9 +357,13 @@ export default function Chat() {
     }
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setInput(val);
+    // Auto-resize
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 160) + "px";
     if (group) {
       const lastWord = val.split(" ").pop();
       if (lastWord?.startsWith("@")) {
@@ -368,6 +372,31 @@ export default function Chat() {
       } else setShowMentions(false);
     }
   };
+
+  /** AI generates a message draft FOR ME to send to the friend */
+  const handleGenerateMyReply = useCallback(async () => {
+    if (!friend || !character) return;
+    setIsMyAiTyping(true);
+    setMyAiDraft("");
+    try {
+      const recentMessages = messages.slice(-12).map(m => ({ sender: m.sender, text: m.text }));
+      const draft = await generateMyAiReply(friend.name, character, recentMessages, profile?.telegram_id);
+      setMyAiDraft(draft);
+      setInput(draft);
+      // Resize textarea
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.style.height = "auto";
+          inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 160) + "px";
+          inputRef.current.focus();
+        }
+      }, 50);
+    } catch (e) {
+      console.error("[Chat] My AI reply error:", e);
+    } finally {
+      setIsMyAiTyping(false);
+    }
+  }, [friend, character, messages, profile?.telegram_id]);
 
   const insertMention = (name: string) => {
     const words = input.split(" ");
