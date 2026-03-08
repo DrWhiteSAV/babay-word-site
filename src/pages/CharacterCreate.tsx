@@ -252,25 +252,35 @@ export default function CharacterCreate() {
 
     if (tgId) {
       try {
-        const storeState = usePlayerStore.getState();
+        // CRITICAL: Fetch existing settings from DB first — NEVER overwrite with store defaults.
+        // The store may still have default settings (fontSize:12, buttonSize:small) at the time
+        // of character creation if the user was redirected here before DB load completed.
         const { data: existingStats } = await supabase
           .from("player_stats")
-          .select("custom_settings")
+          .select("custom_settings, fear, energy, watermelons, boss_level")
           .eq("telegram_id", tgId)
           .maybeSingle();
 
+        // Preserve ALL existing custom_settings — only update character-specific fields (wishes, inventory)
         const existingCustomSettings =
           existingStats?.custom_settings && typeof existingStats.custom_settings === "object"
             ? (existingStats.custom_settings as Record<string, unknown>)
             : {};
 
+        // Use DB values for stats if available (avoids resetting progress on re-creation)
+        const storeState = usePlayerStore.getState();
+        const fear = typeof existingStats?.fear === "number" ? existingStats.fear : storeState.fear;
+        const energy = typeof existingStats?.energy === "number" ? existingStats.energy : storeState.energy;
+        const watermelons = typeof existingStats?.watermelons === "number" ? existingStats.watermelons : storeState.watermelons;
+        const bossLevel = typeof existingStats?.boss_level === "number" ? existingStats.boss_level : storeState.bossLevel;
+
         await supabase.from("player_stats").upsert(
           {
             telegram_id: tgId,
-            fear: storeState.fear,
-            energy: storeState.energy,
-            watermelons: storeState.watermelons,
-            boss_level: storeState.bossLevel,
+            fear,
+            energy,
+            watermelons,
+            boss_level: bossLevel,
             telekinesis_level: 1,
             character_name: name,
             character_gender: gender,
@@ -278,17 +288,14 @@ export default function CharacterCreate() {
             avatar_url: finalUrl,
             lore: generatedLore || null,
             game_status: "playing",
+            // Preserve existing UI settings (fontSize, buttonSize, theme, etc.)
+            // Only update character-specific wish list and inventory
             custom_settings: {
               ...existingCustomSettings,
-              buttonSize: storeState.settings.buttonSize,
-              fontFamily: storeState.settings.fontFamily,
-              fontSize: storeState.settings.fontSize,
-              fontBrightness: storeState.settings.fontBrightness,
-              theme: storeState.settings.theme,
-              musicVolume: storeState.settings.musicVolume,
-              ttsEnabled: storeState.settings.ttsEnabled,
               wishes,
-              inventory: storeState.inventory,
+              inventory: Array.isArray(existingCustomSettings.inventory)
+                ? existingCustomSettings.inventory
+                : storeState.inventory,
             },
           },
           { onConflict: "telegram_id" }
