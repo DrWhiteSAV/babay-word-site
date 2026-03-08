@@ -422,7 +422,12 @@ export default function Chat() {
     setAiCountdown(0);
   }, []);
 
-  const saveMessageToDB = useCallback(async (msg: Message, role: string, senderName: string): Promise<string | null> => {
+  const saveMessageToDB = useCallback(async (
+    msg: Message,
+    role: string,
+    senderName: string,
+    isAiReply = false,
+  ): Promise<string | null> => {
     // Always compute the canonical chatKey at save time using the latest friendTelegramId
     // useCallback ensures the closure always has the LATEST friendTelegramId, not a stale one
     const effectiveChatKey = groupId
@@ -443,6 +448,7 @@ export default function Chat() {
       friend_name: senderName,
       chat_key: effectiveChatKey,
       sender_telegram_id: role === 'user' ? profile?.telegram_id : null,
+      is_ai_reply: isAiReply,
     } as any).select('id').single();
 
     // Notify recipient via Telegram if they're offline (only for user-sent messages)
