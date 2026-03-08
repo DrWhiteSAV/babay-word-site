@@ -201,8 +201,50 @@ export default function Game() {
     return false;
   };
 
+  // -------- Generate boss image and save to gallery --------
+  const generateBossImageWithSave = useCallback(async (currentStage: number, charData: Record<string, string>) => {
+    if (!character) return;
+    try {
+      const bResult = await generateBossImage(currentStage, character.style, charData, tgId) as { url: string; prompt: string };
+      if (bResult?.url && bResult.url.startsWith("http")) {
+        setBossImage(bResult.url);
+        bossImageReadyRef.current = true;
+        setBossImageReady(true);
+        // Save to gallery (bosses section) — save-to-gallery uploads to ImgBB automatically
+        if (tgId) {
+          saveImageToGallery(
+            bResult.url,
+            tgId,
+            `[bosses] Босс ур.${bossLevel}`,
+            bResult.prompt,
+          ).catch(console.error);
+        }
+        // Auto-launch battle if still in preparation phase
+        if (bossPreparationIntervalRef.current) {
+          clearInterval(bossPreparationIntervalRef.current);
+        }
+        // Small delay then start battle
+        await new Promise(r => setTimeout(r, 1200));
+        setIsBossPreparation(false);
+        setIsBossBattle(true);
+        setBossTimer(30 + getBossTimeBonus());
+      } else {
+        // Bad format — show retry
+        if (!bossImageReadyRef.current) {
+          if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+          setBossGenRetry(true);
+        }
+      }
+    } catch {
+      if (!bossImageReadyRef.current) {
+        if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+        setBossGenRetry(true);
+      }
+    }
+  }, [character, tgId, bossLevel, difficulty, inventory]);
+
   // -------- Start boss preparation phase after "Я готов к бою!" --------
-  const launchBossPreparation = useCallback(async (currentStage: number, charData: Record<string, string>) => {
+  const launchBossPreparation = useCallback((currentStage: number, charData: Record<string, string>) => {
     const rewardMult = (difficulty || "Сложная") === "Невозможная" ? 2 : 1;
     setBossRewardMultiplier(rewardMult);
     setBossTaps(0);
@@ -231,50 +273,9 @@ export default function Game() {
       }
     }, 1000);
 
-    // Generate boss image in background
-    await generateBossImageWithSave(currentStage, charData);
-  }, [difficulty]);
-
-  const generateBossImageWithSave = useCallback(async (currentStage: number, charData: Record<string, string>) => {
-    if (!character) return;
-    try {
-      const bResult = await generateBossImage(currentStage, character.style, charData, tgId) as { url: string; prompt: string };
-      if (bResult?.url && bResult.url.startsWith("http")) {
-        setBossImage(bResult.url);
-        bossImageReadyRef.current = true;
-        setBossImageReady(true);
-        // Save to gallery (bosses section, imgbb URL)
-        if (tgId && bResult.url.includes("ibb.co")) {
-          saveImageToGallery(
-            bResult.url,
-            tgId,
-            `[bosses] Босс ур.${bossLevel}`,
-            bResult.prompt,
-          ).catch(console.error);
-        }
-        // Auto-launch battle if still in preparation phase
-        if (bossPreparationIntervalRef.current) {
-          clearInterval(bossPreparationIntervalRef.current);
-        }
-        // Small delay then start battle
-        await new Promise(r => setTimeout(r, 1200));
-        setIsBossPreparation(false);
-        setIsBossBattle(true);
-        setBossTimer(30 + getBossTimeBonus());
-      } else {
-        // Bad format
-        if (!bossImageReadyRef.current) {
-          if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
-          setBossGenRetry(true);
-        }
-      }
-    } catch {
-      if (!bossImageReadyRef.current) {
-        if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
-        setBossGenRetry(true);
-      }
-    }
-  }, [character, tgId, bossLevel, difficulty, inventory]);
+    // Generate boss image in background (non-blocking)
+    generateBossImageWithSave(currentStage, charData);
+  }, [difficulty, generateBossImageWithSave]);
 
   const retryBossImageGen = useCallback((currentStage: number) => {
     setBossGenRetry(false);
@@ -374,8 +375,8 @@ export default function Game() {
           const bgUrl = (bgResult as any).url;
           setBgImage(bgUrl);
           setBgGenRetry(false);
-          // Save to gallery [backgrounds] with imgbb URL
-          if (tgId && bgUrl.includes("ibb.co")) {
+          // Save to gallery [backgrounds] — save-to-gallery uploads to ImgBB automatically
+          if (tgId) {
             saveImageToGallery(
               bgUrl,
               tgId,
@@ -431,7 +432,7 @@ export default function Game() {
         bgGenResolvedRef.current = true;
         setBgImage(bgResult.url);
         setBgGenRetry(false);
-        if (tgId && bgResult.url.includes("ibb.co")) {
+        if (tgId) {
           saveImageToGallery(bgResult.url, tgId, `[backgrounds] Фон: ${diff}`, bgResult.prompt).catch(console.error);
         }
       } else {
@@ -474,7 +475,7 @@ export default function Game() {
     if (isBossStage(currentStage, currentDiff)) {
       setIsLoading(false);
       setStageCountdown(0);
-      await launchBossPreparation(currentStage, charData);
+      launchBossPreparation(currentStage, charData);
       return;
     }
 
