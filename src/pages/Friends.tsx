@@ -13,6 +13,43 @@ import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
 const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
 
+/** Returns a map of chatKey → unread count for the current user */
+function usePerChatUnread(myTid: number | undefined, chatKeys: string[]): Record<string, number> {
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!myTid || chatKeys.length === 0) { setUnreadMap({}); return; }
+
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("chat_key")
+        .in("chat_key", chatKeys)
+        .neq("sender_telegram_id", myTid)
+        .is("read_at", null);
+
+      const map: Record<string, number> = {};
+      for (const row of data || []) {
+        if (row.chat_key) map[row.chat_key] = (map[row.chat_key] || 0) + 1;
+      }
+      setUnreadMap(map);
+    };
+
+    fetch();
+
+    const channel = supabase
+      .channel(`per_chat_unread_${myTid}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, fetch)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages" }, fetch)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myTid, chatKeys.join(",")]);
+
+  return unreadMap;
+}
+
 export default function Friends() {
   const navigate = useNavigate();
   const { character, friends, groupChats, addFriend, toggleFriendAi, addEnergy, addFear, createGroupChat, deleteFriend, deleteGroupChat, updateGroupName } = usePlayerStore();
@@ -41,6 +78,19 @@ export default function Friends() {
     [friendsMeta]
   );
   const onlineMap = useFriendOnlineStatus(friendTelegramIds);
+
+  // Build all chat keys and get per-chat unread counts
+  const allChatKeys = useMemo(() => {
+    const myTid = profile?.telegram_id;
+    if (!myTid) return [];
+    const dmKeys = friends
+      .filter(f => f.name !== "ДанИИл" && friendsMeta[f.name]?.telegram_id)
+      .map(f => [String(myTid), String(friendsMeta[f.name].telegram_id!)].sort().join("_"));
+    const groupKeys = groupChats.map(g => `group_${g.id}`);
+    return [...dmKeys, ...groupKeys];
+  }, [profile?.telegram_id, friends, friendsMeta, groupChats]);
+
+  const perChatUnread = usePerChatUnread(profile?.telegram_id, allChatKeys);
 
   useEffect(() => {
     if (!profile?.telegram_id) return;
@@ -498,9 +548,19 @@ export default function Friends() {
                         <span className="font-bold text-white text-sm truncate">{chat.name}</span>
                       )}
                     </div>
-                    <div className="flex gap-1.5 shrink-0">
+                    <div className="flex gap-1.5 shrink-0 items-center">
                       <button onClick={() => handleEditGroup(chat.id, chat.name)} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-400 transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => navigate("/chat", { state: { groupId: chat.id } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"><MessageSquare size={14} /></button>
+                      <button
+                        onClick={() => navigate("/chat", { state: { groupId: chat.id } })}
+                        className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
+                      >
+                        <MessageSquare size={14} />
+                        {(perChatUnread[`group_${chat.id}`] || 0) > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
+                            {perChatUnread[`group_${chat.id}`] > 99 ? "99+" : perChatUnread[`group_${chat.id}`]}
+                          </span>
+                        )}
+                      </button>
                       <button onClick={() => { if (confirm('Удалить группу?')) deleteGroupChat(chat.id); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </div>
@@ -569,17 +629,33 @@ export default function Friends() {
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex gap-1 shrink-0">
+                      <div className="flex gap-1 shrink-0 items-center">
                         <button
                           onClick={() => setEnergyModal({ friendName: friend.name, telegramId: meta.telegram_id })}
                           className="p-2 bg-neutral-800 hover:bg-yellow-900/40 rounded-lg text-yellow-500 transition-colors"
                           title="Поделиться энергией"
                         ><Zap size={15} /></button>
-                        <button
-                          onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
-                          className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
-                          title="Чат"
-                        ><MessageSquare size={15} /></button>
+                        {/* Chat button with per-chat unread badge */}
+                        {(() => {
+                          const dmKey = meta.telegram_id
+                            ? [String(profile?.telegram_id), String(meta.telegram_id)].sort().join("_")
+                            : null;
+                          const unread = dmKey ? (perChatUnread[dmKey] || 0) : 0;
+                          return (
+                            <button
+                              onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
+                              className="relative p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
+                              title="Чат"
+                            >
+                              <MessageSquare size={15} />
+                              {unread > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-600 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-[0_0_6px_rgba(220,38,38,0.7)]">
+                                  {unread > 99 ? "99+" : unread}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })()}
                         {!isDanil && (
                           <button
                             onClick={async () => {
@@ -589,7 +665,6 @@ export default function Friends() {
                                 await supabase.from("friends").delete()
                                   .eq("telegram_id", profile.telegram_id)
                                   .eq("friend_name", friend.name);
-                                // Refresh meta
                                 setFriendsMeta(prev => { const n = { ...prev }; delete n[friend.name]; return n; });
                               }
                             }}
