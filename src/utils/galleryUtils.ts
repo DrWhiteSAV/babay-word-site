@@ -1,6 +1,8 @@
+import { supabase } from "../integrations/supabase/client";
+
 /**
- * Saves an image to the gallery via the Telegram bot edge function.
- * The image is sent to the user's Telegram chat, and the hosted URL is saved to Supabase.
+ * Saves an image URL directly to the gallery table in Supabase.
+ * Direct DB insert — no edge function needed for non-avatar images.
  */
 export async function saveImageToGallery(
   imageUrl: string,
@@ -10,33 +12,44 @@ export async function saveImageToGallery(
   characterName?: string,
   lore?: string,
 ): Promise<string | null> {
+  if (!imageUrl || !telegramId) {
+    console.warn("[gallery] saveImageToGallery: missing imageUrl or telegramId");
+    return null;
+  }
+
   try {
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-    const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const labelLower = (label || "").toLowerCase();
+    const isAvatar = labelLower.includes("[avatars]") || labelLower.includes("[avatar]") || labelLower.includes("аватар");
 
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/save-to-gallery`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ imageUrl, telegramId, label, prompt, characterName, lore }),
-    });
+    let canonicalLabel = label || null;
 
-    const text = await resp.text();
-    if (!text || !text.trim()) {
-      console.warn("saveImageToGallery: empty response body");
+    if (isAvatar && characterName) {
+      const cleanName = characterName.replace(/^Аватар:\s*/i, "").replace(/^\[.*?\]\s*/i, "").trim();
+      canonicalLabel = lore
+        ? `[avatars] ${cleanName} | ${lore.substring(0, 200)}`
+        : `[avatars] ${cleanName}`;
+    }
+
+    const { data, error } = await supabase
+      .from("gallery")
+      .insert({
+        telegram_id: telegramId,
+        image_url: imageUrl,
+        label: canonicalLabel,
+        prompt: prompt || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[gallery] insert error:", error);
       return null;
     }
-    let data: any;
-    try { data = JSON.parse(text); } catch { console.warn("saveImageToGallery: invalid JSON"); return null; }
-    if (data.success && data.gallery_item?.image_url) {
-      return data.gallery_item.image_url;
-    }
-    console.error("saveImageToGallery error:", data.error);
-    return null;
+
+    console.log(`[DB WRITE] 📝 gallery INSERT telegram_id=${telegramId}, label="${canonicalLabel?.substring(0, 80)}"`);
+    return data?.image_url || imageUrl;
   } catch (e) {
-    console.error("saveImageToGallery failed:", e);
+    console.error("[gallery] saveImageToGallery failed:", e);
     return null;
   }
 }
