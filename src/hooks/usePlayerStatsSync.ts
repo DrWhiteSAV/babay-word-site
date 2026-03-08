@@ -210,6 +210,70 @@ export function usePlayerStatsSync() {
     return () => { cancelled = true; };
   }, [profile?.telegram_id]);
 
+  // ─── AUTO-SYNC settings TO DB (debounced 800ms, fires from anywhere in the app) ──
+  const settingsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settingsLoadedRef = useRef(false);
+
+  useEffect(() => {
+    settingsLoadedRef.current = false;
+  }, [profile?.telegram_id]);
+
+  useEffect(() => {
+    const telegramId = profile?.telegram_id;
+    if (!telegramId) return;
+    if (!store.dbLoaded) return;
+
+    // Skip the very first render after DB load to avoid overwriting with stale defaults
+    if (!settingsLoadedRef.current) {
+      settingsLoadedRef.current = true;
+      return;
+    }
+
+    if (settingsTimerRef.current) clearTimeout(settingsTimerRef.current);
+    settingsTimerRef.current = setTimeout(async () => {
+      try {
+        const { data: existing } = await supabase
+          .from("player_stats")
+          .select("custom_settings")
+          .eq("telegram_id", telegramId)
+          .single();
+        const existingCs = (existing?.custom_settings as Record<string, unknown>) || {};
+        const s = store.settings;
+        const newCs = {
+          ...existingCs,
+          buttonSize: s.buttonSize,
+          fontFamily: s.fontFamily,
+          fontSize: s.fontSize,
+          fontBrightness: s.fontBrightness,
+          theme: s.theme,
+          musicVolume: s.musicVolume,
+          ttsEnabled: s.ttsEnabled,
+        };
+        await supabase
+          .from("player_stats")
+          .update({ custom_settings: newCs })
+          .eq("telegram_id", telegramId);
+        console.log("[sync] ✅ settings auto-saved to DB");
+      } catch (e) {
+        console.error("[sync] ❌ settings save error:", e);
+      }
+    }, 800);
+
+    return () => {
+      if (settingsTimerRef.current) clearTimeout(settingsTimerRef.current);
+    };
+  }, [
+    profile?.telegram_id,
+    store.dbLoaded,
+    store.settings.buttonSize,
+    store.settings.fontFamily,
+    store.settings.fontSize,
+    store.settings.fontBrightness,
+    store.settings.theme,
+    store.settings.musicVolume,
+    store.settings.ttsEnabled,
+  ]);
+
   // ─── AUTO-SYNC TO DB ─────────────────────────────────────────────────────────
   // CRITICAL: This effect ONLY writes gameplay stats (fear, watermelons, boss_level, telekinesis_level, energy).
   // It NEVER touches: avatar_url, character_name, character_gender, character_style, lore, custom_settings.
