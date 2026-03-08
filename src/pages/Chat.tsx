@@ -332,7 +332,7 @@ export default function Chat() {
     };
   }, [chatKey, profile?.telegram_id]);
 
-  // ── AI-Substitute: reply AS ME when friend sends a message ──
+  // ── AI-Substitute: reply AS ME when friend sends a message (online path) ──
   useEffect(() => {
     if (!isAiSubstitute) {
       if (aiSubIntervalRef.current) clearInterval(aiSubIntervalRef.current);
@@ -342,6 +342,9 @@ export default function Chat() {
     }
     if (!friend || !character || !chatKey) return;
     if (messages.length === 0) return;
+    // Only trigger for DM chats where we know the friend's real telegram_id
+    // (ensures canonical chatKey is tid_tid, visible to both sides)
+    if (!friendTelegramId) return;
 
     const lastMsg = messages[messages.length - 1];
     // Only trigger when the last message is from the OTHER person (friend), not from me
@@ -377,7 +380,7 @@ export default function Chat() {
     const recentMessages = messages.slice(-4).map(m => ({ sender: m.sender, text: m.text }));
     doAiReply(lastMsg.text, null, lastMsg.id, character.name, recentMessages, false, true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, isAiSubstitute, friend?.name, character?.name, chatKey, profile?.telegram_id]);
+  }, [messages.length, isAiSubstitute, friend?.name, character?.name, chatKey, profile?.telegram_id, friendTelegramId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
