@@ -110,8 +110,10 @@ export default function Game() {
   const [isPvpLobby, setIsPvpLobby] = useState(false);
   const [pvpParticipants, setPvpParticipants] = useState<string[]>([]);
   const [localFear, setLocalFear] = useState(0);
+  const localFearRef = useRef(0); // always-fresh ref for async closures
   const [localWatermelons, setLocalWatermelons] = useState(0);
   const [exitedEarly, setExitedEarly] = useState(false);
+  const exitedEarlyRef = useRef(false);
 
   interface PvpResult { name: string; fear: number; watermelons: number; isLocal: boolean; exited?: boolean; }
   const [pvpResults, setPvpResults] = useState<PvpResult[] | null>(null);
