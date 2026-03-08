@@ -96,15 +96,28 @@ serve(async (req) => {
       }
     }
 
-    // 4. Load recent chat history for context
+    // 4. Load recent chat history for context (last 4 only)
     const { data: recentMsgs } = await supabase
       .from("chat_messages")
       .select("role, content, friend_name, sender_telegram_id")
       .eq("chat_key", chat_key)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(6); // fetch 6 to slice to 4 after filter
 
-    const history = (recentMsgs || []).reverse().map((m) => {
+    // Anti-repeat guard: check if owner already replied after the last message from sender
+    const msgs = (recentMsgs || []).reverse();
+    const lastSenderMsgIdx = msgs.map(m => m.sender_telegram_id).lastIndexOf(sender_telegram_id);
+    if (lastSenderMsgIdx !== -1) {
+      const ownerRepliedAfter = msgs.slice(lastSenderMsgIdx + 1).some(
+        m => m.sender_telegram_id === owner_telegram_id || m.role === "user"
+      );
+      if (ownerRepliedAfter) {
+        console.log("[ai-sub] Owner already replied after last message — skipping");
+        return new Response(JSON.stringify({ skipped: "already replied" }), { headers: corsHeaders });
+      }
+    }
+
+    const history = msgs.slice(-4).map((m) => {
       const isOwner = m.sender_telegram_id === owner_telegram_id || m.role === "user";
       return {
         sender: isOwner ? owner_character_name : sender_name,
