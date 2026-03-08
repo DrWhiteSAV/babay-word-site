@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, Gender, Style } from "../store/playerStore";
-import { DEFAULT_GALLERY_IMAGES } from "../config/defaultSettings";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2, ArrowRight, Sparkles, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
 import { useTelegram } from "../context/TelegramContext";
@@ -16,8 +15,19 @@ const STYLES: Style[] = [
 ];
 
 const WISHES_OPTIONS = [
+  // Внешность
   "Длинные когти", "Светящиеся глаза", "Треснувшие рога", "Огромные зубы",
   "Лысина", "Борода до колен", "Много глаз", "Щупальца вместо рук",
+  // Новые — тело и части
+  "Паучьи ноги", "Крылья нетопыря", "Шерсть как у волка", "Хвост скорпиона",
+  "Клыки вампира", "Провалившийся нос", "Уши как у летучей мыши", "Три руки",
+  "Руки из теней", "Тело из дыма", "Плавники вместо ушей", "Жабьи лапы",
+  // Атмосфера и магия
+  "Ореол тьмы", "Горящие кости", "Светящиеся символы на коже", "Ледяное дыхание",
+  "Трещины с огнём внутри", "Глаза как зеркала", "Рот полный глаз", "Тени-слуги рядом",
+  // Одежда и артефакты
+  "Старый советский плащ", "Ржавые цепи", "Шапка-ушанка с черепом", "Лапти с гвоздями",
+  "Медные пуговицы", "Рваный сарафан",
 ];
 
 const FALLBACK_AVATAR = "https://i.ibb.co/BVgY7XrT/babai.png";
