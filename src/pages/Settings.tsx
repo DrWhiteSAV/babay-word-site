@@ -46,6 +46,114 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
 
+  // History state
+  const [history, setHistory] = useState<HistorySnapshot[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    const telegramId = profile?.telegram_id;
+    if (!telegramId) return;
+    setHistoryLoading(true);
+    const { data } = await supabase
+      .from("player_stats_history")
+      .select("*")
+      .eq("telegram_id", telegramId)
+      .order("snapshot_at", { ascending: false })
+      .limit(20);
+    setHistory((data || []) as HistorySnapshot[]);
+    setHistoryLoading(false);
+  }, [profile?.telegram_id]);
+
+  useEffect(() => {
+    if (historyOpen) loadHistory();
+  }, [historyOpen, loadHistory]);
+
+  const handleRestoreSnapshot = async (snap: HistorySnapshot) => {
+    if (!window.confirm(`Восстановить персонажа «${snap.character_name || "Безымянный"}»? Текущий прогресс будет перезаписан.`)) return;
+    setRestoringId(snap.id);
+    try {
+      const telegramId = profile?.telegram_id;
+      if (!telegramId) return;
+
+      // Save current state as a snapshot before overwriting
+      const { data: current } = await supabase
+        .from("player_stats")
+        .select("*")
+        .eq("telegram_id", telegramId)
+        .single();
+      if (current) {
+        await supabase.from("player_stats_history").insert({
+          telegram_id: telegramId,
+          character_name: current.character_name,
+          character_gender: current.character_gender,
+          character_style: current.character_style,
+          avatar_url: current.avatar_url,
+          lore: current.lore,
+          fear: current.fear,
+          watermelons: current.watermelons,
+          energy: current.energy,
+          boss_level: current.boss_level,
+          telekinesis_level: current.telekinesis_level,
+          custom_settings: current.custom_settings,
+          snapshot_reason: "before_restore",
+        });
+      }
+
+      await supabase.from("player_stats").update({
+        character_name: snap.character_name,
+        character_gender: snap.character_gender,
+        character_style: snap.character_style,
+        avatar_url: snap.avatar_url,
+        lore: snap.lore,
+        fear: snap.fear,
+        watermelons: snap.watermelons,
+        energy: snap.energy,
+        boss_level: snap.boss_level,
+        telekinesis_level: snap.telekinesis_level,
+        custom_settings: snap.custom_settings || {},
+        game_status: snap.character_name ? "playing" : "reset",
+      }).eq("telegram_id", telegramId);
+
+      console.log(`[DB WRITE] 📝 Restore snapshot for telegram_id=${telegramId}, name=${snap.character_name}`);
+
+      // Update store
+      const cs = (snap.custom_settings || {}) as Record<string, unknown>;
+      usePlayerStore.setState({
+        character: snap.character_name ? {
+          name: snap.character_name,
+          gender: (snap.character_gender as any) || "Бабай",
+          style: (snap.character_style as any) || "Хоррор",
+          wishes: Array.isArray(cs.wishes) ? (cs.wishes as string[]) : [],
+          avatarUrl: snap.avatar_url || "https://i.ibb.co/BVgY7XrT/babai.png",
+          telekinesisLevel: snap.telekinesis_level ?? 1,
+          lore: snap.lore || undefined,
+        } : null,
+        fear: snap.fear ?? 0,
+        watermelons: snap.watermelons ?? 0,
+        energy: snap.energy ?? 100,
+        bossLevel: snap.boss_level ?? 0,
+        settings: {
+          buttonSize: (cs.buttonSize as any) || "small",
+          fontFamily: (cs.fontFamily as any) || "Russo One",
+          fontSize: typeof cs.fontSize === "number" ? cs.fontSize : 12,
+          fontBrightness: typeof cs.fontBrightness === "number" ? cs.fontBrightness : 100,
+          theme: (cs.theme as any) || "normal",
+          musicVolume: typeof cs.musicVolume === "number" ? cs.musicVolume : 50,
+          ttsEnabled: typeof cs.ttsEnabled === "boolean" ? cs.ttsEnabled : false,
+        },
+        gameStatus: snap.character_name ? "playing" : "reset",
+        dbLoaded: true,
+      });
+
+      navigate("/");
+    } catch (e) {
+      console.error("Restore error:", e);
+    }
+    setRestoringId(null);
+  };
+
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
