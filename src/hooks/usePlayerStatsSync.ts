@@ -297,43 +297,9 @@ export function usePlayerStatsSync() {
       return;
     }
 
-    // Something changed — update snapshot and schedule write
+    // Something changed — update snapshot and write to DB
     dbSnapshotRef.current = currentSnapshot;
-    console.log("[usePlayerStatsSync] State changed — writing to DB");
-
-    const currentAvatar = isHttpUrl(store.character.avatarUrl)
-      ? store.character.avatarUrl
-      : lastKnownAvatarUrl.current;
-
-    if (isHttpUrl(currentAvatar)) {
-      lastKnownAvatarUrl.current = currentAvatar;
-    }
-
-    const syncData = {
-      telegram_id: profile.telegram_id,
-      fear: store.fear,
-      energy: store.energy,
-      watermelons: store.watermelons,
-      boss_level: store.bossLevel,
-      telekinesis_level: store.character.telekinesisLevel,
-      character_name: store.character.name,
-      character_gender: store.character.gender,
-      character_style: store.character.style,
-      avatar_url: currentAvatar || FALLBACK_AVATAR,
-      lore: store.character.lore || null,
-      game_status: "playing",
-      custom_settings: {
-        buttonSize: store.settings.buttonSize,
-        fontFamily: store.settings.fontFamily,
-        fontSize: store.settings.fontSize,
-        fontBrightness: store.settings.fontBrightness,
-        theme: store.settings.theme,
-        musicVolume: store.settings.musicVolume,
-        ttsEnabled: store.settings.ttsEnabled,
-        wishes: store.character.wishes,
-        inventory: store.inventory,
-      },
-    };
+    console.log("[usePlayerStatsSync] State changed — writing to DB for", store.character.name);
 
     const timer = setTimeout(async () => {
       const { error } = await supabase
@@ -356,7 +322,7 @@ export function usePlayerStatsSync() {
     return () => clearTimeout(timer);
   }, [
     profile?.telegram_id,
-    store.dbLoaded, // ← MUST be in deps so effect fires when DB load completes
+    store.dbLoaded,
     store.fear,
     store.energy,
     store.watermelons,
@@ -368,7 +334,13 @@ export function usePlayerStatsSync() {
     store.character?.avatarUrl,
     store.character?.lore,
     store.character?.wishes,
-    store.settings,
+    store.settings.buttonSize,
+    store.settings.fontFamily,
+    store.settings.fontSize,
+    store.settings.fontBrightness,
+    store.settings.theme,
+    store.settings.musicVolume,
+    store.settings.ttsEnabled,
     store.inventory,
     store.gameStatus,
   ]);
