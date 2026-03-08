@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
@@ -27,6 +27,8 @@ interface PvpRoom {
 
 export default function PvpRoom() {
   const { roomId } = useParams<{ roomId: string }>();
+  const [searchParams] = useSearchParams();
+  const autoJoin = searchParams.get("join") === "1";
   const navigate = useNavigate();
   const { character, energy, useEnergy } = usePlayerStore();
   const { profile } = useTelegram();
@@ -56,6 +58,8 @@ export default function PvpRoom() {
     setLoading(false);
   };
 
+  const autoJoinDoneRef = useRef(false);
+
   useEffect(() => {
     loadRoom();
 
@@ -82,6 +86,20 @@ export default function PvpRoom() {
 
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
+
+  // Auto-join when arriving via ?join=1 (from chat button) once room + profile loaded
+  useEffect(() => {
+    if (!autoJoin || autoJoinDoneRef.current || !tgId || !character || !roomId) return;
+    const myM = members.find(m => m.telegram_id === tgId);
+    if (!myM) return; // members not loaded yet
+    if (myM.status === "invited") {
+      autoJoinDoneRef.current = true;
+      handleJoin();
+    } else {
+      // Already joined — mark done to skip
+      autoJoinDoneRef.current = true;
+    }
+  }, [autoJoin, tgId, character, roomId, members]);
 
   // Timer countdown when someone finishes
   useEffect(() => {

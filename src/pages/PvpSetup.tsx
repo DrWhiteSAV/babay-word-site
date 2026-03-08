@@ -6,9 +6,6 @@ import { supabase } from "../integrations/supabase/client";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Zap, Skull, Users, Swords, Check, Loader2 } from "lucide-react";
 
-const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
-
 type Difficulty = "Сложная" | "Невозможная";
 
 interface FriendMeta {
@@ -107,36 +104,26 @@ export default function PvpSetup() {
       await supabase.from("pvp_room_members").insert(invites);
     }
 
-    // Send Telegram notifications with join button
+    // Send PVP invite via in-app chat message to each invited friend
     const organizerName = character.name || profile?.first_name || "Бабай";
     const diffLabel = difficulty === "Сложная" ? "Сложная (15 этапов + Босс)" : "Невозможная (45 этапов + Босс ×2)";
-    const appUrl = `https://babay.lovable.app/pvp/room/${roomId}`;
 
     for (const tid of selected) {
-      const friendMeta = friendsMeta.find(f => f.telegram_id === tid);
-      const caption =
-        `⚔️ *Вызов на PVP!*\n\n` +
-        `*${organizerName}* приглашает тебя в PVP-битву Бабаев!\n\n` +
-        `🎮 Режим: ${diffLabel}\n` +
-        `🏠 Комната: \`${roomId}\`\n\n` +
-        `👇 Нажми кнопку чтобы войти в комнату ожидания:`;
-
+      // Build canonical chat_key (sorted tids)
+      const chatKey = [tgId, tid].map(String).sort().join('_');
+      const pvpContent = `[pvp]:${roomId}\n⚔️ ${organizerName} приглашает в PVP!\n🎮 Режим: ${diffLabel}`;
       try {
-        await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            telegram_id: tid,
-            caption,
-            inline_keyboard: [[{ text: "🎮 Войти в комнату", url: appUrl }]],
-          }),
-        });
+        await supabase.from("chat_messages").insert({
+          chat_key: chatKey,
+          telegram_id: tid,
+          sender_telegram_id: tgId,
+          role: "assistant",
+          friend_name: organizerName,
+          content: pvpContent,
+          is_ai_reply: false,
+        } as any);
       } catch (e) {
-        console.error("[PvpSetup] notify error", e);
+        console.error("[PvpSetup] chat notify error", e);
       }
     }
 

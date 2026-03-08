@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion, AnimatePresence } from "motion/react";
-import { MessageSquare, Send, ImagePlus, X, Users, Reply, Check, CheckCheck, RefreshCw, AlertTriangle, Edit2, Bot, Loader2 } from "lucide-react";
+import { MessageSquare, Send, ImagePlus, X, Users, Reply, Check, CheckCheck, RefreshCw, AlertTriangle, Edit2, Bot, Loader2, Swords } from "lucide-react";
 import { generateFriendChat, generateMyAiReply } from "../services/ai";
 import ProfilePopup from "../components/ProfilePopup";
 import Header from "../components/Header";
@@ -49,6 +49,7 @@ interface Message {
   sender: string;
   text: string;
   imageUrl?: string;
+  pvpRoomId?: string;
   replyTo?: string;
   sender_telegram_id?: number;
   read_at?: string | null;
@@ -198,15 +199,22 @@ export default function Chat() {
     if (!chatKey) return;
     if (friendName && !friendTelegramId && !isDanil) return; // DM — wait for friend's telegram_id
 
-    // Helper to decode content that may contain [img]: prefix
+    // Helper to decode content that may contain [img]: or [pvp]: prefix
     const decodeContent = (raw: string) => {
       if (raw.startsWith('[img]:')) {
         const rest = raw.slice(6);
         const nlIdx = rest.indexOf('\n');
-        if (nlIdx >= 0) return { imageUrl: rest.slice(0, nlIdx), text: rest.slice(nlIdx + 1) };
-        return { imageUrl: rest, text: '' };
+        if (nlIdx >= 0) return { imageUrl: rest.slice(0, nlIdx), text: rest.slice(nlIdx + 1), pvpRoomId: undefined };
+        return { imageUrl: rest, text: '', pvpRoomId: undefined };
       }
-      return { imageUrl: undefined, text: raw };
+      if (raw.startsWith('[pvp]:')) {
+        const rest = raw.slice(6);
+        const nlIdx = rest.indexOf('\n');
+        const roomId = nlIdx >= 0 ? rest.slice(0, nlIdx) : rest;
+        const text = nlIdx >= 0 ? rest.slice(nlIdx + 1) : '';
+        return { imageUrl: undefined, text, pvpRoomId: roomId };
+      }
+      return { imageUrl: undefined, text: raw, pvpRoomId: undefined };
     };
 
     let cancelled = false;
@@ -229,6 +237,7 @@ export default function Chat() {
             sender,
             text: decoded.text,
             imageUrl: decoded.imageUrl,
+            pvpRoomId: decoded.pvpRoomId,
             sender_telegram_id: senderId,
             read_at: (m as any).read_at,
             created_at: m.created_at,
@@ -255,6 +264,7 @@ export default function Chat() {
               : m.friend_name,
             text: decoded.text,
             imageUrl: decoded.imageUrl,
+            pvpRoomId: decoded.pvpRoomId,
             sender_telegram_id: m.sender_telegram_id,
             read_at: m.read_at,
             created_at: m.created_at,
@@ -891,6 +901,19 @@ export default function Chat() {
                           {repliedMsg.sender === "user" ? character?.name : repliedMsg.sender}
                         </span>
                         <span className="text-xs opacity-70 line-clamp-1">{repliedMsg.text || "Фото"}</span>
+                      </div>
+                    )}
+
+                    {/* PVP Invite Button */}
+                    {msg.pvpRoomId && (
+                      <div className="mb-2">
+                        <button
+                          onClick={() => navigate(`/pvp/room/${msg.pvpRoomId}?join=1`)}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-red-700 hover:bg-red-600 active:scale-[0.97] rounded-xl font-black text-sm uppercase tracking-wide transition-all shadow-[0_0_14px_rgba(220,38,38,0.4)] w-full justify-center"
+                        >
+                          <Swords size={16} />
+                          Войти в комнату PVP
+                        </button>
                       </div>
                     )}
 
