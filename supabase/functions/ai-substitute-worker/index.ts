@@ -1,0 +1,185 @@
+// @ts-nocheck
+/**
+ * AI Substitute Worker
+ * Called when a new chat message arrives and the owner of ai_substitute=true is OFFLINE.
+ *
+ * Logic:
+ * 1. Receive: chat_key, sender_name, message_content, owner_telegram_id
+ * 2. Check that ai_substitute is still ON for this friendship
+ * 3. Check owner is offline (profiles.updated_at < 3 min ago)
+ * 4. Send Telegram notification to owner about the incoming message
+ * 5. Generate AI reply via protalk-ai
+ * 6. Save reply to chat_messages as the owner (role='user', sender_telegram_id=owner_tid)
+ */
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000;
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+    const PROTALK_BOT_TOKEN = Deno.env.get("PROTALK_BOT_TOKEN")!;
+    const PROTALK_BOT_ID = Deno.env.get("PROTALK_BOT_ID")!;
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const body = await req.json();
+    const {
+      chat_key,
+      sender_name,
+      sender_telegram_id,
+      message_content,
+      owner_telegram_id,
+      owner_character_name,
+      friend_character_name,
+    } = body;
+
+    if (!chat_key || !owner_telegram_id || !message_content) {
+      return new Response(JSON.stringify({ error: "Missing required params" }), { status: 400, headers: corsHeaders });
+    }
+
+    // 1. Check ai_substitute is still ON
+    const { data: friendRow } = await supabase
+      .from("friends")
+      .select("ai_substitute, is_ai_enabled")
+      .eq("telegram_id", owner_telegram_id)
+      .eq("friend_name", friend_character_name)
+      .maybeSingle();
+
+    if (!friendRow?.ai_substitute) {
+      return new Response(JSON.stringify({ skipped: "ai_substitute not enabled" }), { headers: corsHeaders });
+    }
+
+    // 2. Check owner is offline
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("updated_at")
+      .eq("telegram_id", owner_telegram_id)
+      .maybeSingle();
+
+    const lastSeen = profile?.updated_at ? new Date(profile.updated_at).getTime() : 0;
+    const isOffline = Date.now() - lastSeen >= ONLINE_THRESHOLD_MS;
+
+    if (!isOffline) {
+      // Owner is online — client-side will handle it
+      return new Response(JSON.stringify({ skipped: "owner is online" }), { headers: corsHeaders });
+    }
+
+    // 3. Send Telegram notification to owner about the incoming message
+    const previewText = message_content.startsWith("[img]:")
+      ? "📷 Фото"
+      : message_content.slice(0, 100);
+
+    if (TELEGRAM_BOT_TOKEN) {
+      try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: owner_telegram_id,
+            text: `💬 *${sender_name}* пишет тебе (ИИ-заместитель отвечает):\n\n${previewText}`,
+            parse_mode: "Markdown",
+          }),
+        });
+      } catch (e) {
+        console.warn("[ai-sub] TG notify failed:", e);
+      }
+    }
+
+    // 4. Load recent chat history for context
+    const { data: recentMsgs } = await supabase
+      .from("chat_messages")
+      .select("role, content, friend_name, sender_telegram_id")
+      .eq("chat_key", chat_key)
+      .order("created_at", { ascending: false })
+      .limit(12);
+
+    const history = (recentMsgs || []).reverse().map((m) => {
+      const isOwner = m.sender_telegram_id === owner_telegram_id || m.role === "user";
+      return {
+        sender: isOwner ? owner_character_name : sender_name,
+        text: m.content?.startsWith("[img]:") ? "[фото]" : (m.content || ""),
+      };
+    });
+
+    // 5. Get owner's character info
+    const { data: ownerStats } = await supabase
+      .from("player_stats")
+      .select("character_name, character_gender, character_style, lore")
+      .eq("telegram_id", owner_telegram_id)
+      .maybeSingle();
+
+    // Build AI prompt
+    const historyStr = history
+      .slice(-8)
+      .map((h) => `${h.sender}: ${h.text}`)
+      .join("\n");
+
+    const prompt = `Ты — ИИ-заместитель персонажа по имени ${ownerStats?.character_name || owner_character_name}.
+Пол: ${ownerStats?.character_gender || "неизвестен"}.
+Стиль мира: ${ownerStats?.character_style || "обычный"}.
+Лор: ${ownerStats?.lore || "нет"}.
+
+Тебе написал друг по имени ${sender_name}. Ответь КРАТКО и IN-CHARACTER как будто ты — ${ownerStats?.character_name || owner_character_name}.
+НЕ упоминай что ты ИИ. Пиши на русском, живо и в духе персонажа.
+
+История чата:
+${historyStr}
+
+${sender_name}: ${previewText}
+
+Твой ответ (только текст, без кавычек):`;
+
+    // 6. Generate reply via ProTalk
+    const botIdNum = parseInt(PROTALK_BOT_ID);
+    const chatId = `aisub_${owner_telegram_id}_${Date.now()}`;
+    const socialId = `from_user_id:${owner_telegram_id} message_id:${Date.now()}`;
+
+    const ptResp = await fetch(`https://eu1.api.pro-talk.ru/api/v1.0/ask/${PROTALK_BOT_TOKEN}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bot_id: botIdNum, chat_id: chatId, message: prompt, social_id: socialId }),
+    });
+
+    let replyText = "";
+    if (ptResp.ok) {
+      const ptData = await ptResp.json();
+      replyText = ptData.done || ptData.message || ptData.text || ptData.response || "";
+    }
+
+    if (!replyText || replyText.trim().length < 2) {
+      console.warn("[ai-sub] Empty reply from ProTalk");
+      return new Response(JSON.stringify({ skipped: "empty ai reply" }), { headers: corsHeaders });
+    }
+
+    // 7. Save AI reply as the owner
+    const { data: inserted } = await supabase.from("chat_messages").insert({
+      telegram_id: owner_telegram_id,
+      content: replyText.trim(),
+      role: "user",
+      friend_name: ownerStats?.character_name || owner_character_name || "user",
+      chat_key,
+      sender_telegram_id: owner_telegram_id,
+    }).select("id").single();
+
+    console.log("[ai-sub] Reply saved:", inserted?.id);
+
+    return new Response(JSON.stringify({ success: true, reply: replyText.trim(), id: inserted?.id }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  } catch (e) {
+    console.error("[ai-sub] Error:", e);
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: corsHeaders });
+  }
+});
