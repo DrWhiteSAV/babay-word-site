@@ -210,14 +210,20 @@ export default function Game() {
         setBossImage(bResult.url);
         bossImageReadyRef.current = true;
         setBossImageReady(true);
-        // Save to gallery (bosses section) — save-to-gallery uploads to ImgBB automatically
+        // Save to gallery [bosses] — save-to-gallery handles ImgBB upload + DB insert with telegram_id
         if (tgId) {
-          saveImageToGallery(
-            bResult.url,
-            tgId,
-            `[bosses] Босс ур.${bossLevel}`,
-            bResult.prompt,
-          ).catch(console.error);
+          const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+          const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          fetch(`${SUPABASE_URL}/functions/v1/save-to-gallery`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({
+              imageUrl: bResult.url,
+              telegramId: tgId,
+              label: `[bosses] Босс ур.${bossLevel}`,
+              prompt: bResult.prompt,
+            }),
+          }).catch(console.error);
         }
         // Auto-launch battle if still in preparation phase
         if (bossPreparationIntervalRef.current) {
