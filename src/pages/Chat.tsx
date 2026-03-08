@@ -257,6 +257,7 @@ export default function Chat() {
             sender_telegram_id: m.sender_telegram_id,
             read_at: m.read_at,
             created_at: m.created_at,
+            isAiGenerated: !!m.is_ai_reply,
           };
           setMessages(prev => {
             // Already present with real ID
