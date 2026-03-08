@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion } from "motion/react";
-import { Trophy, Medal, Star, Target, CheckCircle2, ChevronRight, UserPlus, Loader2, Zap, Shield, Flame, Leaf } from "lucide-react";
+import { Trophy, Medal, Star, Target, CheckCircle2, ChevronRight, UserPlus, Loader2, Zap, Shield, Flame, Leaf, Check } from "lucide-react";
 import Header from "../components/Header";
 import ProfilePopup from "../components/ProfilePopup";
 import { supabase } from "../integrations/supabase/client";
@@ -31,16 +31,32 @@ interface LeaderboardEntry {
 
 export default function Leaderboard() {
   const navigate = useNavigate();
-  const { character, achievements, addFriend, friends } = usePlayerStore();
+  const { character, achievements, friends, addFriend } = usePlayerStore();
   const { profile } = useTelegram();
-  const [showProfilePopup, setShowProfilePopup] = useState<string | null>(null);
+  const [showProfilePopup, setShowProfilePopup] = useState<{ name: string; telegramId?: number } | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("fear");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addingFriend, setAddingFriend] = useState<number | null>(null);
+  const [addedFriends, setAddedFriends] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadLeaderboard();
   }, [sortBy]);
+
+  // Pre-populate addedFriends from existing friends (by telegram_id via DB)
+  useEffect(() => {
+    if (!profile?.telegram_id) return;
+    supabase
+      .from("friends")
+      .select("friend_telegram_id")
+      .eq("telegram_id", profile.telegram_id)
+      .then(({ data }) => {
+        if (data) {
+          setAddedFriends(new Set(data.map(f => f.friend_telegram_id).filter(Boolean) as number[]));
+        }
+      });
+  }, [profile?.telegram_id]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
@@ -50,15 +66,22 @@ export default function Leaderboard() {
       .order(sortBy, { ascending: false })
       .limit(50);
 
-    if (!error && data) {
-      setLeaderboard(data);
-    }
+    if (!error && data) setLeaderboard(data);
     setLoading(false);
   };
 
-  const handleAddFriend = (name: string) => {
-    addFriend(name);
-    alert(`Заявка в друзья отправлена ${name}!`);
+  const handleAddFriend = async (entry: LeaderboardEntry) => {
+    if (!profile?.telegram_id || addingFriend === entry.telegram_id) return;
+    setAddingFriend(entry.telegram_id);
+    const displayName = entry.character_name || `Бабай #${entry.telegram_id}`;
+    addFriend(displayName);
+    await supabase.from("friends").upsert({
+      telegram_id: profile.telegram_id,
+      friend_name: displayName,
+      friend_telegram_id: entry.telegram_id,
+    }, { onConflict: "telegram_id,friend_name" });
+    setAddedFriends(prev => new Set([...prev, entry.telegram_id]));
+    setAddingFriend(null);
   };
 
   const sortOption = SORT_OPTIONS.find(s => s.key === sortBy)!;
@@ -111,7 +134,8 @@ export default function Leaderboard() {
                 const rank = idx + 1;
                 const isUser = user.telegram_id === profile?.telegram_id;
                 const displayName = user.character_name || `Бабай #${user.telegram_id}`;
-                const isFriend = friends.some(f => f.name === displayName);
+                const alreadyFriend = isUser || addedFriends.has(user.telegram_id);
+                const isAdding = addingFriend === user.telegram_id;
                 const SortIcon = sortOption.icon;
                 return (
                   <div
@@ -126,14 +150,14 @@ export default function Leaderboard() {
                       {rank}
                     </div>
                     {user.avatar_url ? (
-                      <img src={user.avatar_url} alt={displayName} className="w-10 h-10 rounded-full border border-neutral-700 object-cover shrink-0 cursor-pointer" onClick={() => setShowProfilePopup(isUser ? "user" : displayName)} />
+                      <img src={user.avatar_url} alt={displayName} className="w-10 h-10 rounded-full border border-neutral-700 object-cover shrink-0 cursor-pointer" onClick={() => setShowProfilePopup({ name: displayName, telegramId: user.telegram_id })} />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-lg shrink-0 cursor-pointer" onClick={() => setShowProfilePopup(isUser ? "user" : displayName)}>
+                      <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-lg shrink-0 cursor-pointer" onClick={() => setShowProfilePopup({ name: displayName, telegramId: user.telegram_id })}>
                         👻
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className={`font-bold text-sm truncate cursor-pointer hover:underline ${isUser ? 'text-red-400' : 'text-white'}`} onClick={() => setShowProfilePopup(isUser ? "user" : displayName)}>
+                      <h3 className={`font-bold text-sm truncate cursor-pointer hover:underline ${isUser ? 'text-red-400' : 'text-white'}`} onClick={() => setShowProfilePopup({ name: displayName, telegramId: user.telegram_id })}>
                         {displayName}{isUser ? " (Вы)" : ""}
                       </h3>
                       <div className="flex items-center gap-1 text-xs text-neutral-500">
@@ -142,13 +166,14 @@ export default function Leaderboard() {
                         <span className="text-neutral-600">/ тк {user.telekinesis_level}</span>
                       </div>
                     </div>
-                    {!isUser && !isFriend && (
+                    {!isUser && (
                       <button
-                        onClick={() => handleAddFriend(displayName)}
-                        className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-full text-blue-400 transition-colors shrink-0"
-                        title="Добавить в друзья"
+                        onClick={() => !alreadyFriend && handleAddFriend(user)}
+                        disabled={alreadyFriend || isAdding}
+                        className={`p-2 rounded-full transition-colors shrink-0 ${alreadyFriend ? 'bg-neutral-800 text-green-500 cursor-default' : 'bg-neutral-800 hover:bg-neutral-700 text-blue-400'}`}
+                        title={alreadyFriend ? "Уже в друзьях" : "Добавить в друзья"}
                       >
-                        <UserPlus size={16} />
+                        {isAdding ? <Loader2 size={16} className="animate-spin" /> : alreadyFriend ? <Check size={16} /> : <UserPlus size={16} />}
                       </button>
                     )}
                   </div>
@@ -203,7 +228,11 @@ export default function Leaderboard() {
       </div>
 
       {showProfilePopup && (
-        <ProfilePopup name={showProfilePopup} onClose={() => setShowProfilePopup(null)} />
+        <ProfilePopup
+          name={showProfilePopup.name}
+          telegramId={showProfilePopup.telegramId}
+          onClose={() => setShowProfilePopup(null)}
+        />
       )}
     </motion.div>
   );

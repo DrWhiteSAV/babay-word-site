@@ -4,10 +4,20 @@ import { usePlayerStore } from "../store/playerStore";
 import { motion, AnimatePresence } from "motion/react";
 import { Users, UserPlus, Zap, MessageSquare, Link, Copy, Plus, X, Trash2, Edit2, CheckCircle, AlertCircle, Loader2, Send } from "lucide-react";
 import Header from "../components/Header";
-import { transliterate } from "../utils/transliterate";
 import ProfilePopup from "../components/ProfilePopup";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
+
+interface FriendWithMeta {
+  name: string; // character_name
+  isAiEnabled: boolean;
+  telegram_id?: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  telekinesis_level?: number;
+  avatar_url?: string;
+}
 
 export default function Friends() {
   const navigate = useNavigate();
@@ -15,21 +25,21 @@ export default function Friends() {
   const { profile } = useTelegram();
   const [newFriendInput, setNewFriendInput] = useState("");
   const [searchStatus, setSearchStatus] = useState<"idle" | "searching" | "found" | "notfound">("idle");
-  const [foundUser, setFoundUser] = useState<{ first_name: string; username: string | null; character_name: string | null; telegram_id: number } | null>(null);
+  const [foundUser, setFoundUser] = useState<{ first_name: string; last_name?: string; username: string | null; character_name: string | null; telegram_id: number; telekinesis_level?: number; avatar_url?: string } | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [showProfilePopup, setShowProfilePopup] = useState<string | null>(null);
+  const [showProfilePopup, setShowProfilePopup] = useState<{ name: string; telegramId?: number } | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [referralCount, setReferralCount] = useState(0);
   const [referralFriends, setReferralFriends] = useState<Array<{first_name: string; username: string | null; character_name?: string | null}>>([]);
   const [showReferralList, setShowReferralList] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
+  const [friendsMeta, setFriendsMeta] = useState<Record<string, { first_name?: string; last_name?: string; username?: string; telegram_id?: number; telekinesis_level?: number; avatar_url?: string }>>({});
 
   useEffect(() => {
     if (!profile?.telegram_id) return;
-    // Count referrals by looking for profiles with this telegram_id as referral_code
     supabase
       .from("profiles")
       .select("first_name, username, telegram_id")
@@ -37,7 +47,6 @@ export default function Friends() {
       .then(async ({ data }) => {
         if (data && data.length > 0) {
           setReferralCount(data.length);
-          // Get character names for each referral
           const telegramIds = data.map(d => d.telegram_id);
           const { data: statsData } = await supabase
             .from("player_stats")
@@ -53,13 +62,50 @@ export default function Friends() {
       });
   }, [profile?.telegram_id]);
 
-  // Wait for DB before redirecting — character is null until loadStats completes
+  // Load metadata for existing friends from DB
+  useEffect(() => {
+    if (!profile?.telegram_id || friends.length === 0) return;
+    const loadFriendsMeta = async () => {
+      const { data: dbFriends } = await supabase
+        .from("friends")
+        .select("friend_name, friend_telegram_id")
+        .eq("telegram_id", profile.telegram_id);
+
+      if (!dbFriends || dbFriends.length === 0) return;
+      const tgIds = dbFriends.map(f => f.friend_telegram_id).filter(Boolean) as number[];
+      if (tgIds.length === 0) return;
+
+      const [profilesRes, statsRes] = await Promise.all([
+        supabase.from("profiles").select("telegram_id, first_name, last_name, username").in("telegram_id", tgIds),
+        supabase.from("player_stats").select("telegram_id, telekinesis_level, avatar_url, character_name").in("telegram_id", tgIds),
+      ]);
+
+      const profileMap = Object.fromEntries((profilesRes.data || []).map(p => [p.telegram_id, p]));
+      const statsMap = Object.fromEntries((statsRes.data || []).map(s => [s.telegram_id, s]));
+
+      const meta: Record<string, any> = {};
+      for (const f of dbFriends) {
+        if (!f.friend_telegram_id) continue;
+        const prof = profileMap[f.friend_telegram_id];
+        const stats = statsMap[f.friend_telegram_id];
+        meta[f.friend_name] = {
+          first_name: prof?.first_name,
+          last_name: prof?.last_name,
+          username: prof?.username,
+          telegram_id: f.friend_telegram_id,
+          telekinesis_level: stats?.telekinesis_level ?? 1,
+          avatar_url: stats?.avatar_url,
+        };
+      }
+      setFriendsMeta(meta);
+    };
+    loadFriendsMeta();
+  }, [profile?.telegram_id, friends]);
+
   const { dbLoaded } = usePlayerStore();
 
   useEffect(() => {
-    if (dbLoaded && !character) {
-      navigate("/");
-    }
+    if (dbLoaded && !character) navigate("/");
   }, [dbLoaded, character]);
 
   if (!dbLoaded) {
@@ -71,11 +117,8 @@ export default function Friends() {
     );
   }
 
-  if (!character) {
-    return null;
-  }
+  if (!character) return null;
 
-  // Referral link uses telegram_id instead of transliterated name
   const referralLink = `https://t.me/Bab_AIbot/app?startapp=${profile?.telegram_id || ""}`;
   const tkBonus = Math.max(1, character.telekinesisLevel);
   const fearBonus = 100 * tkBonus;
@@ -88,24 +131,41 @@ export default function Friends() {
     setSearchStatus("searching");
     setFoundUser(null);
 
-    const query = newFriendInput.trim().toLowerCase().replace(/^@/, "");
-    const [statsRes, profileRes] = await Promise.all([
-      supabase.from("player_stats").select("character_name, telegram_id").ilike("character_name", query).limit(1),
-      supabase.from("profiles").select("first_name, username, telegram_id").ilike("username", query).limit(1),
+    const query = newFriendInput.trim();
+    const queryLower = query.toLowerCase().replace(/^@/, "");
+    const isNumericId = /^\d+$/.test(query);
+
+    const [statsByName, profileByUsername] = await Promise.all([
+      supabase.from("player_stats").select("character_name, telegram_id, telekinesis_level, avatar_url").ilike("character_name", queryLower).limit(1).then(r => r),
+      supabase.from("profiles").select("first_name, last_name, username, telegram_id").ilike("username", queryLower).limit(1).then(r => r),
     ]);
 
-    const byName = statsRes.data?.[0];
-    const byUsername = profileRes.data?.[0];
+    let profileById: any = null;
+    if (isNumericId) {
+      const res = await supabase.from("profiles").select("first_name, last_name, username, telegram_id").eq("telegram_id", Number(query)).limit(1);
+      profileById = res;
+    }
 
-    if (byName || byUsername) {
-      const telegramId = (byName?.telegram_id ?? byUsername?.telegram_id)!;
-      const { data: prof } = await supabase.from("profiles").select("first_name, username, telegram_id").eq("telegram_id", telegramId).single();
-      const { data: stats } = await supabase.from("player_stats").select("character_name").eq("telegram_id", telegramId).single();
+    const results = [statsByName, profileByUsername, profileById];
+    const byName = results[0].data?.[0];
+    const byUsername = results[1].data?.[0];
+    const byId = isNumericId ? results[2]?.data?.[0] : null;
+
+    if (byName || byUsername || byId) {
+      const match = byName || byUsername || byId;
+      const telegramId = match.telegram_id;
+      const [profRes, statsRes] = await Promise.all([
+        supabase.from("profiles").select("first_name, last_name, username, telegram_id").eq("telegram_id", telegramId).single(),
+        supabase.from("player_stats").select("character_name, telekinesis_level, avatar_url").eq("telegram_id", telegramId).single(),
+      ]);
       setFoundUser({
-        first_name: prof?.first_name || "",
-        username: prof?.username || null,
-        character_name: stats?.character_name || null,
+        first_name: profRes.data?.first_name || "",
+        last_name: profRes.data?.last_name || undefined,
+        username: profRes.data?.username || null,
+        character_name: statsRes.data?.character_name || null,
         telegram_id: telegramId,
+        telekinesis_level: statsRes.data?.telekinesis_level ?? 1,
+        avatar_url: statsRes.data?.avatar_url ?? undefined,
       });
       setSearchStatus("found");
     } else {
@@ -113,18 +173,17 @@ export default function Friends() {
     }
   };
 
-  const handleAddFoundFriend = () => {
+  const handleAddFoundFriend = async () => {
     if (!foundUser) return;
     const nameToAdd = foundUser.character_name || foundUser.first_name;
     addFriend(nameToAdd);
     if (profile?.telegram_id) {
-      supabase.from("friends").upsert({
+      const { error } = await supabase.from("friends").upsert({
         telegram_id: profile.telegram_id,
         friend_name: nameToAdd,
         friend_telegram_id: foundUser.telegram_id,
-      }, { onConflict: "telegram_id,friend_name" }).then(({ error }) => {
-        if (error) console.error("Friend save error:", error);
-      });
+      }, { onConflict: "telegram_id,friend_name" });
+      if (error) console.error("Friend save error:", error);
     }
     setNewFriendInput("");
     setSearchStatus("idle");
@@ -175,9 +234,10 @@ export default function Friends() {
     );
   };
 
-  const getAvatarUrl = (name: string) => {
-    if (name === "ДанИИл") return "https://i.ibb.co/rKGSq544/image.png";
-    return `https://picsum.photos/seed/${name}/100/100`;
+  const getAvatarUrl = (friend: { name: string; avatar_url?: string }) => {
+    if (friend.name === "ДанИИл") return "https://i.ibb.co/rKGSq544/image.png";
+    if (friend.avatar_url) return friend.avatar_url;
+    return `https://picsum.photos/seed/${friend.name}/100/100`;
   };
 
   return (
@@ -257,14 +317,14 @@ export default function Friends() {
           <h2 className="text-lg font-bold mb-1 flex items-center gap-2 text-white">
             <UserPlus size={18} className="text-red-500" /> Добавить друга
           </h2>
-          <p className="text-xs text-neutral-500">Введите имя Бабая или @username в Telegram</p>
+          <p className="text-xs text-neutral-500">Введите имя Бабая, @username или ID Telegram</p>
           <div className="flex gap-2">
             <input
               type="text"
               value={newFriendInput}
               onChange={(e) => { setNewFriendInput(e.target.value); setSearchStatus("idle"); setFoundUser(null); }}
               onKeyDown={(e) => e.key === "Enter" && handleSearchFriend()}
-              placeholder="Имя Бабая или @username..."
+              placeholder="Имя Бабая, @username или ID..."
               className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-900 transition-colors text-white"
             />
             <button
@@ -281,10 +341,21 @@ export default function Friends() {
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="bg-green-900/20 border border-green-800 rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <CheckCircle size={18} className="text-green-400 shrink-0" />
+                  {foundUser.avatar_url ? (
+                    <img src={foundUser.avatar_url} alt="av" className="w-10 h-10 rounded-full object-cover border border-neutral-700 shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-lg shrink-0">👻</div>
+                  )}
                   <div>
-                    <p className="text-white font-bold text-sm">{foundUser.character_name || foundUser.first_name}</p>
-                    {foundUser.username && <p className="text-neutral-400 text-xs">@{foundUser.username}</p>}
+                    <p className="text-white font-bold text-sm">
+                      {foundUser.first_name}{foundUser.last_name ? ` ${foundUser.last_name}` : ""}
+                      {foundUser.username && (
+                        <a href={`https://t.me/${foundUser.username}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline ml-1">@{foundUser.username}</a>
+                      )}
+                    </p>
+                    {foundUser.character_name && (
+                      <p className="text-neutral-400 text-xs">{foundUser.character_name} · тк. {foundUser.telekinesis_level ?? 1}</p>
+                    )}
                   </div>
                 </div>
                 <button onClick={handleAddFoundFriend} className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded-xl text-white text-xs font-bold transition-colors flex items-center gap-1">
@@ -359,34 +430,62 @@ export default function Friends() {
             <p className="text-center text-neutral-500 py-8">У вас пока нет друзей. Пригласите кого-нибудь!</p>
           ) : (
             <div className="space-y-3">
-              {friends.map((friend) => (
-                <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowProfilePopup(friend.name)}>
-                      <img src={getAvatarUrl(friend.name)} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700" />
-                      <div>
-                        <span className="font-bold text-white block">{friend.name}</span>
-                        {friend.name === "ДанИИл" && <span className="text-xs text-green-400">ИИ-куратор</span>}
+              {friends.map((friend) => {
+                const meta = friendsMeta[friend.name] || {};
+                const isDanil = friend.name === "ДанИИл";
+                const avatarSrc = isDanil ? "https://i.ibb.co/rKGSq544/image.png" : (meta.avatar_url || `https://picsum.photos/seed/${friend.name}/100/100`);
+                const tgLink = meta.username ? `https://t.me/${meta.username}` : (meta.telegram_id ? `https://t.me/user?id=${meta.telegram_id}` : null);
+
+                return (
+                  <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}>
+                        <img src={avatarSrc} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700 shrink-0" />
+                        <div className="min-w-0">
+                          {/* Line 1: Имя Фамилия @username */}
+                          {!isDanil && (meta.first_name || meta.username) ? (
+                            <div className="text-sm text-neutral-300 truncate">
+                              {meta.first_name}{meta.last_name ? ` ${meta.last_name}` : ""}
+                              {meta.username && tgLink && (
+                                <a
+                                  href={tgLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  className="text-blue-400 hover:underline ml-1"
+                                >@{meta.username}</a>
+                              )}
+                            </div>
+                          ) : null}
+                          {/* Line 2: [Имя Бабая] тк. N */}
+                          <div className="font-bold text-white text-sm flex items-center gap-1">
+                            {friend.name}
+                            {!isDanil && (
+                              <span className="text-neutral-500 font-normal text-xs">· тк. {meta.telekinesis_level ?? 1}</span>
+                            )}
+                            {isDanil && <span className="text-xs text-green-400 font-normal ml-1">ИИ-куратор</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => shareEnergy(friend.name)} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-yellow-500 transition-colors" title="Поделиться энергией"><Zap size={16} /></button>
+                        <button onClick={() => navigate("/chat", { state: { friendName: friend.name } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors" title="Чат"><MessageSquare size={16} /></button>
+                        {!isDanil && (
+                          <button onClick={() => { if (confirm(`Удалить ${friend.name}?`)) deleteFriend(friend.name); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => shareEnergy(friend.name)} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-yellow-500 transition-colors" title="Поделиться энергией"><Zap size={16} /></button>
-                      <button onClick={() => navigate("/chat", { state: { friendName: friend.name } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors" title="Чат"><MessageSquare size={16} /></button>
-                      {friend.name !== "ДанИИл" && (
-                        <button onClick={() => { if (confirm(`Удалить ${friend.name}?`)) deleteFriend(friend.name); }} className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button>
-                      )}
-                    </div>
+                    {!isDanil && (
+                      <div className="flex items-center justify-between text-sm border-t border-neutral-800 pt-2">
+                        <span className="text-neutral-400">ИИ-заместитель:</span>
+                        <button onClick={() => toggleFriendAi(friend.name)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${friend.isAiEnabled ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-neutral-800 text-neutral-500 border border-neutral-700'}`}>
+                          {friend.isAiEnabled ? "ВКЛ" : "ВЫКЛ"}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {friend.name !== "ДанИИл" && (
-                    <div className="flex items-center justify-between text-sm border-t border-neutral-800 pt-2">
-                      <span className="text-neutral-400">ИИ-заместитель:</span>
-                      <button onClick={() => toggleFriendAi(friend.name)} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${friend.isAiEnabled ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-neutral-800 text-neutral-500 border border-neutral-700'}`}>
-                        {friend.isAiEnabled ? "ВКЛ" : "ВЫКЛ"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -422,7 +521,11 @@ export default function Friends() {
       )}
 
       {showProfilePopup && (
-        <ProfilePopup name={showProfilePopup} onClose={() => setShowProfilePopup(null)} />
+        <ProfilePopup
+          name={showProfilePopup.name}
+          telegramId={showProfilePopup.telegramId}
+          onClose={() => setShowProfilePopup(null)}
+        />
       )}
     </motion.div>
   );
