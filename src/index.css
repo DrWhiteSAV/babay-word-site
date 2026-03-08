@@ -133,13 +133,13 @@ body {
 
 /* Generic buttons — NO clip-path by default (preserves layout);
    Only decorative skew on hub play button above */
-.theme-cyberpunk button {
+.theme-cyberpunk button:not(.cutscene-skip-btn) {
   text-transform: uppercase;
   letter-spacing: 1px;
   position: relative;
 }
 
-.theme-cyberpunk button:hover {
+.theme-cyberpunk button:not(.cutscene-skip-btn):hover {
   background-color: rgba(0, 255, 204, 0.15) !important;
   box-shadow: 0 0 15px rgba(0, 255, 204, 0.4) !important;
 }
