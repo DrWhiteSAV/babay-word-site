@@ -171,7 +171,8 @@ export default function PvpResults() {
             <Trophy size={48} className="text-yellow-400 mx-auto mb-3 drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]" />
             <h1 className="text-3xl font-black text-yellow-300 uppercase tracking-tighter">ПОБЕДА!</h1>
             <p className="text-yellow-200/70 text-sm mt-1">
-              Вы получили <span className="text-yellow-300 font-black">{myReward}</span> 💀 Страха
+              Вы получили <span className="text-yellow-300 font-black">{myFearReward}</span> 💀 Страха
+              {myWatermelonReward > 0 && <> и <span className="text-green-300 font-black">{myWatermelonReward}</span> 🍉 Арбузов</>}
               {winners.length > 1 && ` (делите с ${winners.length - 1} союзником)`}
             </p>
             <p className="text-xs text-neutral-500 mt-2">Комната #{roomId} · {room?.difficulty}</p>
