@@ -473,36 +473,66 @@ export default function Friends() {
 
                 return (
                   <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-xl border border-neutral-800 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}>
-                        <img src={avatarSrc} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-neutral-700 shrink-0" />
-                        <div className="min-w-0">
-                          {/* Line 1: Имя Фамилия @username */}
-                          {!isDanil && (meta.first_name || meta.username) ? (
-                            <div className="text-sm text-neutral-300 truncate">
-                              {meta.first_name}{meta.last_name ? ` ${meta.last_name}` : ""}
-                              {meta.username && tgLink && (
-                                <a
-                                  href={tgLink}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={e => e.stopPropagation()}
-                                  className="text-blue-400 hover:underline ml-1"
-                                >@{meta.username}</a>
-                              )}
-                            </div>
-                          ) : null}
-                          {/* Line 2: [Имя Бабая] тк. N */}
-                          <div className="font-bold text-white text-sm flex items-center gap-1">
-                            {friend.name}
-                            {!isDanil && (
-                              <span className="text-neutral-500 font-normal text-xs">· тк. {meta.telekinesis_level ?? 1}</span>
+                    {/* Top row: avatar + name info + action buttons */}
+                    <div className="flex items-center gap-3 w-full min-w-0">
+                      {/* Avatar — clickable */}
+                      <img
+                        src={avatarSrc}
+                        alt="avatar"
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-700 shrink-0 cursor-pointer"
+                        onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
+                      />
+
+                      {/* Name block — shrinks and truncates */}
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
+                      >
+                        {/* TG name + username */}
+                        {!isDanil && (meta.first_name || meta.username) && (
+                          <p className="text-xs text-neutral-400 truncate leading-tight">
+                            {meta.first_name}{meta.last_name ? ` ${meta.last_name}` : ""}
+                            {meta.username && tgLink && (
+                              <a
+                                href={tgLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-400 hover:underline ml-1"
+                                onClick={e => e.stopPropagation()}
+                              >@{meta.username}</a>
                             )}
-                            {isDanil && <span className="text-xs text-green-400 font-normal ml-1">ИИ-куратор</span>}
-                          </div>
-                        </div>
+                          </p>
+                        )}
+                        {/* Babay name */}
+                        <p className="font-bold text-white text-sm truncate leading-tight flex items-center gap-1">
+                          <span className="truncate">{friend.name}</span>
+                          {isDanil && <span className="text-xs text-green-400 font-normal shrink-0">ИИ-куратор</span>}
+                          {!isDanil && (
+                            <span className="text-neutral-500 font-normal text-xs shrink-0">· тк. {meta.telekinesis_level ?? 1}</span>
+                          )}
+                        </p>
                       </div>
-                      <div className="flex gap-2 shrink-0">
+
+                      {/* Action buttons — never shrink */}
+                      <div className="flex gap-1.5 shrink-0 ml-auto">
+                        <button
+                          onClick={() => setEnergyModal({ friendName: friend.name, telegramId: meta.telegram_id })}
+                          className="p-2 bg-neutral-800 hover:bg-yellow-900/40 rounded-lg text-yellow-500 transition-colors"
+                          title="Поделиться энергией"
+                        ><Zap size={15} /></button>
+                        <button
+                          onClick={() => navigate("/chat", { state: { friendName: friend.name } })}
+                          className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors"
+                          title="Чат"
+                        ><MessageSquare size={15} /></button>
+                        {!isDanil && (
+                          <button
+                            onClick={() => { if (confirm(`Удалить ${friend.name}?`)) deleteFriend(friend.name); }}
+                            className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"
+                          ><Trash2 size={15} /></button>
+                        )}
+                      </div>
+                    </div>
                         <button onClick={() => setEnergyModal({ friendName: friend.name, telegramId: meta.telegram_id })} className="p-2 bg-neutral-800 hover:bg-yellow-900/40 rounded-lg text-yellow-500 transition-colors" title="Поделиться энергией"><Zap size={16} /></button>
                         <button onClick={() => navigate("/chat", { state: { friendName: friend.name } })} className="p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-blue-400 transition-colors" title="Чат"><MessageSquare size={16} /></button>
                         {!isDanil && (
