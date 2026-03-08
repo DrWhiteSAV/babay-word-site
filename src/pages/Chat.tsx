@@ -237,15 +237,14 @@ export default function Chat() {
     };
     load();
 
-    // Subscribe — deduplicate by real DB id AND by pending_ prefix swap
+    // Subscribe — server-side filter by chat_key for reliable AI-substitute message delivery
     const channel = supabase
       .channel(`chat_${chatKey}_${Date.now()}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `chat_key=eq.${chatKey}` },
         (payload) => {
           const m = payload.new as any;
-          if (m.chat_key !== chatKey) return;
           const decoded = decodeContent(m.content);
           const msg: Message = {
             id: m.id,
@@ -276,9 +275,20 @@ export default function Chat() {
           });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `chat_key=eq.${chatKey}` },
+        (payload) => {
+          const m = payload.new as any;
+          // Update read_at status for delivered messages
+          setMessages(prev => prev.map(p => p.id === m.id ? { ...p, read_at: m.read_at } : p));
+        }
+      )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[Chat] Realtime channel error, falling back to polling');
+          console.warn('[Chat] Realtime channel error — reloading messages');
+          // Fallback: reload from DB on error
+          load();
         }
       });
 
