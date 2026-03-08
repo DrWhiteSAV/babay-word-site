@@ -274,7 +274,10 @@ export default function PvpResults() {
                   {isStillPlaying && <span className="text-blue-400">⏳ Ещё играет</span>}
                   {didTimeout && <span className="text-neutral-500">⏱ Не успел</span>}
                   {m.status === "finished" && !timerRunning && isWin && (
-                    <span className="text-yellow-400 font-bold">+{Math.ceil(totalFear / winners.length)} 💀 к счёту</span>
+                    <span className="text-yellow-400 font-bold">
+                      +{Math.ceil(totalFear / winners.length)} 💀
+                      {totalWatermelons > 0 && ` +${Math.ceil(totalWatermelons / winners.length)} 🍉`}
+                    </span>
                   )}
                 </div>
               </div>
@@ -287,6 +290,9 @@ export default function PvpResults() {
                   <Skull size={12} />
                   {isStillPlaying ? "—" : m.score}
                 </div>
+                {m.watermelons > 0 && !isStillPlaying && (
+                  <div className="text-xs text-green-400 font-bold">🍉{m.watermelons}</div>
+                )}
                 {isWin && !timerRunning && (
                   <div className="text-xs text-yellow-400 font-bold">
                     +{Math.ceil(totalFear / winners.length)} 💀
