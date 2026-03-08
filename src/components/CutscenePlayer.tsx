@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SkipForward } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
-import { resolveUrl } from '../utils/cachedUrl';
 
 interface CutscenePlayerProps {
   onComplete: () => void;
