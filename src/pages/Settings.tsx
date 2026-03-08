@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, ButtonSize, FontFamily, Theme } from "../store/playerStore";
 import { motion } from "motion/react";
@@ -173,6 +173,13 @@ export default function Settings() {
 
   // Wait for DB before redirecting — character is null until loadStats completes
   const { dbLoaded } = usePlayerStore();
+
+  useEffect(() => {
+    if (dbLoaded && !character) {
+      navigate("/");
+    }
+  }, [dbLoaded, character]);
+
   if (!dbLoaded) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
@@ -183,7 +190,6 @@ export default function Settings() {
   }
 
   if (!character) {
-    navigate("/");
     return null;
   }
 

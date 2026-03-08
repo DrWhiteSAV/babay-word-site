@@ -55,6 +55,13 @@ export default function Friends() {
 
   // Wait for DB before redirecting — character is null until loadStats completes
   const { dbLoaded } = usePlayerStore();
+
+  useEffect(() => {
+    if (dbLoaded && !character) {
+      navigate("/");
+    }
+  }, [dbLoaded, character]);
+
   if (!dbLoaded) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
@@ -65,7 +72,6 @@ export default function Friends() {
   }
 
   if (!character) {
-    navigate("/");
     return null;
   }
 

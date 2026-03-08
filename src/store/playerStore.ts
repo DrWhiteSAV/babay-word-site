@@ -395,13 +395,12 @@ export const usePlayerStore = create<PlayerState>()(
       }
     }),
     {
-      // Version bumped to "v3" to invalidate old cache that may contain stale gameStatus
-      name: "babai-ui-prefs-v3",
-      // DO NOT persist settings — they always come from DB (custom_settings in player_stats)
-      // DO NOT persist character/stats — always loaded from DB on mount
+      // Version bumped to "v4" — friends/quests removed from cache; now loaded from DB
+      name: "babai-ui-prefs-v4",
+      // ONLY persist things that come from admin DB tables (not per-user):
+      //   - videoCutscenes, pageBackgrounds, globalBackgroundUrl, shopItems, bossItems, storeConfig
+      // DO NOT persist: settings, character, stats, friends, quests — all from DB on each load
       partialize: (state) => ({
-      // settings intentionally excluded — loaded exclusively from DB
-        friends: state.friends,
         groupChats: state.groupChats,
         shopItems: state.shopItems,
         bossItems: state.bossItems,
@@ -410,9 +409,7 @@ export const usePlayerStore = create<PlayerState>()(
         videoCutscenes: state.videoCutscenes,
         pageBackgrounds: state.pageBackgrounds,
         globalBackgroundUrl: state.globalBackgroundUrl,
-        quests: state.quests,
         // dbLoaded intentionally NOT persisted — must reset to false on every app start
-        // so Home.tsx always waits for a fresh DB check
       }),
     },
   ),
@@ -422,5 +419,6 @@ export const usePlayerStore = create<PlayerState>()(
 if (typeof window !== "undefined") {
   try { localStorage.removeItem("babai-ui-prefs"); } catch {}
   try { localStorage.removeItem("babai-ui-prefs-v2"); } catch {}
+  try { localStorage.removeItem("babai-ui-prefs-v3"); } catch {}
 }
 

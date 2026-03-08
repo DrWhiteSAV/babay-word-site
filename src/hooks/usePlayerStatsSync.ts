@@ -54,10 +54,12 @@ export function usePlayerStatsSync() {
 
     const load = async () => {
       try {
-        const [statsResult, galleryResult] = await Promise.all([
+        const [statsResult, galleryResult, friendsResult] = await Promise.all([
           supabase.from("player_stats").select("*").eq("telegram_id", telegramId).maybeSingle(),
           supabase.from("gallery").select("image_url, label, created_at")
             .eq("telegram_id", telegramId).order("created_at", { ascending: false }).limit(12),
+          supabase.from("friends").select("friend_name, is_ai_enabled")
+            .eq("telegram_id", telegramId),
         ]);
 
         if (cancelled) return;
@@ -88,12 +90,22 @@ export function usePlayerStatsSync() {
           }
         }
 
+        // Friends from DB
+        const dbFriends = (friendsResult.data || []).map(f => ({
+          name: f.friend_name,
+          isAiEnabled: f.is_ai_enabled ?? false,
+        }));
+        // Always include ДанИИл as AI friend
+        const hasAI = dbFriends.some(f => f.name === "ДанИИл");
+        const friendsList = hasAI ? dbFriends : [{ name: "ДанИИл", isAiEnabled: true }, ...dbFriends];
+
         // No row yet → new user
         if (!data) {
           usePlayerStore.setState({
             character: null,
             fear: 0, energy: 100, watermelons: 0, bossLevel: 0,
             inventory: [],
+            friends: friendsList,
             settings: { ...DEFAULT_SETTINGS },
             gameStatus: "new",
             dbLoaded: true,
@@ -109,6 +121,7 @@ export function usePlayerStatsSync() {
             character: null,
             fear: 0, energy: 100, watermelons: 0, bossLevel: 0,
             inventory: [],
+            friends: friendsList,
             settings: { ...DEFAULT_SETTINGS },
             gameStatus: "reset",
             dbLoaded: true,
@@ -162,6 +175,7 @@ export function usePlayerStatsSync() {
           bossLevel: typeof data.boss_level === "number" ? data.boss_level : 0,
           settings,
           inventory,
+          friends: friendsList,
           gameStatus,
           dbLoaded: true,
         });

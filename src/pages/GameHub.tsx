@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from "../components/Header";
 import { usePlayerStore } from "../store/playerStore";
@@ -23,7 +23,13 @@ export default function GameHub() {
   const { character, dbLoaded, fear, energy, watermelons, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
   const [infoModal, setInfoModal] = useState<CurrencyType>(null);
 
-  // Show loader while DB is loading — don't redirect prematurely
+  // Wait for DB load — don't redirect prematurely
+  useEffect(() => {
+    if (dbLoaded && !character) {
+      navigate("/");
+    }
+  }, [dbLoaded, character]);
+
   if (!dbLoaded) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
@@ -34,7 +40,6 @@ export default function GameHub() {
   }
 
   if (!character) {
-    navigate("/");
     return null;
   }
 
