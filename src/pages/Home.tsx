@@ -1,11 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
+import { useEffect } from "react";
 import { motion } from "motion/react";
 import { Play, Settings as SettingsIcon, Loader2 } from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
   const { character, dbLoaded, gameStatus } = usePlayerStore();
+
+  // Auto-redirect to hub if character is already created
+  useEffect(() => {
+    if (dbLoaded && gameStatus === "playing" && character) {
+      navigate("/hub", { replace: true });
+    }
+  }, [dbLoaded, gameStatus, character, navigate]);
 
   const handlePlay = () => {
     if (gameStatus === "playing" && character) {
@@ -34,6 +42,9 @@ export default function Home() {
       </div>
     );
   }
+
+  // While redirect is happening (character exists), show nothing
+  if (gameStatus === "playing" && character) return null;
 
   const hasCharacter = gameStatus === "playing" && !!character;
 
