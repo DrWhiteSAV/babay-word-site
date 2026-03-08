@@ -393,15 +393,17 @@ export const usePlayerStore = create<PlayerState>()(
     }),
     {
       name: "babai-ui-prefs",
-      // Only persist UI preferences and non-critical fields, NOT character/stats
-      // Character + stats are always loaded from DB on mount
+      // DO NOT persist settings — they come from DB (custom_settings in player_stats)
+      // DO NOT persist character/stats — always loaded from DB
+      // Only persist non-personal non-DB items
       partialize: (state) => ({
-        settings: state.settings,
+        // settings intentionally excluded — loaded from DB on mount
         friends: state.friends,
         groupChats: state.groupChats,
         shopItems: state.shopItems,
         bossItems: state.bossItems,
         storeConfig: state.storeConfig,
+        // videoCutscenes cached for perf, never cleared on reset
         videoCutscenes: state.videoCutscenes,
         pageBackgrounds: state.pageBackgrounds,
         globalBackgroundUrl: state.globalBackgroundUrl,
