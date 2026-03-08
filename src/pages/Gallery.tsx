@@ -114,13 +114,51 @@ export default function Gallery() {
 
   const handleSetAsAvatar = async () => {
     if (!selectedImage || !character) return;
-    updateCharacter({ avatarUrl: selectedImage.image_url });
-    if (profile?.telegram_id) {
-      await supabase.from("player_stats")
-        .update({ avatar_url: selectedImage.image_url })
-        .eq("telegram_id", profile.telegram_id);
+
+    const telegramId = profile?.telegram_id;
+
+    // Parse name and lore from label
+    // Label format examples:
+    //   "[avatars] Имя Бабая | Лор..."
+    //   "[avatar] Dr.White SAV AI"
+    //   "Аватар Бабай — старый дух..."
+    const rawLabel = (selectedImage.label || "").replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "").trim();
+
+    // Split by "|" or "—" to extract name vs lore
+    const parts = rawLabel.split(/\s*[|—]\s*/);
+    const parsedName = parts[0]?.trim() || null;
+    const parsedLore = parts.slice(1).join(" — ").trim() || null;
+
+    const updates: Record<string, unknown> = {
+      avatar_url: selectedImage.image_url,
+    };
+    if (parsedName) updates.character_name = parsedName;
+    if (parsedLore) updates.lore = parsedLore;
+
+    console.log(`[DB WRITE] 📝 Gallery SET AVATAR for telegram_id=${telegramId}`, {
+      avatar_url: selectedImage.image_url.substring(0, 60),
+      character_name: parsedName,
+      lore: parsedLore?.substring(0, 80),
+    });
+
+    // Update store immediately
+    updateCharacter({
+      avatarUrl: selectedImage.image_url,
+      ...(parsedName ? { name: parsedName } : {}),
+      ...(parsedLore ? { lore: parsedLore } : {}),
+    });
+
+    if (telegramId) {
+      const { error } = await supabase.from("player_stats")
+        .update(updates)
+        .eq("telegram_id", telegramId);
+
+      if (error) {
+        console.error("[DB WRITE] ❌ Gallery set avatar error:", error.message);
+      } else {
+        console.log("[DB WRITE] ✅ Gallery avatar + name/lore saved to player_stats");
+      }
     }
-    alert("Аватар обновлён!");
     setSelectedImage(null);
   };
 
