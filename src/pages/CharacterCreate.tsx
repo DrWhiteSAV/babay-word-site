@@ -910,23 +910,28 @@ export default function CharacterCreate() {
                 </div>
               )}
 
-              <p className="text-xs text-neutral-500 mb-3 text-center">— или выбери готовый —</p>
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
-                <div
-                  onClick={() => setSelectedDefaultImage(null)}
-                  className={`snap-start flex-shrink-0 w-20 h-20 rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${!selectedDefaultImage && !generatedAvatarUrl ? "border-red-600" : "border-neutral-700 hover:border-neutral-500"}`}
-                >
-                  <div className="w-full h-full bg-neutral-800 flex items-center justify-center text-2xl">🤖</div>
-                </div>
-                {DEFAULT_GALLERY_IMAGES.map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedDefaultImage(img)}
-                    className={`snap-start flex-shrink-0 w-20 h-20 rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${selectedDefaultImage === img ? "border-red-600" : "border-neutral-700 hover:border-neutral-500"}`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+              {/* DB Templates grid */}
+              <div className="mt-4">
+                <p className="text-xs text-neutral-500 mb-3 text-center">
+                  — или выбери шаблон ({gender}) —
+                </p>
+                {loadingTemplates ? (
+                  <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-red-500" /></div>
+                ) : dbTemplates.length > 0 ? (
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                    {dbTemplates.map((tmpl) => (
+                      <div
+                        key={tmpl.id}
+                        onClick={() => setSelectedDefaultImage(tmpl.image_url)}
+                        className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all aspect-square ${selectedDefaultImage === tmpl.image_url ? "border-red-600 shadow-[0_0_12px_rgba(220,38,38,0.5)]" : "border-neutral-700 hover:border-neutral-500"}`}
+                      >
+                        <img src={tmpl.image_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <p className="text-xs text-neutral-600 text-center py-3">Нет шаблонов — сгенерируй первый!</p>
+                )}
               </div>
             </div>
 

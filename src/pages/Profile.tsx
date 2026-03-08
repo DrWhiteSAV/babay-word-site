@@ -152,15 +152,17 @@ export default function Profile() {
         onInfoClick={(type, e) => setInfoModal(type)}
         rightContent={
           <div className="flex gap-4">
-            <div
-              role="button"
-              onClick={() => navigate("/admin")}
-              className="p-2 cursor-pointer hover:bg-neutral-800 rounded-full transition-colors text-red-500"
-              title="Админ-панель"
-              style={{ clipPath: 'none' }}
-            >
-              <ShieldAlert size={20} />
-            </div>
+            {(profile?.role === "Супер-Бабай" || profile?.role === "Ад-Бабай") && (
+              <div
+                role="button"
+                onClick={() => navigate("/admin")}
+                className="p-2 cursor-pointer hover:bg-neutral-800 rounded-full transition-colors text-red-500"
+                title="Админ-панель"
+                style={{ clipPath: 'none' }}
+              >
+                <ShieldAlert size={20} />
+              </div>
+            )}
             <div
               role="button"
               onClick={() => updateSettings({ ttsEnabled: !settings.ttsEnabled })}
