@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import {
@@ -49,12 +49,18 @@ export default function Game() {
   const [showSuccessAvatar, setShowSuccessAvatar] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [aiRetry, setAiRetry] = useState(false);
+  const [stageCountdown, setStageCountdown] = useState(0);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stageCountdownRef = useRef<NodeJS.Timeout | null>(null);
   const [pendingRetryStage, setPendingRetryStage] = useState<number | null>(null);
 
   // World generation phase
   const [isGeneratingWorld, setIsGeneratingWorld] = useState(false);
   const [worldReady, setWorldReady] = useState(false);
+  const [bgGenCountdown, setBgGenCountdown] = useState(0);
+  const [bgGenRetry, setBgGenRetry] = useState(false);
+  const bgGenIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const bgGenResolvedRef = useRef(false);
 
   // Result State
   const [isResultView, setIsResultView] = useState(false);
@@ -68,6 +74,14 @@ export default function Game() {
   const [bossImage, setBossImage] = useState("");
   const [isBossDefeated, setIsBossDefeated] = useState(false);
   const [bossRewardMultiplier, setBossRewardMultiplier] = useState(1);
+
+  // Boss preparation phase (60s countdown + rules before battle)
+  const [isBossPreparation, setIsBossPreparation] = useState(false);
+  const [bossPreparationCountdown, setBossPreparationCountdown] = useState(60);
+  const [bossImageReady, setBossImageReady] = useState(false);
+  const [bossGenRetry, setBossGenRetry] = useState(false);
+  const bossPreparationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const bossImageReadyRef = useRef(false);
 
   // Boss warning (stage 15 / 45)
   const [showBossWarning, setShowBossWarning] = useState(false);
@@ -175,19 +189,127 @@ export default function Game() {
     return 1;
   };
 
-  // Check if current stage triggers boss battle
   const isBossStage = (s: number, diff: Difficulty) => {
     if (diff === "Сложная") return s === 16;
     if (diff === "Невозможная") return s === 46;
-    return false; // No boss in Endless
+    return false;
   };
 
-  // Check if current stage shows boss warning
   const isBossWarningStage = (s: number, diff: Difficulty) => {
     if (diff === "Сложная") return s === 15;
     if (diff === "Невозможная") return s === 45;
     return false;
   };
+
+  // -------- Start boss preparation phase after "Я готов к бою!" --------
+  const launchBossPreparation = useCallback(async (currentStage: number, charData: Record<string, string>) => {
+    const rewardMult = (difficulty || "Сложная") === "Невозможная" ? 2 : 1;
+    setBossRewardMultiplier(rewardMult);
+    setBossTaps(0);
+    setBossTimer(0);
+    setIsBossDefeated(false);
+    setBossImage("");
+    bossImageReadyRef.current = false;
+    setBossImageReady(false);
+    setBossGenRetry(false);
+    setBossPreparationCountdown(60);
+    setIsBossPreparation(true);
+    setIsBossBattle(false);
+
+    // Start 60s countdown
+    let countdown = 60;
+    if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+    bossPreparationIntervalRef.current = setInterval(() => {
+      countdown -= 1;
+      setBossPreparationCountdown(countdown);
+      if (countdown <= 0) {
+        clearInterval(bossPreparationIntervalRef.current!);
+        // If image not ready yet, show retry
+        if (!bossImageReadyRef.current) {
+          setBossGenRetry(true);
+        }
+      }
+    }, 1000);
+
+    // Generate boss image in background
+    await generateBossImageWithSave(currentStage, charData);
+  }, [difficulty]);
+
+  const generateBossImageWithSave = useCallback(async (currentStage: number, charData: Record<string, string>) => {
+    if (!character) return;
+    try {
+      const bResult = await generateBossImage(currentStage, character.style, charData, tgId) as { url: string; prompt: string };
+      if (bResult?.url && bResult.url.startsWith("http")) {
+        setBossImage(bResult.url);
+        bossImageReadyRef.current = true;
+        setBossImageReady(true);
+        // Save to gallery (bosses section, imgbb URL)
+        if (tgId && bResult.url.includes("ibb.co")) {
+          saveImageToGallery(
+            bResult.url,
+            tgId,
+            `[bosses] Босс ур.${bossLevel}`,
+            bResult.prompt,
+          ).catch(console.error);
+        }
+        // Auto-launch battle if still in preparation phase
+        if (bossPreparationIntervalRef.current) {
+          clearInterval(bossPreparationIntervalRef.current);
+        }
+        // Small delay then start battle
+        await new Promise(r => setTimeout(r, 1200));
+        setIsBossPreparation(false);
+        setIsBossBattle(true);
+        setBossTimer(30 + getBossTimeBonus());
+      } else {
+        // Bad format
+        if (!bossImageReadyRef.current) {
+          if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+          setBossGenRetry(true);
+        }
+      }
+    } catch {
+      if (!bossImageReadyRef.current) {
+        if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+        setBossGenRetry(true);
+      }
+    }
+  }, [character, tgId, bossLevel, difficulty, inventory]);
+
+  const retryBossImageGen = useCallback((currentStage: number) => {
+    setBossGenRetry(false);
+    bossImageReadyRef.current = false;
+    setBossPreparationCountdown(60);
+    let countdown = 60;
+    if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+    bossPreparationIntervalRef.current = setInterval(() => {
+      countdown -= 1;
+      setBossPreparationCountdown(countdown);
+      if (countdown <= 0) {
+        clearInterval(bossPreparationIntervalRef.current!);
+        if (!bossImageReadyRef.current) setBossGenRetry(true);
+      }
+    }, 1000);
+    if (character) {
+      const charData: Record<string, string> = {
+        name: character.name, gender: character.gender, style: character.style,
+        wishes: character.wishes.join(", "), telekinesis: String(character.telekinesisLevel),
+        lore: character.lore || "", fear: String(fear), watermelons: String(watermelons),
+        boss_level: String(bossLevel), username: profile?.username || "",
+        first_name: profile?.first_name || "", telegram_id: String(tgId || ""),
+      };
+      generateBossImageWithSave(currentStage, charData);
+    }
+  }, [character, fear, watermelons, bossLevel, profile, tgId, generateBossImageWithSave]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+      if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+      if (stageCountdownRef.current) clearTimeout(stageCountdownRef.current);
+    };
+  }, []);
 
   const startGame = async (diff: Difficulty) => {
     const cost = diff === "Сложная" ? 3 : diff === "Невозможная" ? 15 : 50;
@@ -206,6 +328,8 @@ export default function Game() {
     setPvpResults(null);
     setIsGameOver(false);
     setWorldReady(false);
+    setBgGenRetry(false);
+    bgGenResolvedRef.current = false;
 
     const defaultBg = getDefaultGameBg();
     setBgImage(defaultBg);
@@ -215,37 +339,56 @@ export default function Game() {
       setBgGenStatus("generating");
 
       const charData: Record<string, string> = {
-        name: character.name,
-        gender: character.gender,
-        style: character.style,
-        wishes: character.wishes.join(", "),
-        telekinesis: String(character.telekinesisLevel),
-        lore: character.lore || "",
-        fear: String(fear),
-        watermelons: String(watermelons),
-        boss_level: String(bossLevel),
-        username: profile?.username || "",
-        first_name: profile?.first_name || "",
-        telegram_id: String(tgId || ""),
+        name: character.name, gender: character.gender, style: character.style,
+        wishes: character.wishes.join(", "), telekinesis: String(character.telekinesisLevel),
+        lore: character.lore || "", fear: String(fear), watermelons: String(watermelons),
+        boss_level: String(bossLevel), username: profile?.username || "",
+        first_name: profile?.first_name || "", telegram_id: String(tgId || ""),
         difficulty: diff,
       };
 
-      try {
-        const bgPromise = generateBackgroundImage(1, character.style, charData, tgId);
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 30000));
-        const bgResult = await Promise.race([bgPromise, timeoutPromise]);
-
-        if (bgResult && (bgResult as any).url && (bgResult as any).url.startsWith("http")) {
-          const bgUrl = (bgResult as any).url;
-          setBgImage(bgUrl);
-          // Save to gallery DB (fire and forget — don't await)
-          if (tgId) {
-            saveImageToGallery(bgUrl, tgId, `[backgrounds] Фон: ${diff}`, (bgResult as any).prompt)
-              .catch(console.error);
+      // Start 60s countdown for background gen
+      let countdown = 60;
+      setBgGenCountdown(60);
+      if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+      bgGenIntervalRef.current = setInterval(() => {
+        countdown -= 1;
+        setBgGenCountdown(countdown);
+        if (countdown <= 0) {
+          clearInterval(bgGenIntervalRef.current!);
+          if (!bgGenResolvedRef.current) {
+            setBgGenRetry(true);
           }
         }
-      } catch (e) {
-        console.warn("[Game] bg gen failed:", e);
+      }, 1000);
+
+      try {
+        const bgPromise = generateBackgroundImage(1, character.style, charData, tgId);
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000));
+        const bgResult = await Promise.race([bgPromise, timeoutPromise]);
+
+        if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+
+        if (bgResult && (bgResult as any).url && (bgResult as any).url.startsWith("http")) {
+          bgGenResolvedRef.current = true;
+          const bgUrl = (bgResult as any).url;
+          setBgImage(bgUrl);
+          setBgGenRetry(false);
+          // Save to gallery [backgrounds] with imgbb URL
+          if (tgId && bgUrl.includes("ibb.co")) {
+            saveImageToGallery(
+              bgUrl,
+              tgId,
+              `[backgrounds] Фон: ${diff}`,
+              (bgResult as any).prompt,
+            ).catch(console.error);
+          }
+        } else {
+          if (!bgGenResolvedRef.current) setBgGenRetry(true);
+        }
+      } catch {
+        if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+        setBgGenRetry(true);
       }
 
       setBgGenStatus("done");
@@ -253,70 +396,85 @@ export default function Game() {
     }
   };
 
+  const retryBgGen = async () => {
+    if (!character) return;
+    setBgGenRetry(false);
+    bgGenResolvedRef.current = false;
+    setBgGenCountdown(60);
+    setIsGeneratingWorld(true);
+
+    const diff = difficulty || "Сложная";
+    const charData: Record<string, string> = {
+      name: character.name, gender: character.gender, style: character.style,
+      wishes: character.wishes.join(", "), telekinesis: String(character.telekinesisLevel),
+      lore: character.lore || "", fear: String(fear), watermelons: String(watermelons),
+      boss_level: String(bossLevel), username: profile?.username || "",
+      first_name: profile?.first_name || "", telegram_id: String(tgId || ""),
+      difficulty: diff,
+    };
+
+    let countdown = 60;
+    if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+    bgGenIntervalRef.current = setInterval(() => {
+      countdown -= 1;
+      setBgGenCountdown(countdown);
+      if (countdown <= 0) {
+        clearInterval(bgGenIntervalRef.current!);
+        if (!bgGenResolvedRef.current) setBgGenRetry(true);
+      }
+    }, 1000);
+
+    try {
+      const bgResult = await generateBackgroundImage(1, character.style, charData, tgId);
+      if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+      if (bgResult?.url && bgResult.url.startsWith("http")) {
+        bgGenResolvedRef.current = true;
+        setBgImage(bgResult.url);
+        setBgGenRetry(false);
+        if (tgId && bgResult.url.includes("ibb.co")) {
+          saveImageToGallery(bgResult.url, tgId, `[backgrounds] Фон: ${diff}`, bgResult.prompt).catch(console.error);
+        }
+      } else {
+        setBgGenRetry(true);
+      }
+    } catch {
+      if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
+      setBgGenRetry(true);
+    }
+    setIsGeneratingWorld(false);
+  };
+
   const loadNextStage = async (currentStage: number) => {
     setIsLoading(true);
     setIsResultView(false);
     setShowBossWarning(false);
+    setAiRetry(false);
+    setStageCountdown(20);
 
     const charData: Record<string, string> = character ? {
-      name: character.name,
-      gender: character.gender,
-      style: character.style,
-      wishes: character.wishes.join(", "),
-      telekinesis: String(character.telekinesisLevel),
-      lore: character.lore || "",
-      fear: String(fear),
-      watermelons: String(watermelons),
-      boss_level: String(bossLevel),
-      username: profile?.username || "",
-      first_name: profile?.first_name || "",
-      telegram_id: String(tgId || ""),
+      name: character.name, gender: character.gender, style: character.style,
+      wishes: character.wishes.join(", "), telekinesis: String(character.telekinesisLevel),
+      lore: character.lore || "", fear: String(fear), watermelons: String(watermelons),
+      boss_level: String(bossLevel), username: profile?.username || "",
+      first_name: profile?.first_name || "", telegram_id: String(tgId || ""),
     } : {};
 
     const currentDiff = difficulty || "Сложная";
 
-    // Boss warning stage (15 for Hard, 45 for Impossible)
+    // Boss warning stage
     if (isBossWarningStage(currentStage, currentDiff)) {
       setBossWarningStage(currentStage);
       setShowBossWarning(true);
       setIsLoading(false);
+      setStageCountdown(0);
       return;
     }
 
-    // Boss battle stage (16 for Hard, 46 for Impossible; not in Endless)
+    // Boss battle stage → now goes to preparation phase
     if (isBossStage(currentStage, currentDiff)) {
-      const rewardMult = currentDiff === "Невозможная" ? 2 : 1;
-      setBossRewardMultiplier(rewardMult);
-      setBossTaps(0);
-      setBossTimer(0);
-      setIsBossDefeated(false);
-      setBossImage("");
-      setIsLoading(true);
-      setIsBossBattle(true);
-
-      if (character) {
-        let retryCount = 0;
-        let bossUrl = "";
-        while (!bossUrl && retryCount < 3) {
-          try {
-            const bResult = await generateBossImage(currentStage, character.style, charData, tgId) as { url: string; prompt: string };
-            if (bResult.url && bResult.url.startsWith("http")) {
-              bossUrl = bResult.url;
-              setBossImage(bossUrl);
-              if (tgId) {
-                saveImageToGallery(bossUrl, tgId, `[bosses] Босс ур.${bossLevel}`, bResult.prompt).catch(console.error);
-              }
-            }
-          } catch (e) {
-            console.warn("[Game] boss image retry", retryCount, e);
-          }
-          retryCount++;
-        }
-        await new Promise(r => setTimeout(r, 1000));
-      }
-
-      setBossTimer(30 + getBossTimeBonus());
       setIsLoading(false);
+      setStageCountdown(0);
+      await launchBossPreparation(currentStage, charData);
       return;
     }
 
@@ -328,21 +486,37 @@ export default function Game() {
         text: `Ну что, ${character?.name}, как успехи на ${currentStage} этаже?`,
       }]);
       setIsLoading(false);
+      setStageCountdown(0);
       return;
     }
 
     if (character) {
       setAiRetry(false);
       setPendingRetryStage(currentStage);
+
+      // 20s countdown
+      let countdown = 20;
+      setStageCountdown(20);
+      if (stageCountdownRef.current) clearTimeout(stageCountdownRef.current);
+      const countInterval = setInterval(() => {
+        countdown -= 1;
+        setStageCountdown(countdown);
+        if (countdown <= 0) clearInterval(countInterval);
+      }, 1000);
+
       if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
       aiTimeoutRef.current = setTimeout(() => {
+        clearInterval(countInterval);
         setAiRetry(true);
         setIsLoading(false);
-      }, 30000);
+        setStageCountdown(0);
+      }, 20000);
 
       try {
         const newScenario = await generateScenario(currentStage, currentDiff, character.style, tgId);
         clearTimeout(aiTimeoutRef.current!);
+        clearInterval(countInterval);
+        setStageCountdown(0);
         setAiRetry(false);
 
         if (!newScenario?.text || !newScenario?.options?.length) {
@@ -360,14 +534,17 @@ export default function Game() {
             }
           });
         }
-      } catch (e) {
+      } catch {
         clearTimeout(aiTimeoutRef.current!);
+        clearInterval(countInterval);
+        setStageCountdown(0);
         setAiRetry(true);
         setIsLoading(false);
         return;
       }
     }
     setIsLoading(false);
+    setStageCountdown(0);
   };
 
   const handleOptionSelect = async (index: number) => {
@@ -466,6 +643,18 @@ export default function Game() {
     setIsPvpLobby(false);
     setBgImage(getDefaultGameBg());
     await startGame(diff);
+  };
+
+  const getBossRules = () => {
+    const maxHp = 100 * Math.pow(2, bossLevel - 1);
+    const timeLimit = 30 + getBossTimeBonus();
+    const damage = getTapDamage();
+    return {
+      maxHp,
+      timeLimit,
+      damage,
+      reward: Math.floor(storeConfig.bossRewardBase * Math.pow(storeConfig.bossRewardMultiplier, bossLevel - 1) * bossRewardMultiplier),
+    };
   };
 
   // ======== SCREENS ========
@@ -613,7 +802,6 @@ export default function Game() {
 
       {/* Background Image */}
       <div className="fixed inset-0 z-0 bg-neutral-950">
-        {/* Boss image as blurred background when in boss battle */}
         {isBossBattle && bossImage && (
           <div
             className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none blur-xl scale-110"
@@ -666,15 +854,51 @@ export default function Game() {
             transition={{ repeat: Infinity, duration: 2 }}
             src="https://i.ibb.co/BVgY7XrT/babai.png"
             alt="Creating world"
-            className="w-48 mb-6 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]"
+            className="w-40 mb-6 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]"
           />
-          <p className="text-sm uppercase tracking-widest text-red-500 animate-pulse font-bold mb-2">Создаю мир игры...</p>
-          <p className="text-xs text-neutral-500">Генерирую атмосферный фон</p>
+          <p className="text-sm uppercase tracking-widest text-red-500 animate-pulse font-bold mb-3">Создаю мир игры...</p>
+          {!bgGenRetry ? (
+            <>
+              {/* Countdown circle */}
+              <div className="relative w-20 h-20 mb-4">
+                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="34" stroke="#1f1f1f" strokeWidth="6" fill="none" />
+                  <circle
+                    cx="40" cy="40" r="34"
+                    stroke="#ef4444"
+                    strokeWidth="6"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 34}`}
+                    strokeDashoffset={`${2 * Math.PI * 34 * (1 - bgGenCountdown / 60)}`}
+                    className="transition-all duration-1000"
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-xl font-black text-white">{bgGenCountdown}</span>
+              </div>
+              <p className="text-xs text-neutral-500">Генерирую атмосферный фон...</p>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4 mt-2">
+              <p className="text-neutral-400 text-sm">ИИ что-то завис...</p>
+              <button
+                onClick={retryBgGen}
+                className="px-6 py-3 bg-red-800 hover:bg-red-700 rounded-xl font-bold text-white flex items-center gap-2"
+              >
+                <RefreshCw size={18} /> ИИ тупит, Давай ещё раз?
+              </button>
+              <button
+                onClick={() => { setBgGenRetry(false); setIsGeneratingWorld(false); }}
+                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm text-neutral-300"
+              >
+                Пропустить, играть без фона
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* World ready — show "Let's go" button before first stage */}
-      {!isGeneratingWorld && difficulty && !worldReady && !isDanilChat && !isBossBattle && !showBossWarning && stage === 1 && !scenario && !aiRetry && (
+      {!isGeneratingWorld && difficulty && !worldReady && !isDanilChat && !isBossBattle && !isBossPreparation && !showBossWarning && stage === 1 && !scenario && !aiRetry && (
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center">
           <motion.img
             initial={{ scale: 0.8, opacity: 0 }}
@@ -695,17 +919,37 @@ export default function Game() {
       )}
 
       {/* Main Content Area */}
-      {!isGeneratingWorld && (worldReady || stage > 1 || isDanilChat || isBossBattle || showBossWarning) && (
+      {!isGeneratingWorld && (worldReady || stage > 1 || isDanilChat || isBossBattle || isBossPreparation || showBossWarning) && (
         <div className="relative z-10 flex-1 flex flex-col p-6 overflow-y-auto pb-24">
           <AnimatePresence mode="wait">
-            {isLoading && !isBossBattle ? (
+
+            {/* --- STAGE LOADING with countdown --- */}
+            {isLoading && !isBossBattle && !isBossPreparation ? (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center text-neutral-500">
-                <motion.img animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }} transition={{ repeat: Infinity, duration: 2 }} src="https://i.ibb.co/BVgY7XrT/babai.png" alt="Loading" className="w-48 mb-6 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]" />
-                <p className="text-sm uppercase tracking-widest text-red-500 animate-pulse font-bold">Генерация кошмара...</p>
+                <motion.img animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }} transition={{ repeat: Infinity, duration: 2 }} src="https://i.ibb.co/BVgY7XrT/babai.png" alt="Loading" className="w-40 mb-4 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]" />
+                <p className="text-sm uppercase tracking-widest text-red-500 animate-pulse font-bold mb-4">Генерация кошмара...</p>
+                {stageCountdown > 0 && (
+                  <div className="relative w-16 h-16">
+                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="26" stroke="#1f1f1f" strokeWidth="5" fill="none" />
+                      <circle
+                        cx="32" cy="32" r="26"
+                        stroke="#ef4444"
+                        strokeWidth="5"
+                        fill="none"
+                        strokeDasharray={`${2 * Math.PI * 26}`}
+                        strokeDashoffset={`${2 * Math.PI * 26 * (1 - stageCountdown / 20)}`}
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-base font-black text-white">{stageCountdown}</span>
+                  </div>
+                )}
               </motion.div>
+
             ) : aiRetry ? (
               <motion.div key="retry" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center gap-6">
-                <p className="text-neutral-400 text-lg">ИИ молчит уже 30 секунд...</p>
+                <p className="text-neutral-400 text-lg">ИИ молчит уже 20 секунд...</p>
                 <button
                   onClick={() => { setAiRetry(false); setIsLoading(true); if (pendingRetryStage !== null) loadNextStage(pendingRetryStage); }}
                   className="px-6 py-4 bg-red-800 hover:bg-red-700 rounded-xl font-bold text-white flex items-center gap-2 text-lg"
@@ -713,6 +957,7 @@ export default function Game() {
                   <RefreshCw size={20} /> ИИ тупит, Давай ещё раз?
                 </button>
               </motion.div>
+
             ) : showBossWarning ? (
               // Boss warning screen (stage 15/45)
               <motion.div key="boss-warning" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center gap-6">
@@ -735,6 +980,112 @@ export default function Game() {
                   Я готов к бою! ⚔️
                 </button>
               </motion.div>
+
+            ) : isBossPreparation ? (
+              // --- BOSS PREPARATION PHASE ---
+              <motion.div key="boss-prep" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-start text-center gap-5 pt-4 overflow-y-auto">
+                <div className="text-6xl mb-1">⚔️</div>
+                <h2 className="text-2xl font-black text-red-500 uppercase tracking-tight">Подготовка к бою</h2>
+
+                {/* Countdown or image ready */}
+                {!bossGenRetry && !bossImageReady && (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="relative w-20 h-20">
+                      <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="34" stroke="#1f1f1f" strokeWidth="6" fill="none" />
+                        <circle
+                          cx="40" cy="40" r="34"
+                          stroke="#ef4444"
+                          strokeWidth="6"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 34}`}
+                          strokeDashoffset={`${2 * Math.PI * 34 * (1 - bossPreparationCountdown / 60)}`}
+                          className="transition-all duration-1000"
+                        />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-xl font-black text-white">{bossPreparationCountdown}</span>
+                    </div>
+                    <p className="text-xs text-neutral-500 flex items-center gap-1">
+                      <Loader2 size={12} className="animate-spin" /> Вызываю босса из тьмы...
+                    </p>
+                    <p className="text-xs text-yellow-400/70">⚡ Матч может начаться раньше отсчёта — как только босс появится!</p>
+                  </div>
+                )}
+
+                {bossImageReady && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-900/40 border border-green-600/40 rounded-xl">
+                    <span className="text-green-400 text-lg">✅</span>
+                    <p className="text-green-300 text-sm font-bold">Босс готов! Запускаю бой...</p>
+                  </div>
+                )}
+
+                {bossGenRetry && (
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-neutral-400 text-sm">Нейросеть не ответила вовремя...</p>
+                    <button
+                      onClick={() => retryBossImageGen(stage)}
+                      className="px-6 py-3 bg-red-800 hover:bg-red-700 rounded-xl font-bold text-white flex items-center gap-2"
+                    >
+                      <RefreshCw size={18} /> ИИ тупит, Давай ещё раз?
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Skip image, start battle with placeholder
+                        if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
+                        setBossImage("https://i.ibb.co/BVgY7XrT/babai.png");
+                        setIsBossPreparation(false);
+                        setIsBossBattle(true);
+                        setBossTimer(30 + getBossTimeBonus());
+                      }}
+                      className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm text-neutral-300"
+                    >
+                      Биться вслепую 👊
+                    </button>
+                  </div>
+                )}
+
+                {/* Boss rules */}
+                {(() => {
+                  const rules = getBossRules();
+                  return (
+                    <div className="w-full max-w-xs bg-neutral-900/80 border border-red-900/40 rounded-2xl p-4 text-left space-y-3 mt-1">
+                      <h3 className="font-black text-red-400 uppercase tracking-widest text-xs mb-3">Правила битвы</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-neutral-400">Уровень босса</span>
+                          <span className="font-bold text-white">👹 Ур. {bossLevel}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-neutral-400">HP босса</span>
+                          <span className="font-bold text-red-400">{rules.maxHp} ударов</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-neutral-400">Твой урон за тап</span>
+                          <span className="font-bold text-yellow-400">×{rules.damage}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-neutral-400">Время на бой</span>
+                          <span className="font-bold text-orange-400">{rules.timeLimit} сек</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-neutral-400">Награда за победу</span>
+                          <span className="font-bold text-green-400">🍉 {rules.reward}</span>
+                        </div>
+                        {bossRewardMultiplier > 1 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-neutral-400">Бонус</span>
+                            <span className="font-bold text-yellow-400">× {bossRewardMultiplier} награда!</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-neutral-500 pt-2 border-t border-neutral-800">
+                        Тапай по боссу как можно быстрее — уничтожь его раньше, чем закончится время!
+                      </p>
+                    </div>
+                  );
+                })()}
+              </motion.div>
+
             ) : isBossBattle ? (
               <motion.div key="boss" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-center mb-6">
@@ -748,7 +1099,7 @@ export default function Game() {
                   </div>
                 </div>
 
-                {isLoading || !bossImage ? (
+                {!bossImage ? (
                   <div className="w-64 h-64 rounded-3xl border-4 border-red-900 flex items-center justify-center bg-neutral-900">
                     <Loader2 size={48} className="animate-spin text-red-500" />
                   </div>
@@ -772,10 +1123,7 @@ export default function Game() {
                       Вы одолели босса и получили {Math.floor(storeConfig.bossRewardBase * Math.pow(storeConfig.bossRewardMultiplier, bossLevel - 1) * bossRewardMultiplier)} 🍉!
                     </p>
                     <button
-                      onClick={async () => {
-                        if (bossImage && tgId && bossImage.includes("ibb.co")) {
-                          saveImageToGallery(bossImage, tgId, `[bosses] Победа над боссом ур. ${bossLevel}!`, undefined).catch(console.error);
-                        }
+                      onClick={() => {
                         setIsBossBattle(false);
                         setIsGameOver(true);
                       }}
@@ -784,13 +1132,13 @@ export default function Game() {
                       ФИНИШ! <ArrowRight size={18} />
                     </button>
                   </div>
-                ) : !isLoading && bossImage ? (
+                ) : bossImage ? (
                   <p className="mt-6 text-neutral-400 animate-pulse">ТАПАЙ ПО БОССУ!</p>
                 ) : null}
               </motion.div>
+
             ) : isDanilChat ? (
               <motion.div key="chat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col">
-                {/* Danil chat bg uses game background (bgImage) */}
                 <div
                   className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
                   style={{ backgroundImage: bgImage ? `url(${bgImage})` : undefined }}
@@ -851,6 +1199,7 @@ export default function Game() {
                   </div>
                 )}
               </motion.div>
+
             ) : isResultView ? (
               <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col items-center justify-center text-center">
                 <div className={`text-2xl font-black mb-6 uppercase tracking-widest ${lastChoiceCorrect ? 'text-green-500' : 'text-red-500'}`}>
@@ -861,6 +1210,7 @@ export default function Game() {
                   ПРОДОЛЖИТЬ <ArrowRight size={18} />
                 </button>
               </motion.div>
+
             ) : scenario ? (
               <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col overflow-y-auto">
                 <div className="flex items-center justify-center py-8 min-h-[120px]">
