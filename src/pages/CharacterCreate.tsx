@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, Gender, Style } from "../store/playerStore";
-import { DEFAULT_GALLERY_IMAGES } from "../config/defaultSettings";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2, ArrowRight, Sparkles, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
 import { useTelegram } from "../context/TelegramContext";
@@ -16,8 +15,19 @@ const STYLES: Style[] = [
 ];
 
 const WISHES_OPTIONS = [
+  // Внешность
   "Длинные когти", "Светящиеся глаза", "Треснувшие рога", "Огромные зубы",
   "Лысина", "Борода до колен", "Много глаз", "Щупальца вместо рук",
+  // Новые — тело и части
+  "Паучьи ноги", "Крылья нетопыря", "Шерсть как у волка", "Хвост скорпиона",
+  "Клыки вампира", "Провалившийся нос", "Уши как у летучей мыши", "Три руки",
+  "Руки из теней", "Тело из дыма", "Плавники вместо ушей", "Жабьи лапы",
+  // Атмосфера и магия
+  "Ореол тьмы", "Горящие кости", "Светящиеся символы на коже", "Ледяное дыхание",
+  "Трещины с огнём внутри", "Глаза как зеркала", "Рот полный глаз", "Тени-слуги рядом",
+  // Одежда и артефакты
+  "Старый советский плащ", "Ржавые цепи", "Шапка-ушанка с черепом", "Лапти с гвоздями",
+  "Медные пуговицы", "Рваный сарафан",
 ];
 
 const FALLBACK_AVATAR = "https://i.ibb.co/BVgY7XrT/babai.png";
@@ -91,6 +101,34 @@ export default function CharacterCreate() {
   const [wishes, setWishes] = useState<string[]>([]);
   const [selectedDefaultImage, setSelectedDefaultImage] = useState<string | null>(null);
   const [step, setStep] = useState(1);
+  const [dbTemplates, setDbTemplates] = useState<Array<{ id: string; image_url: string; label: string | null }>>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Load last 15 avatars for the selected gender from DB
+  useEffect(() => {
+    if (!gender) return;
+    setLoadingTemplates(true);
+    const genderLabel = gender === "Бабай" ? "Бабай" : "Бабайка";
+    supabase
+      .from("gallery")
+      .select("id, image_url, label")
+      .ilike("label", "%[avatars]%")
+      .order("created_at", { ascending: false })
+      .limit(60)
+      .then(({ data }) => {
+        const filtered = (data || [])
+          .filter(d => {
+            if (!d.label) return true;
+            // Match gender: check if label contains gender keyword (from lore or name)
+            // We use the gender tag stored in avatars table via label — just show all if no gender info
+            const lower = d.label.toLowerCase();
+            return lower.includes(genderLabel.toLowerCase()) || (!lower.includes("бабай") && !lower.includes("бабайка"));
+          })
+          .slice(0, 15);
+        setDbTemplates(filtered.length > 0 ? filtered : (data || []).slice(0, 15));
+        setLoadingTemplates(false);
+      });
+  }, [gender]);
 
   const [generatedName, setGeneratedName] = useState<string>("");
   const [generatedLore, setGeneratedLore] = useState<string>("");
@@ -872,23 +910,28 @@ export default function CharacterCreate() {
                 </div>
               )}
 
-              <p className="text-xs text-neutral-500 mb-3 text-center">— или выбери готовый —</p>
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
-                <div
-                  onClick={() => setSelectedDefaultImage(null)}
-                  className={`snap-start flex-shrink-0 w-20 h-20 rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${!selectedDefaultImage && !generatedAvatarUrl ? "border-red-600" : "border-neutral-700 hover:border-neutral-500"}`}
-                >
-                  <div className="w-full h-full bg-neutral-800 flex items-center justify-center text-2xl">🤖</div>
-                </div>
-                {DEFAULT_GALLERY_IMAGES.map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedDefaultImage(img)}
-                    className={`snap-start flex-shrink-0 w-20 h-20 rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${selectedDefaultImage === img ? "border-red-600" : "border-neutral-700 hover:border-neutral-500"}`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+              {/* DB Templates grid */}
+              <div className="mt-4">
+                <p className="text-xs text-neutral-500 mb-3 text-center">
+                  — или выбери шаблон ({gender}) —
+                </p>
+                {loadingTemplates ? (
+                  <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-red-500" /></div>
+                ) : dbTemplates.length > 0 ? (
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                    {dbTemplates.map((tmpl) => (
+                      <div
+                        key={tmpl.id}
+                        onClick={() => setSelectedDefaultImage(tmpl.image_url)}
+                        className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all aspect-square ${selectedDefaultImage === tmpl.image_url ? "border-red-600 shadow-[0_0_12px_rgba(220,38,38,0.5)]" : "border-neutral-700 hover:border-neutral-500"}`}
+                      >
+                        <img src={tmpl.image_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <p className="text-xs text-neutral-600 text-center py-3">Нет шаблонов — сгенерируй первый!</p>
+                )}
               </div>
             </div>
 
