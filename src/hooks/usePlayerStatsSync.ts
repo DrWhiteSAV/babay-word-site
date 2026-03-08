@@ -231,12 +231,32 @@ export function usePlayerStatsSync() {
   // CRITICAL: store.dbLoaded (Zustand state) is used — NOT a ref — so this
   // effect correctly re-evaluates when dbLoaded transitions false→true.
   // This prevents stale localStorage values from triggering a DB write.
+  //
+  // IMPORTANT: We use a ref to track if the CURRENT sync cycle has already
+  // done the initial load. This prevents the settings deps from firing the
+  // sync before DB data is in the store.
+  const syncAllowedRef = useRef(false);
+
+  // Reset sync permission whenever telegram_id changes (new user/session)
+  useEffect(() => {
+    syncAllowedRef.current = false;
+  }, [profile?.telegram_id]);
+
   useEffect(() => {
     if (!profile?.telegram_id) return;
     if (!store.dbLoaded) return; // ← Gate #1: Wait for fresh DB load
     if (!store.character) return; // ← Gate #2: No character = nothing to sync
     // Gate #3: Never write to DB if game_status is 'reset' or 'loading' or 'new'
     if (store.gameStatus === "reset" || store.gameStatus === "loading" || store.gameStatus === "new") return;
+
+    // Gate #4: First time dbLoaded becomes true — mark sync as allowed but skip
+    // this very first invocation to prevent writing DB-loaded values right back.
+    // On the NEXT change (user actually changes something), sync will fire normally.
+    if (!syncAllowedRef.current) {
+      syncAllowedRef.current = true;
+      console.log("[usePlayerStatsSync] DB loaded — sync armed, skipping initial write");
+      return;
+    }
 
     const currentAvatar = isHttpUrl(store.character.avatarUrl)
       ? store.character.avatarUrl
