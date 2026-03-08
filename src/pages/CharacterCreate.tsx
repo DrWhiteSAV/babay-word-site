@@ -275,6 +275,7 @@ export default function CharacterCreate() {
             character_style: style,
             avatar_url: finalUrl,
             lore: generatedLore || null,
+            game_status: "playing",
             custom_settings: {
               ...existingCustomSettings,
               buttonSize: storeState.settings.buttonSize,
