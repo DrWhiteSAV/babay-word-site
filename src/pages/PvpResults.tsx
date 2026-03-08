@@ -45,7 +45,7 @@ const fmtTime = (s: number) =>
 export default function PvpResults() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { addFear } = usePlayerStore();
+  const { addFear, addWatermelons } = usePlayerStore();
   const { profile } = useTelegram();
   const tgId = profile?.telegram_id;
 
