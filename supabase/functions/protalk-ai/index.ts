@@ -49,13 +49,18 @@ async function askProTalk(
 
 // Extract image URL from ProTalk response text
 // Handles: plain URLs, markdown ![alt](url), ![alt]url, or any http URL
+// Also strips trailing punctuation (. , ; ! ?) that ProTalk sometimes appends to URLs
+function stripTrailingPunctuation(url: string): string {
+  return url.replace(/[.,;!?)\]]+$/, "").trim();
+}
+
 function extractImageUrl(text: string): string | null {
   // 1. Markdown image: ![alt](url) or ![alt]url (no closing paren)
   const mdMatch = text.match(/!\[[^\]]*\]\(?( *https?:\/\/[^\s\])"']+)\)?/i);
-  if (mdMatch) return mdMatch[1].trim();
+  if (mdMatch) return stripTrailingPunctuation(mdMatch[1].trim());
   // 2. Any bare https URL
   const urlMatch = text.match(/https?:\/\/[^\s\])"'<>]+/i);
-  return urlMatch ? urlMatch[0].trim() : null;
+  return urlMatch ? stripTrailingPunctuation(urlMatch[0].trim()) : null;
 }
 
 serve(async (req) => {
