@@ -415,14 +415,23 @@ export default function CharacterCreate() {
     setStyle(s);
     pendingStyleRef.current = s;
     // Switch the app theme live — exactly like Settings does
-    const { updateSettings } = usePlayerStore.getState();
     updateSettings({ theme: styleToTheme[s] as any });
   };
 
   const handleCreateLore = async () => {
-    if (!style || !gender || loreLocked) return;
+    if (!style || !gender || loreLocked || isGeneratingLore) return;
     const name = generatedName || (gender === "Бабай" ? "Бурьяник" : "Тьмарица");
     await doGenerateLore(style, gender, name);
+  };
+
+  const handleRetryLore = async () => {
+    const s = pendingStyleRef.current || style;
+    const g = gender;
+    if (!s || !g) return;
+    setLoreTimeout(false);
+    setLoreLocked(false);
+    const name = generatedName || (g === "Бабай" ? "Бурьяник" : "Тьмарица");
+    await doGenerateLore(s, g, name);
   };
 
   const doGenerateAvatar = useCallback(async (currentGender: Gender, currentStyle: Style, currentName: string, currentWishes: string[], currentLore: string, isRetry = false) => {
