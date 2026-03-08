@@ -13,42 +13,7 @@ import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
 const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
 
-/** Returns a map of chatKey → unread count for the current user */
-function usePerChatUnread(myTid: number | undefined, chatKeys: string[]): Record<string, number> {
-  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    if (!myTid || chatKeys.length === 0) { setUnreadMap({}); return; }
-
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("chat_key")
-        .in("chat_key", chatKeys)
-        .neq("sender_telegram_id", myTid)
-        .is("read_at", null);
-
-      const map: Record<string, number> = {};
-      for (const row of data || []) {
-        if (row.chat_key) map[row.chat_key] = (map[row.chat_key] || 0) + 1;
-      }
-      setUnreadMap(map);
-    };
-
-    fetch();
-
-    const channel = supabase
-      .channel(`per_chat_unread_${myTid}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, fetch)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages" }, fetch)
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myTid, chatKeys.join(",")]);
-
-  return unreadMap;
-}
 
 export default function Friends() {
   const navigate = useNavigate();
