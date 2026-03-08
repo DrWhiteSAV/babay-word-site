@@ -139,7 +139,13 @@ export default function PvpRoom() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Polling fallback every 3s — ensures status sync even if realtime is slow
+    const pollInterval = setInterval(loadRoom, 3000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
   }, [roomId]);
 
   // Scroll chat to bottom when new messages arrive
