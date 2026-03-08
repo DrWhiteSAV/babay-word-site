@@ -148,7 +148,10 @@ export default function Chat() {
   }, [character, friendName, groupId, navigate]);
 
   useEffect(() => {
+    // For DM chats: wait until friendTelegramId is resolved so chatKey is canonical (tid_tid)
+    // For group chats: chatKey is always ready immediately
     if (!chatKey) return;
+    if (friendName && !friendTelegramId) return; // DM — wait for friend's telegram_id
 
     // Helper to decode content that may contain [img]: prefix
     const decodeContent = (raw: string) => {
@@ -161,14 +164,15 @@ export default function Chat() {
       return { imageUrl: undefined, text: raw };
     };
 
+    let cancelled = false;
     const load = async () => {
       const { data } = await supabase
         .from("chat_messages")
         .select("*")
         .eq("chat_key", chatKey)
         .order("created_at", { ascending: true })
-        .limit(100);
-      if (data) {
+        .limit(200);
+      if (!cancelled && data) {
         setMessages(data.map(m => {
           const decoded = decodeContent(m.content);
           const senderId = (m as any).sender_telegram_id;
@@ -218,8 +222,11 @@ export default function Chat() {
         }
       ).subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [chatKey, profile?.telegram_id]);
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [chatKey, profile?.telegram_id, friendTelegramId]);
 
   useEffect(() => {
     if (!chatKey || !profile?.telegram_id || messages.length === 0) return;
