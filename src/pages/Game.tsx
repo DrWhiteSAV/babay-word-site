@@ -211,19 +211,23 @@ export default function Game() {
         bossImageReadyRef.current = true;
         setBossImageReady(true);
         // Save to gallery [bosses] — save-to-gallery handles ImgBB upload + DB insert with telegram_id
-        if (tgId) {
-          const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-          const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          fetch(`${SUPABASE_URL}/functions/v1/save-to-gallery`, {
+        const activeTgId = tgId ?? profile?.telegram_id;
+        console.log(`[Game] 👹 boss ready, tgId=${activeTgId}, saving to gallery...`);
+        if (activeTgId) {
+          const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+          const SB_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          fetch(`${SB_URL}/functions/v1/save-to-gallery`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SB_KEY}` },
             body: JSON.stringify({
               imageUrl: bResult.url,
-              telegramId: tgId,
+              telegramId: activeTgId,
               label: `[bosses] Босс ур.${bossLevel}`,
               prompt: bResult.prompt,
             }),
-          }).catch(console.error);
+          }).then(r => r.json()).then(d => console.log("[Game] 📦 boss gallery save:", d.success ? "ok" : d.error)).catch(console.error);
+        } else {
+          console.warn("[Game] ⚠️ no tgId — boss not saved to gallery");
         }
         // Auto-launch battle if still in preparation phase
         if (bossPreparationIntervalRef.current) {
@@ -247,7 +251,7 @@ export default function Game() {
         setBossGenRetry(true);
       }
     }
-  }, [character, tgId, bossLevel, difficulty, inventory]);
+  }, [character, tgId, profile, bossLevel, difficulty, inventory]);
 
   // -------- Start boss preparation phase after "Я готов к бою!" --------
   const launchBossPreparation = useCallback((currentStage: number, charData: Record<string, string>) => {
