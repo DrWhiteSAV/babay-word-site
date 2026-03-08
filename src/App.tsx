@@ -18,37 +18,16 @@ import { useAchievements } from "./hooks/useAchievements";
 import { usePlayerStatsSync } from "./hooks/usePlayerStatsSync";
 import { useIncomingMessageNotifier } from "./hooks/useIncomingMessageNotifier";
 import { useGroupChatsSync } from "./hooks/useGroupChatsSync";
-
-// Pages
-import Home from "./pages/Home";
-import CharacterCreate from "./pages/CharacterCreate";
-import GameHub from "./pages/GameHub";
-import Game from "./pages/Game";
-import Shop from "./pages/Shop";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import Friends from "./pages/Friends";
-import Chat from "./pages/Chat";
-import Gallery from "./pages/Gallery";
-import Leaderboard from "./pages/Leaderboard";
-import Events from "./pages/Events";
-import Achievements from "./pages/Achievements";
-import Admin from "./pages/Admin";
-import AdminPic from "./pages/AdminPic";
-import AdminVideo from "./pages/AdminVideo";
-import AdminStore from "./pages/AdminStore";
-import AdminUsers from "./pages/AdminUsers";
-import AdminAI from "./pages/AdminAI";
-import AdminAudio from "./pages/AdminAudio";
-import AdminText from "./pages/AdminText";
-import AdminStat from "./pages/AdminStat";
-import AdminNotifications from "./pages/AdminNotifications";
-import AdminImages from "./pages/AdminImages";
-import AdminEvents from "./pages/AdminEvents";
-import AdminAchievements from "./pages/AdminAchievements";
-import NotificationSettings from "./pages/NotificationSettings";
-import TelegramOnly from "./pages/TelegramOnly";
 import { useTelegram } from "./context/TelegramContext";
+
+/** Restricts a route to Супер-Бабай and Ад-Бабай only */
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  const { profile, isLoading } = useTelegram();
+  if (isLoading) return null;
+  const allowed = profile?.role === "Супер-Бабай" || profile?.role === "Ад-Бабай";
+  if (!allowed) return <Navigate to="/hub" replace />;
+  return <>{children}</>;
+}
 
 function AppContent() {
   const { entryMode, isLoading } = useTelegram();
