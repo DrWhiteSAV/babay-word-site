@@ -277,19 +277,6 @@ export function usePlayerStatsSync() {
   ]);
 
   // ─── AUTO-SYNC TO DB ─────────────────────────────────────────────────────────
-  // CRITICAL: This effect ONLY writes gameplay stats (fear, watermelons, boss_level, telekinesis_level, energy).
-  // It NEVER touches: avatar_url, character_name, character_gender, character_style, lore, custom_settings.
-  // custom_settings is written ONLY via the "Сохранить настройки" button in Settings.
-  // Identity fields are written ONLY by CharacterCreate, Gallery, or explicit save actions.
-  const lastWrittenRef = useRef<string | null>(null);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    lastWrittenRef.current = null;
-    loadedRef.current = false;
-  }, [profile?.telegram_id]);
-
-  const store = usePlayerStore();
 
   // Helper: write gameplay stats to DB immediately (no delay)
   interface GameplayPayload {
