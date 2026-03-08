@@ -111,13 +111,13 @@ export default function Settings() {
             game_status: "reset",
             referral_bonus_claimed: false,
             custom_settings: {
-              buttonSize: DEFAULT_SETTINGS.buttonSize,
-              fontFamily: DEFAULT_SETTINGS.fontFamily,
-              fontSize: DEFAULT_SETTINGS.fontSize,
-              fontBrightness: DEFAULT_SETTINGS.fontBrightness,
-              theme: DEFAULT_SETTINGS.theme,
-              musicVolume: DEFAULT_SETTINGS.musicVolume,
-              ttsEnabled: DEFAULT_SETTINGS.ttsEnabled,
+              buttonSize: "small",
+              fontFamily: "Russo One",
+              fontSize: 12,
+              fontBrightness: 100,
+              theme: "normal",
+              musicVolume: 50,
+              ttsEnabled: false,
               wishes: [],
               inventory: [],
             },
@@ -126,6 +126,7 @@ export default function Settings() {
           supabase.from("player_achievements").delete().eq("telegram_id", telegramId),
           supabase.from("leaderboard_cache").delete().eq("telegram_id", telegramId),
         ]);
+        console.log("[DB WRITE] ✅ player_stats RESET complete for telegram_id:", telegramId);
       }
     } catch (e) {
       console.error("Reset error:", e);
