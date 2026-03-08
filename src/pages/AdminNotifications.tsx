@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Bell, Plus, Trash2, Send, Loader2, RefreshCw, ChevronDown, ChevronUp,
@@ -163,6 +163,7 @@ export default function AdminNotifications() {
   const [triggerOptions, setTriggerOptions] = useState<TriggerOption[]>([]);
   const [aiImproving, setAiImproving] = useState(false);
   const [showMacros, setShowMacros] = useState(false);
+  const msgRef = useRef<HTMLTextAreaElement | null>(null);
 
   const [form, setForm] = useState({
     type: 'broadcast',
@@ -217,27 +218,32 @@ export default function AdminNotifications() {
   };
 
   const insertMacro = (macro: string) => {
-    setForm(f => ({ ...f, message: f.message + macro }));
+    const ta = msgRef.current;
+    if (!ta) { setForm(f => ({ ...f, message: f.message + macro })); return; }
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    const cur = ta.value;
+    const newVal = cur.slice(0, s) + macro + cur.slice(e);
+    setForm(f => ({ ...f, message: newVal }));
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(s + macro.length, s + macro.length); }, 0);
   };
+
+
+
 
   const handleAiImprove = async () => {
     if (!form.message) return;
     setAiImproving(true);
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCUCb8uYbhPOJSqKw4TtZrCkdLyVlDDbiE";
-      const prompt = `Улучши этот текст уведомления для мобильного приложения "Бабай" (игра про славянских кибер-духов в пижамах). Сделай его более живым, атмосферным, с юмором. Сохрани все макросы вида {macro} без изменений. Верни только улучшенный текст, без объяснений.
-
-Тип уведомления: ${NOTIF_TYPES.find(t => t.value === form.type)?.label}
-Оригинальный текст:
-${form.message}`;
-
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const aiPrompt = `Улучши этот текст уведомления для мобильного приложения "Бабай" (игра про славянских кибер-духов). Сделай его более живым, атмосферным, с юмором. Сохрани все макросы вида {macro} без изменений. Верни только улучшенный текст, без объяснений.\n\nТип: ${NOTIF_TYPES.find(t => t.value === form.type)?.label}\nОригинал:\n${form.message}`;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/protalk-ai`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({ type: "text", prompt: aiPrompt }),
       });
       const data = await res.json();
-      const improved = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const improved = data?.text?.trim();
       if (improved) setForm(f => ({ ...f, message: improved }));
     } catch (e) {
       console.error('AI improve error:', e);
@@ -404,6 +410,22 @@ ${form.message}`;
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5 relative z-10 pb-8">
 
+        {/* Instruction */}
+        <details className="bg-blue-950/30 border border-blue-900/40 rounded-xl overflow-hidden">
+          <summary className="px-4 py-3 text-xs font-bold text-blue-300 cursor-pointer flex items-center gap-2">
+            <Bell size={13} /> Типы уведомлений и макросы — инструкция
+          </summary>
+          <div className="px-4 pb-4 space-y-2 text-[11px] text-neutral-300">
+            <p>📢 <strong className="text-blue-300">Рассылка всем</strong> — массовая отправка. Нажми кнопку ▶ у нужного уведомления. Автоматически подставляет макросы для каждого пользователя.</p>
+            <p>👥 <strong className="text-blue-300">Добавление в друзья</strong> — срабатывает автоматически при добавлении друга. Выбери триггер из выпадающего списка.</p>
+            <p>🎯 <strong className="text-blue-300">Выполнение эвента</strong> — привяжи к конкретному эвенту из таблицы эвентов. Отправляется при завершении эвента игроком.</p>
+            <p>🏆 <strong className="text-blue-300">Достижение</strong> — привяжи к ключу достижения. Отправляется при первой разблокировке.</p>
+            <p>💬 <strong className="text-blue-300">Сообщение (оффлайн)</strong> — срабатывает когда игроку пишут, а он не онлайн.</p>
+            <p>🔤 <strong className="text-yellow-300">Макросы</strong> — нажми «Макросы» под полем сообщения, чтобы вставить переменную в позицию курсора. При отправке они заменяются данными каждого игрока.</p>
+            <p>✨ <strong className="text-purple-300">ИИ-улучшение (ProTalk)</strong> — улучшает стиль текста, сохраняя все макросы нетронутыми.</p>
+          </div>
+        </details>
+
         {/* Create form */}
         <section className="bg-neutral-900/80 backdrop-blur-md border border-neutral-800 rounded-2xl p-4 space-y-4">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">Создать уведомление</h2>
@@ -474,7 +496,7 @@ ${form.message}`;
                 </motion.div>
               )}
             </AnimatePresence>
-            <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+            <textarea ref={msgRef} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               placeholder="Текст уведомления..."
               rows={4}
               className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-red-900 resize-none" />

@@ -44,6 +44,8 @@ import AdminText from "./pages/AdminText";
 import AdminStat from "./pages/AdminStat";
 import AdminNotifications from "./pages/AdminNotifications";
 import AdminImages from "./pages/AdminImages";
+import AdminEvents from "./pages/AdminEvents";
+import AdminAchievements from "./pages/AdminAchievements";
 import NotificationSettings from "./pages/NotificationSettings";
 import TelegramOnly from "./pages/TelegramOnly";
 import { useTelegram } from "./context/TelegramContext";
@@ -230,6 +232,8 @@ function AppContent() {
           <Route path="/admin/stat" element={<AdminStat />} />
           <Route path="/admin/notifications" element={<AdminNotifications />} />
           <Route path="/admin/images" element={<AdminImages />} />
+          <Route path="/admin/events" element={<AdminEvents />} />
+          <Route path="/admin/achievements" element={<AdminAchievements />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />

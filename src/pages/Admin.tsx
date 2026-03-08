@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Image as ImageIcon, Video, ShieldAlert, ShoppingCart, Users, Bot, Music, Type, BarChart3, Bell, Upload } from "lucide-react";
+import { Image as ImageIcon, Video, ShieldAlert, ShoppingCart, Users, Bot, Music, Type, BarChart3, Bell, Upload, Calendar, Trophy } from "lucide-react";
 import Header from "../components/Header";
 
 export default function Admin() {
@@ -157,6 +157,32 @@ export default function Admin() {
             <div className="text-center">
               <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-1">Уведомления</h3>
               <p className="text-xs text-neutral-500">Конструктор рассылок и уведомлений в Telegram</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/events")}
+            className="bg-neutral-900 border border-neutral-800 hover:border-red-500 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 transition-colors group"
+          >
+            <div className="w-16 h-16 rounded-full bg-neutral-800 group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
+              <Calendar size={32} className="text-neutral-400 group-hover:text-red-500 transition-colors" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-1">Эвенты</h3>
+              <p className="text-xs text-neutral-500">Создание и управление игровыми событиями</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/achievements")}
+            className="bg-neutral-900 border border-neutral-800 hover:border-red-500 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 transition-colors group"
+          >
+            <div className="w-16 h-16 rounded-full bg-neutral-800 group-hover:bg-red-900/30 flex items-center justify-center transition-colors">
+              <Trophy size={32} className="text-neutral-400 group-hover:text-red-500 transition-colors" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-1">Достижения</h3>
+              <p className="text-xs text-neutral-500">Конструктор достижений с условиями и наградами</p>
             </div>
           </button>
         </div>
