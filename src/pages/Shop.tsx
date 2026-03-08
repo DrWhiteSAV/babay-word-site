@@ -421,9 +421,9 @@ export default function Shop() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 shop-evolve-popup"
           >
-            <h3 className="text-lg font-black text-purple-400 mb-2 flex items-center gap-2">
+            <h3 className="text-lg font-black text-purple-400 mb-2 flex items-center gap-2 shop-evolve-title">
               <Sparkles size={20} /> Эволюция аватара: {avatarEvolvePopup.itemName}
             </h3>
             <p className={`text-xs mb-4 ${avatarEvolvePopup.isGenerating ? "text-neutral-500 animate-pulse" : avatarEvolvePopup.newAvatar ? "text-green-400" : "text-red-400"}`}>
@@ -435,18 +435,18 @@ export default function Shop() {
                 {/* Circular countdown */}
                 <div className="relative w-32 h-32">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(168,85,247,0.15)" strokeWidth="8" />
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(168,85,247,0.15)" strokeWidth="8" className="shop-evolve-ring-bg" />
                     <circle
                       cx="50" cy="50" r="44"
                       fill="none" stroke="rgba(168,85,247,0.8)" strokeWidth="8"
                       strokeDasharray={`${2 * Math.PI * 44}`}
                       strokeDashoffset={`${2 * Math.PI * 44 * (1 - countdown / GENERATION_TIMEOUT_SEC)}`}
                       strokeLinecap="round"
-                      className="transition-all duration-1000"
+                      className="transition-all duration-1000 shop-evolve-ring-stroke"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black text-purple-300">{countdown}</span>
+                    <span className="text-3xl font-black text-purple-300 shop-evolve-timer">{countdown}</span>
                     <span className="text-xs text-neutral-500">сек</span>
                   </div>
                 </div>
@@ -501,7 +501,7 @@ export default function Shop() {
             {!avatarEvolvePopup.isGenerating && (
               <button
                 onClick={() => setAvatarEvolvePopup(null)}
-                className="mt-4 w-full max-w-sm py-3 bg-purple-800 hover:bg-purple-700 text-white rounded-xl font-bold transition-colors"
+                className="mt-4 w-full max-w-sm py-3 bg-purple-800 hover:bg-purple-700 text-white rounded-xl font-bold transition-colors shop-evolve-btn"
               >
                 {avatarEvolvePopup.newAvatar ? "Отлично!" : "Закрыть"}
               </button>

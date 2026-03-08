@@ -350,11 +350,11 @@ export default function Friends() {
       <div className="px-6 pt-3 pb-0 relative z-10">
         <button
           onClick={() => navigate("/chats")}
-          className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-900/80 to-blue-800/60 hover:from-blue-800/90 hover:to-blue-700/70 border border-blue-700/50 hover:border-blue-500/70 rounded-2xl px-5 py-4 transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:shadow-[0_0_28px_rgba(59,130,246,0.35)] active:scale-[0.98]"
+          className="friends-chats-btn w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-900/80 to-blue-800/60 hover:from-blue-800/90 hover:to-blue-700/70 border border-blue-700/50 hover:border-blue-500/70 rounded-2xl px-5 py-4 transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:shadow-[0_0_28px_rgba(59,130,246,0.35)] active:scale-[0.98]"
         >
-          <MessageSquare size={22} className="text-blue-300" />
-          <span className="text-base font-black text-white tracking-wide">Чаты</span>
-          <span className="ml-auto text-xs text-blue-400 font-semibold">Открыть →</span>
+          <MessageSquare size={22} className="friends-chats-icon text-blue-300" />
+          <span className="friends-chats-label text-base font-black text-white tracking-wide">Чаты</span>
+          <span className="friends-chats-arrow ml-auto text-xs text-blue-400 font-semibold">Открыть →</span>
         </button>
       </div>
 

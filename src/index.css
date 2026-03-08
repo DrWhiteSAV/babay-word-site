@@ -1132,3 +1132,151 @@ body {
   padding: 1.5rem 2rem !important;
   font-size: 1.25rem !important;
 }
+
+/* ============================================================
+   STEAMPUNK: play button — bright light text & icon
+   ============================================================ */
+.theme-steampunk .hub-play-btn,
+.theme-steampunk .hub-play-btn * {
+  color: #fff8e8 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 8px rgba(255,230,120,0.4) !important;
+  fill: #fff8e8 !important;
+}
+
+/* ============================================================
+   FRIENDS-CHATS-BTN — per-theme accent colours
+   ============================================================ */
+/* default (no theme) = blue — already in Tailwind classes */
+
+.theme-horror .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(100,0,0,0.85), rgba(60,0,0,0.7)) !important;
+  border-color: rgba(180,30,30,0.6) !important;
+  box-shadow: 0 0 18px rgba(200,0,0,0.3) !important;
+}
+.theme-horror .friends-chats-icon { color: #ff6060 !important; }
+.theme-horror .friends-chats-label { color: #f0d8d8 !important; }
+.theme-horror .friends-chats-arrow { color: #ff4444 !important; }
+
+.theme-steampunk .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(100,60,10,0.9), rgba(60,35,5,0.8)) !important;
+  border-color: rgba(200,150,50,0.6) !important;
+  box-shadow: 0 0 18px rgba(200,150,30,0.3) !important;
+}
+.theme-steampunk .friends-chats-icon { color: #f0b030 !important; }
+.theme-steampunk .friends-chats-label { color: #f0dab8 !important; }
+.theme-steampunk .friends-chats-arrow { color: #c8821a !important; }
+
+.theme-anime .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(140,20,100,0.8), rgba(90,10,70,0.7)) !important;
+  border-color: rgba(255,140,200,0.55) !important;
+  box-shadow: 0 0 18px rgba(255,100,180,0.3) !important;
+}
+.theme-anime .friends-chats-icon { color: #ff80c0 !important; }
+.theme-anime .friends-chats-label { color: #fdeeff !important; }
+.theme-anime .friends-chats-arrow { color: #ff80c0 !important; }
+
+.theme-soviet .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(100,20,20,0.85), rgba(60,10,10,0.75)) !important;
+  border-color: rgba(180,160,60,0.5) !important;
+  box-shadow: none !important;
+}
+.theme-soviet .friends-chats-icon { color: #cc3333 !important; }
+.theme-soviet .friends-chats-label { color: #ddd8c0 !important; letter-spacing: 3px; text-transform: uppercase; }
+.theme-soviet .friends-chats-arrow { color: #b8b090 !important; }
+
+.theme-fairytale .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(20,70,20,0.85), rgba(10,45,10,0.75)) !important;
+  border-color: rgba(80,160,60,0.55) !important;
+  box-shadow: 0 0 16px rgba(60,160,40,0.25) !important;
+}
+.theme-fairytale .friends-chats-icon { color: #70c040 !important; }
+.theme-fairytale .friends-chats-label { color: #d8f0d0 !important; }
+.theme-fairytale .friends-chats-arrow { color: #80d840 !important; }
+
+.theme-cartoon .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(255,60,60,0.85), rgba(220,80,0,0.75)) !important;
+  border: 3px solid #000 !important;
+  box-shadow: 4px 4px 0 #000, 0 0 16px rgba(255,100,0,0.3) !important;
+}
+.theme-cartoon .friends-chats-icon { color: #fff !important; }
+.theme-cartoon .friends-chats-label { color: #fff !important; text-transform: uppercase; letter-spacing: 2px; }
+.theme-cartoon .friends-chats-arrow { color: #ffe080 !important; }
+
+.theme-fantasy .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(60,20,120,0.85), rgba(40,10,90,0.75)) !important;
+  border-color: rgba(180,100,255,0.55) !important;
+  box-shadow: 0 0 20px rgba(140,60,220,0.35) !important;
+}
+.theme-fantasy .friends-chats-icon { color: #c080ff !important; }
+.theme-fantasy .friends-chats-label { color: #ede0f8 !important; }
+.theme-fantasy .friends-chats-arrow { color: #a060e0 !important; }
+
+.theme-cyberpunk .friends-chats-btn {
+  background: linear-gradient(135deg, rgba(0,40,60,0.9), rgba(0,20,40,0.8)) !important;
+  border-color: rgba(0,255,204,0.45) !important;
+  box-shadow: 0 0 18px rgba(0,255,204,0.2) !important;
+}
+.theme-cyberpunk .friends-chats-icon { color: #00ffcc !important; }
+.theme-cyberpunk .friends-chats-label { color: #00ffcc !important; }
+.theme-cyberpunk .friends-chats-arrow { color: #00ccaa !important; }
+
+/* ============================================================
+   SHOP AVATAR EVOLVE POPUP — per-theme accent
+   ============================================================ */
+.shop-evolve-popup { /* base class added to popup container */ }
+
+.theme-horror .shop-evolve-popup { background: linear-gradient(180deg, rgba(20,5,5,0.98), rgba(10,0,0,0.99)) !important; border-color: rgba(180,30,30,0.5) !important; }
+.theme-horror .shop-evolve-title { color: #ff3333 !important; text-shadow: 0 0 12px rgba(255,0,0,0.5); }
+.theme-horror .shop-evolve-ring-stroke { stroke: rgba(200,0,0,0.8) !important; }
+.theme-horror .shop-evolve-ring-bg { stroke: rgba(80,0,0,0.2) !important; }
+.theme-horror .shop-evolve-timer { color: #ff6060 !important; }
+.theme-horror .shop-evolve-btn { background: #8b0000 !important; border-color: #cc0000 !important; }
+
+.theme-steampunk .shop-evolve-popup { background: linear-gradient(180deg, rgba(25,15,5,0.98), rgba(15,8,2,0.99)) !important; border-color: rgba(180,130,50,0.5) !important; }
+.theme-steampunk .shop-evolve-title { color: #f0b030 !important; text-shadow: 0 0 10px rgba(200,150,30,0.5); }
+.theme-steampunk .shop-evolve-ring-stroke { stroke: rgba(200,140,30,0.85) !important; }
+.theme-steampunk .shop-evolve-ring-bg { stroke: rgba(100,70,15,0.2) !important; }
+.theme-steampunk .shop-evolve-timer { color: #f0b030 !important; }
+.theme-steampunk .shop-evolve-btn { background: linear-gradient(135deg, #c87c14, #f0b030) !important; border-color: #f5c842 !important; color: #1a0f00 !important; }
+
+.theme-anime .shop-evolve-popup { background: linear-gradient(180deg, rgba(30,10,30,0.98), rgba(20,5,20,0.99)) !important; border-color: rgba(255,140,200,0.4) !important; }
+.theme-anime .shop-evolve-title { color: #ff80c0 !important; text-shadow: 0 0 10px rgba(255,100,180,0.5); }
+.theme-anime .shop-evolve-ring-stroke { stroke: rgba(255,100,180,0.85) !important; }
+.theme-anime .shop-evolve-ring-bg { stroke: rgba(130,20,90,0.2) !important; }
+.theme-anime .shop-evolve-timer { color: #ff80c0 !important; }
+.theme-anime .shop-evolve-btn { background: linear-gradient(135deg, #e040a0, #ff80c0) !important; border-color: #ffaad8 !important; }
+
+.theme-soviet .shop-evolve-popup { background: linear-gradient(180deg, rgba(15,12,5,0.98), rgba(8,6,2,0.99)) !important; border-color: rgba(180,160,60,0.4) !important; }
+.theme-soviet .shop-evolve-title { color: #cc3333 !important; }
+.theme-soviet .shop-evolve-ring-stroke { stroke: rgba(180,30,30,0.8) !important; }
+.theme-soviet .shop-evolve-ring-bg { stroke: rgba(60,10,10,0.2) !important; }
+.theme-soviet .shop-evolve-timer { color: #cc3333 !important; }
+.theme-soviet .shop-evolve-btn { background: #aa2222 !important; border-color: #cc3333 !important; letter-spacing: 2px; text-transform: uppercase; }
+
+.theme-fairytale .shop-evolve-popup { background: linear-gradient(180deg, rgba(5,15,5,0.98), rgba(3,10,3,0.99)) !important; border-color: rgba(80,160,60,0.4) !important; }
+.theme-fairytale .shop-evolve-title { color: #70c040 !important; text-shadow: 0 0 10px rgba(60,180,40,0.4); }
+.theme-fairytale .shop-evolve-ring-stroke { stroke: rgba(80,180,50,0.85) !important; }
+.theme-fairytale .shop-evolve-ring-bg { stroke: rgba(20,60,10,0.2) !important; }
+.theme-fairytale .shop-evolve-timer { color: #80d840 !important; }
+.theme-fairytale .shop-evolve-btn { background: linear-gradient(135deg, #2d6b20, #50a030) !important; border-color: #70c040 !important; }
+
+.theme-cartoon .shop-evolve-popup { background: linear-gradient(180deg, rgba(10,18,35,0.98), rgba(8,14,28,0.99)) !important; border: 3px solid #ffe040 !important; box-shadow: 6px 6px 0 #000 !important; }
+.theme-cartoon .shop-evolve-title { color: #ffe040 !important; text-shadow: 2px 2px 0 #000; text-transform: uppercase; }
+.theme-cartoon .shop-evolve-ring-stroke { stroke: rgba(255,180,0,0.9) !important; }
+.theme-cartoon .shop-evolve-ring-bg { stroke: rgba(80,50,0,0.2) !important; }
+.theme-cartoon .shop-evolve-timer { color: #ffe040 !important; }
+.theme-cartoon .shop-evolve-btn { background: linear-gradient(135deg, #ff3a3a, #ff7700) !important; border: 3px solid #000 !important; box-shadow: 3px 3px 0 #000 !important; color: #fff !important; }
+
+.theme-fantasy .shop-evolve-popup { background: linear-gradient(180deg, rgba(12,8,20,0.98), rgba(8,5,15,0.99)) !important; border-color: rgba(180,100,255,0.4) !important; }
+.theme-fantasy .shop-evolve-title { color: #c080ff !important; text-shadow: 0 0 12px rgba(180,100,255,0.5); }
+.theme-fantasy .shop-evolve-ring-stroke { stroke: rgba(180,100,255,0.85) !important; }
+.theme-fantasy .shop-evolve-ring-bg { stroke: rgba(60,20,100,0.2) !important; }
+.theme-fantasy .shop-evolve-timer { color: #c080ff !important; }
+.theme-fantasy .shop-evolve-btn { background: linear-gradient(135deg, #5020a0, #8040c8) !important; border-color: #c080ff !important; }
+
+.theme-cyberpunk .shop-evolve-popup { background: linear-gradient(180deg, rgba(0,8,16,0.98), rgba(0,5,10,0.99)) !important; border-color: rgba(0,255,204,0.35) !important; box-shadow: 0 0 24px rgba(0,255,204,0.15) !important; }
+.theme-cyberpunk .shop-evolve-title { color: #00ffcc !important; text-shadow: 0 0 10px rgba(0,255,204,0.6); }
+.theme-cyberpunk .shop-evolve-ring-stroke { stroke: rgba(0,255,204,0.85) !important; }
+.theme-cyberpunk .shop-evolve-ring-bg { stroke: rgba(0,80,60,0.2) !important; }
+.theme-cyberpunk .shop-evolve-timer { color: #00ffcc !important; }
+.theme-cyberpunk .shop-evolve-btn { background: linear-gradient(135deg, rgba(0,60,50,0.9), rgba(0,40,35,0.8)) !important; border-color: rgba(0,255,204,0.5) !important; color: #00ffcc !important; }
