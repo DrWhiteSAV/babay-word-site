@@ -135,17 +135,18 @@ export default function Friends() {
     const queryLower = query.toLowerCase().replace(/^@/, "");
     const isNumericId = /^\d+$/.test(query);
 
-    const searches: Promise<any>[] = [
-      supabase.from("player_stats").select("character_name, telegram_id, telekinesis_level, avatar_url").ilike("character_name", queryLower).limit(1),
-      supabase.from("profiles").select("first_name, last_name, username, telegram_id").ilike("username", queryLower).limit(1),
-    ];
+    const [statsByName, profileByUsername] = await Promise.all([
+      supabase.from("player_stats").select("character_name, telegram_id, telekinesis_level, avatar_url").ilike("character_name", queryLower).limit(1).then(r => r),
+      supabase.from("profiles").select("first_name, last_name, username, telegram_id").ilike("username", queryLower).limit(1).then(r => r),
+    ]);
+
+    let profileById: any = null;
     if (isNumericId) {
-      searches.push(
-        supabase.from("profiles").select("first_name, last_name, username, telegram_id").eq("telegram_id", Number(query)).limit(1)
-      );
+      const res = await supabase.from("profiles").select("first_name, last_name, username, telegram_id").eq("telegram_id", Number(query)).limit(1);
+      profileById = res;
     }
 
-    const results = await Promise.all(searches);
+    const results = [statsByName, profileByUsername, profileById];
     const byName = results[0].data?.[0];
     const byUsername = results[1].data?.[0];
     const byId = isNumericId ? results[2]?.data?.[0] : null;
