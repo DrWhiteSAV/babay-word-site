@@ -252,35 +252,36 @@ export default function CharacterCreate() {
 
     if (tgId) {
       try {
-        // CRITICAL: Fetch existing settings from DB first — NEVER overwrite with store defaults.
-        // The store may still have default settings (fontSize:12, buttonSize:small) at the time
-        // of character creation if the user was redirected here before DB load completed.
+        // CRITICAL: Read FULL existing row from DB first — NEVER overwrite fields we didn't change
         const { data: existingStats } = await supabase
           .from("player_stats")
-          .select("custom_settings, fear, energy, watermelons, boss_level")
+          .select("*")
           .eq("telegram_id", tgId)
           .maybeSingle();
 
-        // Preserve ALL existing custom_settings — only update character-specific fields (wishes, inventory)
+        // Preserve ALL existing custom_settings (UI prefs like fontSize, buttonSize, theme)
         const existingCustomSettings =
           existingStats?.custom_settings && typeof existingStats.custom_settings === "object"
             ? (existingStats.custom_settings as Record<string, unknown>)
             : {};
 
-        // Use DB values for stats if available (avoids resetting progress on re-creation)
+        // Preserve stats from DB — never regress existing values
         const storeState = usePlayerStore.getState();
-        const fear = typeof existingStats?.fear === "number" ? existingStats.fear : storeState.fear;
-        const energy = typeof existingStats?.energy === "number" ? existingStats.energy : storeState.energy;
-        const watermelons = typeof existingStats?.watermelons === "number" ? existingStats.watermelons : storeState.watermelons;
-        const bossLevel = typeof existingStats?.boss_level === "number" ? existingStats.boss_level : storeState.bossLevel;
+        const fearVal = typeof existingStats?.fear === "number" ? existingStats.fear : storeState.fear;
+        const energyVal = typeof existingStats?.energy === "number" ? existingStats.energy : storeState.energy;
+        const watermelonsVal = typeof existingStats?.watermelons === "number" ? existingStats.watermelons : storeState.watermelons;
+        const bossLevelVal = typeof existingStats?.boss_level === "number" ? existingStats.boss_level : storeState.bossLevel;
+
+        // NEVER reset referral_bonus_claimed — read from DB and preserve it
+        const referralBonusClaimed = existingStats?.referral_bonus_claimed ?? false;
 
         await supabase.from("player_stats").upsert(
           {
             telegram_id: tgId,
-            fear,
-            energy,
-            watermelons,
-            boss_level: bossLevel,
+            fear: fearVal,
+            energy: energyVal,
+            watermelons: watermelonsVal,
+            boss_level: bossLevelVal,
             telekinesis_level: 1,
             character_name: name,
             character_gender: gender,
@@ -288,10 +289,9 @@ export default function CharacterCreate() {
             avatar_url: finalUrl,
             lore: generatedLore || null,
             game_status: "playing",
-            // Preserve existing UI settings (fontSize, buttonSize, theme, etc.)
-            // Only update character-specific wish list and inventory
+            referral_bonus_claimed: referralBonusClaimed, // preserve — never reset
             custom_settings: {
-              ...existingCustomSettings,
+              ...existingCustomSettings, // keep UI settings (fontSize, theme, etc.)
               wishes,
               inventory: Array.isArray(existingCustomSettings.inventory)
                 ? existingCustomSettings.inventory

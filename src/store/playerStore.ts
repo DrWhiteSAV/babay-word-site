@@ -177,7 +177,7 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
   inventory: [],
   gallery: DEFAULT_GALLERY_IMAGES,
   achievements: [],
-  friends: [{ name: "ДанИИл", isAiEnabled: true }],
+  friends: [], // loaded from DB — no defaults injected
   groupChats: [],
   quests: [
     { id: 'q1', type: 'daily', title: 'Первый испуг', description: 'Выгони 5 жильцов', reward: { type: 'fear', amount: 50 }, completed: false, progress: 0, target: 5 },
