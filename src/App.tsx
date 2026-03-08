@@ -181,8 +181,16 @@ function AppContent() {
 
   const currentPath = location.pathname;
   const customBg = pageBackgrounds?.[currentPath];
-  const activeBgUrl = customBg?.url || globalBackgroundUrl;
-  
+  const rawBgUrl = customBg?.url || globalBackgroundUrl;
+
+  // Resolve background to cached blob URL when available
+  useEffect(() => {
+    if (!rawBgUrl) { setResolvedBgUrl(null); return; }
+    resolveUrl(rawBgUrl).then(url => setResolvedBgUrl(url));
+  }, [rawBgUrl]);
+
+  const activeBgUrl = resolvedBgUrl ?? rawBgUrl;
+
   // Calculate dimming values based on customBg.dimming (0-100)
   // If no custom dimming, use default 80% to 95% gradient
   const dimmingTop = customBg ? customBg.dimming / 100 : 0.8;
