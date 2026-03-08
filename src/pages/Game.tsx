@@ -138,7 +138,7 @@ export default function Game() {
   // PVP results
   useEffect(() => {
     if (isGameOver && pvpParticipants.length > 0 && !pvpResults) {
-      const results = pvpParticipants.map(p => {
+      const results: { name: string; fear: number; watermelons: number; isLocal: boolean; exited?: boolean }[] = pvpParticipants.map(p => {
         const successRate = 0.5 + Math.random() * 0.4;
         const simulatedFear = Math.floor(maxStages * successRate);
         const simulatedWatermelons = Math.floor(Math.random() * 25);
