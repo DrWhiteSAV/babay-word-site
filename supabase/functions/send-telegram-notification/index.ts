@@ -11,12 +11,14 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { telegram_id, title, message, photo_url, caption } = body;
+    const { telegram_id, title, message, photo_url, caption, inline_keyboard } = body;
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
 
     if (!botToken || !telegram_id) {
       return new Response(JSON.stringify({ error: 'Missing params' }), { status: 400, headers: corsHeaders });
     }
+
+    const replyMarkup = inline_keyboard ? { inline_keyboard } : undefined;
 
     let data: any;
 
@@ -31,6 +33,7 @@ serve(async (req) => {
           photo: photo_url,
           caption: cap,
           parse_mode: 'Markdown',
+          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
         }),
       });
       data = await resp.json();
@@ -41,7 +44,10 @@ serve(async (req) => {
         const resp2 = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: telegram_id, text, parse_mode: 'Markdown' }),
+          body: JSON.stringify({
+            chat_id: telegram_id, text, parse_mode: 'Markdown',
+            ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+          }),
         });
         data = await resp2.json();
       }
@@ -51,7 +57,10 @@ serve(async (req) => {
       const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: telegram_id, text, parse_mode: 'Markdown' }),
+        body: JSON.stringify({
+          chat_id: telegram_id, text, parse_mode: 'Markdown',
+          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        }),
       });
       data = await resp.json();
     }
