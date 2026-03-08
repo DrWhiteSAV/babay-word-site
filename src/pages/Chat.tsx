@@ -412,9 +412,9 @@ export default function Chat() {
     setAiCountdown(0);
   }, []);
 
-  const saveMessageToDB = async (msg: Message, role: string, senderName: string): Promise<string | null> => {
+  const saveMessageToDB = useCallback(async (msg: Message, role: string, senderName: string): Promise<string | null> => {
     // Always compute the canonical chatKey at save time using the latest friendTelegramId
-    // This prevents AI responses from being saved with the wrong key (ai_TID_name vs TID_TID)
+    // useCallback ensures the closure always has the LATEST friendTelegramId, not a stale one
     const effectiveChatKey = groupId
       ? `group_${groupId}`
       : profile?.telegram_id && friendTelegramId
