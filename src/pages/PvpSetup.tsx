@@ -5,7 +5,7 @@ import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
 import { protalkGenerateText } from "../services/protalk";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Zap, Skull, Users, Swords, Check, Loader2, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { ArrowLeft, Zap, Skull, Users, Swords, Check, Loader2 } from "lucide-react";
 
 type ConnectionStatus = "idle" | "checking" | "ok" | "error";
 

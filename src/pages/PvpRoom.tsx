@@ -3,8 +3,9 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
+import { protalkGenerateText } from "../services/protalk";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Loader2, Swords, Users, Clock, Crown, Timer, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Swords, Users, Clock, Crown, Timer, Send, Wifi, WifiOff, RefreshCw, Check, AlertTriangle } from "lucide-react";
 
 interface RoomMember {
   telegram_id: number;
