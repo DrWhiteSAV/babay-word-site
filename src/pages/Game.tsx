@@ -30,6 +30,9 @@ interface Scenario {
 
 export default function Game() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const pvpRoomId = searchParams.get("pvp") || null;
+  const pvpDiffParam = searchParams.get("diff") as Difficulty | null;
   const {
     character, fear, energy, useEnergy, addFear, settings, gallery, addToGallery,
     addWatermelons, inventory, watermelons, lastEnergyUpdate, bossLevel,
