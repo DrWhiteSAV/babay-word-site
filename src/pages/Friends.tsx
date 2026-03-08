@@ -472,13 +472,16 @@ export default function Friends() {
                   <div key={friend.name} className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-xl border border-neutral-800 flex flex-col gap-2">
                     {/* Top row: avatar + names + buttons */}
                     <div className="flex items-center gap-2 w-full min-w-0">
-                      {/* Avatar */}
-                      <img
-                        src={avatarSrc}
-                        alt="avatar"
-                        className="w-10 h-10 rounded-full object-cover border border-neutral-700 shrink-0 cursor-pointer"
-                        onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
-                      />
+                      {/* Avatar with online dot */}
+                      <div className="relative shrink-0">
+                        <img
+                          src={avatarSrc}
+                          alt="avatar"
+                          className="w-10 h-10 rounded-full object-cover border border-neutral-700 cursor-pointer"
+                          onClick={() => setShowProfilePopup({ name: friend.name, telegramId: meta.telegram_id })}
+                        />
+                        <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-neutral-900 ${isDanil ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : isOnline ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : 'bg-neutral-600'}`} />
+                      </div>
 
                       {/* Name block */}
                       <div
