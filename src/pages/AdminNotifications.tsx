@@ -410,6 +410,22 @@ export default function AdminNotifications() {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5 relative z-10 pb-8">
 
+        {/* Instruction */}
+        <details className="bg-blue-950/30 border border-blue-900/40 rounded-xl overflow-hidden">
+          <summary className="px-4 py-3 text-xs font-bold text-blue-300 cursor-pointer flex items-center gap-2">
+            <Bell size={13} /> Типы уведомлений и макросы — инструкция
+          </summary>
+          <div className="px-4 pb-4 space-y-2 text-[11px] text-neutral-300">
+            <p>📢 <strong className="text-blue-300">Рассылка всем</strong> — массовая отправка. Нажми кнопку ▶ у нужного уведомления. Автоматически подставляет макросы для каждого пользователя.</p>
+            <p>👥 <strong className="text-blue-300">Добавление в друзья</strong> — срабатывает автоматически при добавлении друга. Выбери триггер из выпадающего списка.</p>
+            <p>🎯 <strong className="text-blue-300">Выполнение эвента</strong> — привяжи к конкретному эвенту из таблицы эвентов. Отправляется при завершении эвента игроком.</p>
+            <p>🏆 <strong className="text-blue-300">Достижение</strong> — привяжи к ключу достижения. Отправляется при первой разблокировке.</p>
+            <p>💬 <strong className="text-blue-300">Сообщение (оффлайн)</strong> — срабатывает когда игроку пишут, а он не онлайн.</p>
+            <p>🔤 <strong className="text-yellow-300">Макросы</strong> — нажми «Макросы» под полем сообщения, чтобы вставить переменную в позицию курсора. При отправке они заменяются данными каждого игрока.</p>
+            <p>✨ <strong className="text-purple-300">ИИ-улучшение (ProTalk)</strong> — улучшает стиль текста, сохраняя все макросы нетронутыми.</p>
+          </div>
+        </details>
+
         {/* Create form */}
         <section className="bg-neutral-900/80 backdrop-blur-md border border-neutral-800 rounded-2xl p-4 space-y-4">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">Создать уведомление</h2>
