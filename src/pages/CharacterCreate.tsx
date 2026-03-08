@@ -50,7 +50,7 @@ async function callProtalk(
 
 export default function CharacterCreate() {
   const navigate = useNavigate();
-  const { setCharacter, updateCharacter, addFear, addEnergy } = usePlayerStore();
+  const { setCharacter, addFear, addEnergy } = usePlayerStore();
   const { profile } = useTelegram();
 
   const [gender, setGender] = useState<Gender | null>(null);
