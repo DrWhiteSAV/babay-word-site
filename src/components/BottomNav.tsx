@@ -70,7 +70,7 @@ function useUnreadCount() {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [profile?.telegram_id, friends.length, groupChats.length]);
+  }, [profile?.telegram_id, friends.length, groupChats.length, friendTidMap]);
 
   return count;
 }
