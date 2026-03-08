@@ -225,6 +225,7 @@ export type Database = {
           created_at: string
           friend_name: string
           id: string
+          is_ai_reply: boolean
           read_at: string | null
           role: string
           sender_telegram_id: number | null
@@ -236,6 +237,7 @@ export type Database = {
           created_at?: string
           friend_name: string
           id?: string
+          is_ai_reply?: boolean
           read_at?: string | null
           role: string
           sender_telegram_id?: number | null
@@ -247,6 +249,7 @@ export type Database = {
           created_at?: string
           friend_name?: string
           id?: string
+          is_ai_reply?: boolean
           read_at?: string | null
           role?: string
           sender_telegram_id?: number | null
