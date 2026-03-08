@@ -870,6 +870,34 @@ export default function Chat() {
           )}
         </AnimatePresence>
 
+        {/* AI-Substitute typing bubble — shown to BOTH sides (owner via state, recipient via broadcast) */}
+        <AnimatePresence>
+          {aiSubTypingCountdown > 0 && (
+            <motion.div
+              key="ai-sub-typing"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              className="flex justify-start items-end gap-2"
+            >
+              <img
+                src={getAvatarUrl(friend?.name || chatTitle || "user")}
+                alt="ai-sub"
+                className="w-7 h-7 rounded-full object-cover border border-green-500/30"
+              />
+              <div className="chat-bubble-typing px-4 py-3 flex items-center gap-2">
+                <Bot size={12} className="text-green-400 shrink-0" />
+                <div className="flex gap-1">
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                </div>
+                <span className="text-[10px] font-mono text-green-400 ml-1 font-bold">{aiSubTypingCountdown}с</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div ref={chatEndRef} />
       </div>
 
