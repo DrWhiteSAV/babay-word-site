@@ -360,16 +360,27 @@ export default function Settings() {
         {/* Theme */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
-            <Square size={18} /> Тема оформления
+            <Square size={18} /> Стиль оформления
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {(["normal", "cyberpunk"] as Theme[]).map((theme) => (
+            {([
+              { id: "normal", label: "🌑 Фотореализм", desc: "Обычный тёмный стиль" },
+              { id: "horror", label: "💀 Хоррор", desc: "Кровь, тьма, ужас" },
+              { id: "steampunk", label: "⚙️ Стимпанк", desc: "Пар, латунь, шестерни" },
+              { id: "cyberpunk", label: "⚡ Киберпанк", desc: "Неон, матрица, будущее" },
+              { id: "anime", label: "🌸 Аниме", desc: "Яркие цвета, Japan" },
+              { id: "soviet", label: "🇺🇸 Постсоветский", desc: "Ретро СССР, брутализм" },
+              { id: "fairytale", label: "🌿 Русская сказка", desc: "Лес, берёзы, сказки" },
+              { id: "cartoon", label: "🎨 2D мультфильм", desc: "Мультяшный, яркий" },
+              { id: "fantasy", label: "🏰 Фэнтэзи деревня", desc: "Средневековье, магия" },
+            ] as { id: Theme; label: string; desc: string }[]).map((theme) => (
               <button
-                key={theme}
-                onClick={() => updateSettings({ theme })}
-                className={`p-3 rounded-xl border font-bold transition-all uppercase tracking-wider ${settings.theme === theme ? "border-red-600 bg-red-900/30 text-white" : "border-neutral-800 bg-neutral-900/50 backdrop-blur-sm text-white hover:bg-neutral-800"}`}
+                key={theme.id}
+                onClick={() => updateSettings({ theme: theme.id })}
+                className={`p-3 rounded-xl border font-bold transition-all text-left ${settings.theme === theme.id ? "border-red-600 bg-red-900/30 text-white" : "border-neutral-800 bg-neutral-900/50 backdrop-blur-sm text-white hover:bg-neutral-800"}`}
               >
-                {theme === "normal" ? "Обычная" : "Киберпанк"}
+                <span className="block text-sm">{theme.label}</span>
+                <span className="block text-[10px] text-neutral-500 font-normal mt-0.5">{theme.desc}</span>
               </button>
             ))}
           </div>
