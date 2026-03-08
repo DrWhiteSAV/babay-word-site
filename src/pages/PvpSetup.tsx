@@ -45,13 +45,13 @@ export default function PvpSetup() {
         .map(f => f.friend_telegram_id)
         .filter(Boolean) as number[];
 
-      let statsMap: Record<number, { character_name?: string | null; avatar_url?: string }> = {};
+      const statsMap: Record<number, { character_name?: string | null; avatar_url?: string | null }> = {};
       if (telegramIds.length > 0) {
         const { data: stats } = await supabase
           .from("player_stats")
           .select("telegram_id, character_name, avatar_url")
           .in("telegram_id", telegramIds);
-        statsMap = Object.fromEntries((stats || []).map(s => [s.telegram_id, s]));
+        (stats || []).forEach(s => { statsMap[s.telegram_id] = s; });
       }
 
       const meta: FriendMeta[] = (dbFriends || [])
