@@ -33,6 +33,8 @@ export default function PvpSetup() {
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
+  const [connStatus, setConnStatus] = useState<ConnectionStatus>("idle");
+  const [connMessage, setConnMessage] = useState("");
 
   useEffect(() => {
     if (!tgId || friends.length === 0) return;
