@@ -12,20 +12,34 @@ import {
   Skull,
   Users,
   Trophy,
+  Loader2,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
-import { usePlayerStatsSync } from "../hooks/usePlayerStatsSync";
+
 
 export default function GameHub() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { character, fear, energy, watermelons, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
+  const { character, dbLoaded, fear, energy, watermelons, globalBackgroundUrl, pageBackgrounds } = usePlayerStore();
   const [infoModal, setInfoModal] = useState<CurrencyType>(null);
-  usePlayerStatsSync();
 
+  // Wait for DB load — don't redirect prematurely
+  useEffect(() => {
+    if (dbLoaded && !character) {
+      navigate("/");
+    }
+  }, [dbLoaded, character]);
+
+  if (!dbLoaded) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-500">
+        <Loader2 size={28} className="animate-spin text-red-700" />
+        <span className="text-sm">Загрузка духа...</span>
+      </div>
+    );
+  }
 
   if (!character) {
-    navigate("/");
     return null;
   }
 

@@ -33,7 +33,12 @@ async function askProTalk(
 
   if (!response.ok) {
     const err = await response.text();
-    console.error("ProTalk error:", response.status, err);
+    console.error("ProTalk error:", response.status, err.substring(0, 200));
+    // For timeouts (504/502/503), return empty string so caller can use fallback
+    if (response.status === 504 || response.status === 502 || response.status === 503) {
+      console.warn("ProTalk timeout, returning empty response for fallback");
+      return "";
+    }
     throw new Error(`ProTalk API error: ${response.status} - ${err}`);
   }
 
@@ -85,9 +90,9 @@ serve(async (req) => {
 
     const rawResponse = await askProTalk(prompt, PROTALK_BOT_TOKEN, botIdNum, chatId, socialId);
 
+    // For timeouts, return success with empty content so client uses fallback
     if (!rawResponse) {
-      return new Response(JSON.stringify({ error: "Empty response from ProTalk" }), {
-        status: 500,
+      return new Response(JSON.stringify({ success: true, text: "", imageUrl: null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

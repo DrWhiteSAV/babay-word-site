@@ -100,6 +100,7 @@ export interface PlayerState {
   bossLevel: number;
   lastEnergyUpdate: number;
   inventory: string[];
+  // gallery is only used for profile page preview - real gallery comes from DB
   gallery: string[];
   achievements: string[];
   friends: Friend[];
@@ -123,6 +124,10 @@ export interface PlayerState {
   shopItems: ShopItem[];
   bossItems: ShopItem[];
   storeConfig: StoreConfig;
+  // Flag: DB has been loaded - prevents stale localStorage from overwriting
+  dbLoaded: boolean;
+  // game_status from DB — if 'reset', sync-to-DB is blocked to prevent old data overwriting
+  gameStatus: string;
   setCharacter: (char: Character) => void;
   updateCharacter: (updates: Partial<Character>) => void;
   addFear: (amount: number) => void;
@@ -155,12 +160,23 @@ export interface PlayerState {
   updateBossItem: (id: string, updates: Partial<ShopItem>) => void;
 }
 
+const DEFAULT_SETTINGS = {
+  buttonSize: "small" as ButtonSize,
+  fontFamily: "JetBrains Mono" as FontFamily,
+  fontSize: 12,
+  fontBrightness: 100,
+  theme: "normal" as Theme,
+  musicVolume: 50,
+  ttsEnabled: false,
+};
+
 export const usePlayerStore = create<PlayerState>()(
   persist(
     (set, get) => ({
+      // Character + stats: NOT persisted via localStorage — loaded from DB
       character: null,
       fear: 0,
-      energy: 50, // Starting energy
+      energy: 100,
       watermelons: 0,
       bossLevel: 1,
       lastEnergyUpdate: Date.now(),
@@ -175,15 +191,7 @@ export const usePlayerStore = create<PlayerState>()(
         { id: 'q3', type: 'global', title: 'Арбузный магнат', description: 'Победи босса', reward: { type: 'watermelons', amount: 15 }, completed: false, progress: 0, target: 1 },
         { id: 'q4', type: 'global', title: 'Мастер телекинеза', description: 'Прокачай телекинез до 5 уровня', reward: { type: 'energy', amount: 100 }, completed: false, progress: 0, target: 5 }
       ],
-      settings: {
-        buttonSize: "medium",
-        fontFamily: "JetBrains Mono",
-        fontSize: 16,
-        fontBrightness: 100,
-        theme: "normal",
-        musicVolume: 50,
-        ttsEnabled: false,
-      },
+      settings: { ...DEFAULT_SETTINGS },
       globalBackgroundUrl: DEFAULT_GLOBAL_BACKGROUND,
       pageBackgrounds: DEFAULT_PAGE_BACKGROUNDS,
       videoCutscenes: {
@@ -193,12 +201,10 @@ export const usePlayerStore = create<PlayerState>()(
       shopItems: DEFAULT_SHOP_ITEMS,
       bossItems: DEFAULT_BOSS_ITEMS,
       storeConfig: DEFAULT_STORE_CONFIG,
+      dbLoaded: false,
+      gameStatus: "loading", // Start as "loading" — NEVER "playing" before DB check
       setCharacter: (char) => {
-        const { addToGallery } = get();
         set({ character: char });
-        if (char.avatarUrl) {
-          addToGallery(char.avatarUrl);
-        }
       },
       updateCharacter: (updates) => {
         const { character } = get();
@@ -248,7 +254,6 @@ export const usePlayerStore = create<PlayerState>()(
       updateSettings: (newSettings) =>
         set((state) => {
           const updated = { ...state.settings, ...newSettings };
-          // If theme changed to cyberpunk, force font to Tektur
           if (newSettings.theme === "cyberpunk" && state.settings.theme !== "cyberpunk") {
             updated.fontFamily = "Tektur";
           } else if (newSettings.theme === "normal" && state.settings.theme !== "normal") {
@@ -290,16 +295,8 @@ export const usePlayerStore = create<PlayerState>()(
       },
       addToGallery: (url) => {
         const { gallery } = get();
-        if (!gallery.includes(url)) {
-          // Limit gallery to 6 images. Base64 strings are huge (~300-500KB each).
-          // 3 was too low, 15 was too high. 6 is a middle ground.
-          const newGallery = [url, ...gallery].slice(0, 6);
-          try {
-            set({ gallery: newGallery });
-          } catch (e) {
-            console.error("Failed to save to localStorage, clearing gallery to save space.");
-            set({ gallery: [url] }); // Try saving only the newest one
-          }
+        if (typeof url === "string" && url.startsWith("http") && !gallery.includes(url)) {
+          set({ gallery: [url, ...gallery].slice(0, 12) });
         }
       },
       upgradeTelekinesis: (cost) => {
@@ -351,13 +348,11 @@ export const usePlayerStore = create<PlayerState>()(
       },
       createGroupChat: (name, members) => {
         const { groupChats } = get();
-        // Ensure DanIIL is always in group chats
         const finalMembers = members.includes("ДанИИл") ? members : [...members, "ДанИИл"];
         set({ groupChats: [...groupChats, { id: Date.now().toString(), name, members: finalMembers }] });
       },
       updateGroupMembers: (id, members) => {
         const { groupChats } = get();
-        // Ensure DanIIL is always in group chats
         const finalMembers = members.includes("ДанИИл") ? members : [...members, "ДанИИл"];
         set({
           groupChats: groupChats.map(g => g.id === id ? { ...g, members: finalMembers } : g)
@@ -400,15 +395,30 @@ export const usePlayerStore = create<PlayerState>()(
       }
     }),
     {
-      name: "babai-storage",
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          // Ensure we don't carry over too many images from previous versions
-          if (state.gallery.length > 6) {
-            state.gallery = state.gallery.slice(0, 6);
-          }
-        }
-      },
+      // Version bumped to "v4" — friends/quests removed from cache; now loaded from DB
+      name: "babai-ui-prefs-v4",
+      // ONLY persist things that come from admin DB tables (not per-user):
+      //   - videoCutscenes, pageBackgrounds, globalBackgroundUrl, shopItems, bossItems, storeConfig
+      // DO NOT persist: settings, character, stats, friends, quests — all from DB on each load
+      partialize: (state) => ({
+        groupChats: state.groupChats,
+        shopItems: state.shopItems,
+        bossItems: state.bossItems,
+        storeConfig: state.storeConfig,
+        // videoCutscenes cached for perf, preserved on reset
+        videoCutscenes: state.videoCutscenes,
+        pageBackgrounds: state.pageBackgrounds,
+        globalBackgroundUrl: state.globalBackgroundUrl,
+        // dbLoaded intentionally NOT persisted — must reset to false on every app start
+      }),
     },
   ),
 );
+
+// Invalidate old cache keys on startup
+if (typeof window !== "undefined") {
+  try { localStorage.removeItem("babai-ui-prefs"); } catch {}
+  try { localStorage.removeItem("babai-ui-prefs-v2"); } catch {}
+  try { localStorage.removeItem("babai-ui-prefs-v3"); } catch {}
+}
+

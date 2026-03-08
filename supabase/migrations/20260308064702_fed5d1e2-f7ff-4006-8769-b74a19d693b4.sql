@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS chat_key text; ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS sender_telegram_id bigint; ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS read_at timestamp with time zone; CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_key ON public.chat_messages(chat_key);
