@@ -13,6 +13,7 @@ import {
   Zap,
   Image as ImageIcon,
   MessageSquare,
+  Swords,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
 
