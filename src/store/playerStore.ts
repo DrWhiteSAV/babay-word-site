@@ -236,16 +236,16 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
   updateSettings: (newSettings) =>
     set((state) => {
       const updated = { ...state.settings, ...newSettings };
-      // Auto-switch font when theme changes (only if user explicitly changes theme)
+      // Auto-switch font when theme changes — ALWAYS override with theme font
       if (newSettings.theme && newSettings.theme !== state.settings.theme) {
         const themeDefaultFont: Record<string, import("./playerStore").FontFamily> = {
           cyberpunk: "Tektur",
           horror: "Special Elite",
           steampunk: "Playfair Display",
           anime: "Montserrat",
-          soviet: "Russo One",
-          fairytale: "Ruslan Display",
-          cartoon: "Nunito",
+          soviet: "Cuprum",
+          fairytale: "Marck Script",
+          cartoon: "Comfortaa",
           fantasy: "Cinzel Decorative",
           normal: "Russo One",
         };
