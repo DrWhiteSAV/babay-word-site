@@ -243,8 +243,8 @@ export default function Game() {
         setBossImage(bResult.url);
         bossImageReadyRef.current = true;
         setBossImageReady(true);
-        // Save to gallery (bosses section, imgbb URL)
-        if (tgId && bResult.url.includes("ibb.co")) {
+        // Save to gallery (bosses section) — save-to-gallery uploads to ImgBB automatically
+        if (tgId) {
           saveImageToGallery(
             bResult.url,
             tgId,
