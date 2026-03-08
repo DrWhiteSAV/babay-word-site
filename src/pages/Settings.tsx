@@ -81,12 +81,39 @@ export default function Settings() {
     try {
       const telegramId = profile?.telegram_id;
       if (telegramId) {
+        // Save snapshot before reset for rollback
+        const { data: current } = await supabase
+          .from("player_stats")
+          .select("*")
+          .eq("telegram_id", telegramId)
+          .single();
+
+        if (current) {
+          await supabase.from("player_stats_history").insert({
+            telegram_id: telegramId,
+            character_name: current.character_name,
+            character_gender: current.character_gender,
+            character_style: current.character_style,
+            avatar_url: current.avatar_url,
+            lore: current.lore,
+            fear: current.fear,
+            watermelons: current.watermelons,
+            energy: current.energy,
+            boss_level: current.boss_level,
+            telekinesis_level: current.telekinesis_level,
+            custom_settings: current.custom_settings,
+            snapshot_reason: "reset",
+          });
+        }
+
         await Promise.all([
           supabase.from("player_stats").update({
             fear: 0, watermelons: 0, energy: 100, boss_level: 0,
-            telekinesis_level: 0, total_clicks: 0,
+            telekinesis_level: 1, total_clicks: 0,
             character_name: null, character_gender: null, character_style: null,
             avatar_url: null, lore: null,
+            game_status: "reset",
+            referral_bonus_claimed: false,
             custom_settings: {
               buttonSize: DEFAULT_SETTINGS.buttonSize,
               fontFamily: DEFAULT_SETTINGS.fontFamily,
@@ -95,6 +122,8 @@ export default function Settings() {
               theme: DEFAULT_SETTINGS.theme,
               musicVolume: DEFAULT_SETTINGS.musicVolume,
               ttsEnabled: DEFAULT_SETTINGS.ttsEnabled,
+              wishes: [],
+              inventory: [],
             },
           }).eq("telegram_id", telegramId),
           supabase.from("player_inventory").delete().eq("telegram_id", telegramId),
@@ -105,21 +134,24 @@ export default function Settings() {
     } catch (e) {
       console.error("Reset error:", e);
     }
-    // Reset store + settings to defaults
+    // Clear ALL localStorage/cache so nothing stale remains
+    localStorage.clear();
+    sessionStorage.clear();
+    // Reset store to defaults
     usePlayerStore.setState({
       character: null,
       fear: 0,
-      energy: 50,
+      energy: 100,
       watermelons: 0,
-      bossLevel: 1,
+      bossLevel: 0,
       lastEnergyUpdate: Date.now(),
       inventory: [],
       achievements: [],
       friends: [{ name: "ДанИИл", isAiEnabled: true }],
       quests: [],
       settings: { ...DEFAULT_SETTINGS },
+      dbLoaded: false,
     });
-    localStorage.removeItem("babai-storage");
     setResetting(false);
     navigate("/create");
   };
