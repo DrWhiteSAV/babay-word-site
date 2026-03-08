@@ -121,8 +121,10 @@ export default function ProfilePopup({ name, telegramId, onClose }: ProfilePopup
       }
     : (remoteData || getMockData(name));
 
-  // Resolve items by id
-  const inventoryItems = data.inventory
+  // Resolve ONLY purchased items — filter strictly by what's in inventory list
+  // For mock data (no telegramId, not real user), show empty inventory
+  const rawInventory = (!isUser && !telegramId && !isDanil) ? [] : data.inventory;
+  const inventoryItems = rawInventory
     .map(id => allItems.find(i => i.id === id))
     .filter(Boolean) as typeof allItems;
 
