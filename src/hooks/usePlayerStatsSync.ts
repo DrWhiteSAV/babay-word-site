@@ -149,19 +149,16 @@ export function usePlayerStatsSync() {
             : [];
 
           // Avatar priority:
-          // 1. Real URL stored in player_stats.avatar_url
-          // 2. Latest avatar from gallery
+          // 1. Real URL stored in player_stats.avatar_url  ← ONLY source, no DB writes on load
+          // 2. Latest avatar from gallery (display only, NO write to DB)
           // 3. Fallback
           let avatarUrl = FALLBACK_AVATAR;
           if (isRealAvatar(data.avatar_url)) {
             avatarUrl = data.avatar_url;
           } else if (latestAvatarFromGallery) {
+            // ⚠️ DISPLAY ONLY — do NOT write back to player_stats on app load
             avatarUrl = latestAvatarFromGallery;
-            // Persist the gallery avatar back to player_stats silently
-            supabase.from("player_stats")
-              .update({ avatar_url: latestAvatarFromGallery })
-              .eq("telegram_id", telegramId)
-              .then(() => console.log("[sync] ✅ restored avatar from gallery to player_stats"));
+            console.log("[sync] 📷 using gallery avatar for display (no DB write on load)");
           }
 
           character = {
