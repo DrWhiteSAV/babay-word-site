@@ -445,7 +445,18 @@ export default function Game() {
         setBgImage(bgResult.url);
         setBgGenRetry(false);
         if (tgId) {
-          saveImageToGallery(bgResult.url, tgId, `[backgrounds] Фон: ${diff}`, bgResult.prompt).catch(console.error);
+          const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+          const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          fetch(`${SUPABASE_URL}/functions/v1/save-to-gallery`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({
+              imageUrl: bgResult.url,
+              telegramId: tgId,
+              label: `[backgrounds] Фон: ${diff}`,
+              prompt: bgResult.prompt,
+            }),
+          }).catch(console.error);
         }
       } else {
         setBgGenRetry(true);
