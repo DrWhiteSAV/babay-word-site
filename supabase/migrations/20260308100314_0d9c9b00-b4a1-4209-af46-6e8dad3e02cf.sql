@@ -1,0 +1,1 @@
+UPDATE player_stats SET character_name = REGEXP_REPLACE(character_name, '^Аватар:\s*', '', 'i') WHERE character_name ~* '^Аватар:\s+';

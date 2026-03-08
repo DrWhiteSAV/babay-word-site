@@ -42,7 +42,9 @@ async function generateAndSaveAvatar(
     body: JSON.stringify({
       imageUrl: rawUrl,
       telegramId,
-      label: `[avatars] Аватар: ${character.name} + ${newItemName}`,
+      label: `[avatars] ${character.name} + ${newItemName}`,
+      characterName: character.name,
+      lore: character.lore || null,
       prompt,
     }),
   });

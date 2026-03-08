@@ -42,7 +42,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageUrl, telegramId, label, prompt, lore } = await req.json();
+    const { imageUrl, telegramId, label, prompt, lore, characterName } = await req.json();
 
     if (!imageUrl || !telegramId) {
       return new Response(JSON.stringify({ error: "imageUrl and telegramId are required" }), {
@@ -90,16 +90,27 @@ serve(async (req) => {
     const finalUrl = imgbbUrl || storageUrl || imageUrl;
     console.log(`[save-to-gallery] finalUrl: ${finalUrl}`);
 
-    // 4. Update player_stats avatar_url if this is an avatar image
-    // Check for [avatars] prefix OR "Аватар" anywhere in label
+    // 4. Update player_stats for avatar images: avatar_url + character_name + lore
     const labelLower = (label || "").toLowerCase();
-    if (labelLower.includes("[avatars]") || labelLower.includes("аватар") || labelLower.includes("avatar")) {
+    const isAvatar = labelLower.includes("[avatars]") || labelLower.includes("аватар") || labelLower.includes("avatar");
+    if (isAvatar) {
+      // Build targeted update — only include fields that are provided
+      const statsUpdate: Record<string, unknown> = { avatar_url: finalUrl };
+      // characterName passed explicitly from the client (clean name without "Аватар:" prefix)
+      if (characterName && typeof characterName === "string" && characterName.trim()) {
+        statsUpdate.character_name = characterName.trim();
+        console.log(`[save-to-gallery] setting character_name: ${characterName.trim()}`);
+      }
+      if (lore && typeof lore === "string" && lore.trim()) {
+        statsUpdate.lore = lore.trim();
+        console.log(`[save-to-gallery] setting lore: ${lore.substring(0, 80)}`);
+      }
       const { error: statsError } = await supabase
         .from("player_stats")
-        .update({ avatar_url: finalUrl })
+        .update(statsUpdate)
         .eq("telegram_id", telegramId);
       if (statsError) console.error("[save-to-gallery] player_stats update error:", statsError);
-      else console.log("[save-to-gallery] Updated player_stats avatar_url");
+      else console.log("[save-to-gallery] Updated player_stats:", Object.keys(statsUpdate).join(", "));
     }
 
     // 5. Save to gallery table
