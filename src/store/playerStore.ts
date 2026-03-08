@@ -36,7 +36,7 @@ export type FontFamily =
   | "Neucha"
   | "Ruslan Display"
   | "Tektur";
-export type Theme = "normal" | "cyberpunk";
+export type Theme = "normal" | "cyberpunk" | "horror" | "steampunk" | "anime" | "soviet" | "fairytale" | "cartoon" | "fantasy";
 
 export interface Character {
   name: string;
