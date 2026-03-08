@@ -190,6 +190,356 @@ body {
   box-shadow: inset 0 0 12px rgba(0, 255, 204, 0.04);
 }
 
+/* ── HORROR THEME ── */
+.theme-horror {
+  background-color: #080508 !important;
+  color: #d4a0a0 !important;
+}
+.theme-horror [class*="bg-neutral-900"],
+.theme-horror [class*="bg-neutral-950"],
+.theme-horror [class*="bg-neutral-800"] {
+  background-color: rgba(20, 5, 5, 0.9) !important;
+  border-color: rgba(180, 30, 30, 0.35) !important;
+  box-shadow: inset 0 0 20px rgba(180, 0, 0, 0.06);
+}
+.theme-horror .border,
+.theme-horror [class*="border-neutral"],
+.theme-horror [class*="border-red"] {
+  border-color: rgba(180, 30, 30, 0.4) !important;
+}
+.theme-horror .text-white,
+.theme-horror .text-neutral-200,
+.theme-horror .text-neutral-300 {
+  color: #e8c8c8 !important;
+  text-shadow: 0 0 8px rgba(200, 0, 0, 0.3);
+}
+.theme-horror .text-red-500,
+.theme-horror .text-red-400 {
+  color: #ff3333 !important;
+  text-shadow: 0 0 12px rgba(255, 0, 0, 0.6);
+}
+.theme-horror .hub-play-btn {
+  background-color: #8b0000 !important;
+  border-color: #cc0000 !important;
+  box-shadow: 0 0 20px rgba(200, 0, 0, 0.5) !important;
+}
+.theme-horror button:not(.cutscene-skip-btn):hover {
+  background-color: rgba(180, 0, 0, 0.2) !important;
+  box-shadow: 0 0 12px rgba(200, 0, 0, 0.3) !important;
+}
+.theme-horror::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(100, 0, 0, 0.25) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── STEAMPUNK THEME ── */
+.theme-steampunk {
+  background-color: #1a1005 !important;
+  color: #d4b896 !important;
+}
+.theme-steampunk [class*="bg-neutral-900"],
+.theme-steampunk [class*="bg-neutral-950"],
+.theme-steampunk [class*="bg-neutral-800"] {
+  background-color: rgba(35, 22, 8, 0.92) !important;
+  border-color: rgba(180, 130, 60, 0.35) !important;
+  box-shadow: inset 0 0 16px rgba(180, 130, 60, 0.05);
+}
+.theme-steampunk .border,
+.theme-steampunk [class*="border-neutral"],
+.theme-steampunk [class*="border-red"] {
+  border-color: rgba(180, 130, 60, 0.4) !important;
+}
+.theme-steampunk .text-white,
+.theme-steampunk .text-neutral-200,
+.theme-steampunk .text-neutral-300 {
+  color: #f0dab8 !important;
+}
+.theme-steampunk .text-red-500,
+.theme-steampunk .text-red-400,
+.theme-steampunk .text-red-600 {
+  color: #c8821a !important;
+  text-shadow: 0 0 8px rgba(200, 130, 26, 0.5);
+}
+.theme-steampunk .hub-play-btn {
+  background: linear-gradient(135deg, #8b5e1a, #c89030) !important;
+  border-color: #d4a030 !important;
+  box-shadow: 0 0 15px rgba(180, 130, 30, 0.5) !important;
+  color: #1a1005 !important;
+}
+.theme-steampunk button:not(.cutscene-skip-btn):hover {
+  background-color: rgba(180, 130, 30, 0.15) !important;
+  border-color: rgba(180, 130, 60, 0.5) !important;
+}
+.theme-steampunk::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(180, 130, 30, 0.03) 0px, rgba(180, 130, 30, 0.03) 1px, transparent 1px, transparent 12px),
+    repeating-linear-gradient(-45deg, rgba(180, 130, 30, 0.03) 0px, rgba(180, 130, 30, 0.03) 1px, transparent 1px, transparent 12px);
+  pointer-events: none;
+  z-index: 0;
+}
+.theme-steampunk .fog-layer,
+.theme-steampunk .fog-layer-2 {
+  filter: brightness(0) sepia(1) hue-rotate(20deg) opacity(0.3);
+}
+
+/* ── ANIME THEME ── */
+.theme-anime {
+  background-color: #0a0520 !important;
+  color: #f0d0f8 !important;
+}
+.theme-anime [class*="bg-neutral-900"],
+.theme-anime [class*="bg-neutral-950"],
+.theme-anime [class*="bg-neutral-800"] {
+  background-color: rgba(20, 10, 40, 0.88) !important;
+  border-color: rgba(200, 100, 230, 0.3) !important;
+  box-shadow: inset 0 0 16px rgba(180, 80, 220, 0.05);
+}
+.theme-anime .border,
+.theme-anime [class*="border-neutral"],
+.theme-anime [class*="border-red"] {
+  border-color: rgba(200, 100, 230, 0.35) !important;
+}
+.theme-anime .text-white,
+.theme-anime .text-neutral-200,
+.theme-anime .text-neutral-300 {
+  color: #f5e0ff !important;
+}
+.theme-anime .text-red-500,
+.theme-anime .text-red-400,
+.theme-anime .text-red-600 {
+  color: #e060ff !important;
+  text-shadow: 0 0 10px rgba(220, 80, 255, 0.5);
+}
+.theme-anime .hub-play-btn {
+  background: linear-gradient(135deg, #c030e0, #8020c8) !important;
+  border-color: #e060ff !important;
+  box-shadow: 0 0 20px rgba(200, 60, 240, 0.5) !important;
+}
+.theme-anime button:not(.cutscene-skip-btn):hover {
+  background-color: rgba(180, 60, 220, 0.18) !important;
+  box-shadow: 0 0 12px rgba(200, 80, 240, 0.3) !important;
+}
+.theme-anime::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at top, rgba(120, 30, 180, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at bottom, rgba(40, 10, 80, 0.3) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.theme-anime .fog-layer,
+.theme-anime .fog-layer-2 {
+  filter: brightness(0) sepia(1) hue-rotate(240deg) saturate(2) opacity(0.25);
+}
+
+/* ── SOVIET THEME ── */
+.theme-soviet {
+  background-color: #0d0d0a !important;
+  color: #c8c0a8 !important;
+}
+.theme-soviet [class*="bg-neutral-900"],
+.theme-soviet [class*="bg-neutral-950"],
+.theme-soviet [class*="bg-neutral-800"] {
+  background-color: rgba(20, 18, 12, 0.92) !important;
+  border-color: rgba(180, 160, 60, 0.3) !important;
+}
+.theme-soviet .border,
+.theme-soviet [class*="border-neutral"],
+.theme-soviet [class*="border-red"] {
+  border-color: rgba(180, 160, 60, 0.35) !important;
+}
+.theme-soviet .text-white,
+.theme-soviet .text-neutral-200,
+.theme-soviet .text-neutral-300 {
+  color: #ddd8c0 !important;
+}
+.theme-soviet .text-red-500,
+.theme-soviet .text-red-400,
+.theme-soviet .text-red-600 {
+  color: #cc3333 !important;
+  text-shadow: none;
+}
+.theme-soviet .hub-play-btn {
+  background-color: #aa2222 !important;
+  border: 2px solid #cc3333 !important;
+  box-shadow: none !important;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.theme-soviet button:not(.cutscene-skip-btn) {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.theme-soviet button:not(.cutscene-skip-btn):hover {
+  background-color: rgba(160, 30, 30, 0.15) !important;
+}
+.theme-soviet::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(180, 160, 60, 0.03) 0px, rgba(180, 160, 60, 0.03) 1px, transparent 1px, transparent 30px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── FAIRYTALE THEME ── */
+.theme-fairytale {
+  background-color: #050d08 !important;
+  color: #c8e0c0 !important;
+}
+.theme-fairytale [class*="bg-neutral-900"],
+.theme-fairytale [class*="bg-neutral-950"],
+.theme-fairytale [class*="bg-neutral-800"] {
+  background-color: rgba(8, 20, 10, 0.9) !important;
+  border-color: rgba(80, 160, 80, 0.3) !important;
+  box-shadow: inset 0 0 16px rgba(40, 120, 40, 0.05);
+}
+.theme-fairytale .border,
+.theme-fairytale [class*="border-neutral"],
+.theme-fairytale [class*="border-red"] {
+  border-color: rgba(80, 160, 80, 0.35) !important;
+}
+.theme-fairytale .text-white,
+.theme-fairytale .text-neutral-200,
+.theme-fairytale .text-neutral-300 {
+  color: #d8f0d0 !important;
+}
+.theme-fairytale .text-red-500,
+.theme-fairytale .text-red-400,
+.theme-fairytale .text-red-600 {
+  color: #80d840 !important;
+  text-shadow: 0 0 10px rgba(80, 200, 40, 0.5);
+}
+.theme-fairytale .hub-play-btn {
+  background: linear-gradient(135deg, #2d6b20, #50a030) !important;
+  border-color: #70c040 !important;
+  box-shadow: 0 0 15px rgba(60, 160, 40, 0.4) !important;
+}
+.theme-fairytale button:not(.cutscene-skip-btn):hover {
+  background-color: rgba(50, 140, 30, 0.15) !important;
+}
+.theme-fairytale .fog-layer,
+.theme-fairytale .fog-layer-2 {
+  filter: brightness(0) sepia(1) hue-rotate(90deg) saturate(1.5) opacity(0.35);
+}
+.theme-fairytale::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at bottom, rgba(20, 80, 20, 0.2) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── CARTOON THEME ── */
+.theme-cartoon {
+  background-color: #0c0820 !important;
+  color: #f0e8ff !important;
+}
+.theme-cartoon [class*="bg-neutral-900"],
+.theme-cartoon [class*="bg-neutral-950"],
+.theme-cartoon [class*="bg-neutral-800"] {
+  background-color: rgba(20, 15, 40, 0.9) !important;
+  border-color: rgba(120, 200, 255, 0.35) !important;
+  box-shadow: inset 0 0 16px rgba(100, 180, 255, 0.04);
+}
+.theme-cartoon .border,
+.theme-cartoon [class*="border-neutral"],
+.theme-cartoon [class*="border-red"] {
+  border-color: rgba(120, 200, 255, 0.3) !important;
+}
+.theme-cartoon .text-white,
+.theme-cartoon .text-neutral-200,
+.theme-cartoon .text-neutral-300 {
+  color: #f8f0ff !important;
+}
+.theme-cartoon .text-red-500,
+.theme-cartoon .text-red-400,
+.theme-cartoon .text-red-600 {
+  color: #ff8040 !important;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+}
+.theme-cartoon .hub-play-btn {
+  background: linear-gradient(135deg, #ff6030, #ff8040) !important;
+  border: 3px solid #000 !important;
+  box-shadow: 4px 4px 0 #000 !important;
+  border-radius: 12px !important;
+  clip-path: none !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+.theme-cartoon button:not(.cutscene-skip-btn) {
+  border-radius: 12px !important;
+}
+.theme-cartoon button:not(.cutscene-skip-btn):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.4) !important;
+}
+.theme-cartoon .fog-layer,
+.theme-cartoon .fog-layer-2 {
+  display: none;
+}
+
+/* ── FANTASY THEME ── */
+.theme-fantasy {
+  background-color: #0a0810 !important;
+  color: #d8c8e8 !important;
+}
+.theme-fantasy [class*="bg-neutral-900"],
+.theme-fantasy [class*="bg-neutral-950"],
+.theme-fantasy [class*="bg-neutral-800"] {
+  background-color: rgba(18, 12, 28, 0.9) !important;
+  border-color: rgba(160, 120, 200, 0.3) !important;
+  box-shadow: inset 0 0 16px rgba(130, 80, 180, 0.05);
+}
+.theme-fantasy .border,
+.theme-fantasy [class*="border-neutral"],
+.theme-fantasy [class*="border-red"] {
+  border-color: rgba(160, 120, 200, 0.35) !important;
+}
+.theme-fantasy .text-white,
+.theme-fantasy .text-neutral-200,
+.theme-fantasy .text-neutral-300 {
+  color: #ede0f8 !important;
+}
+.theme-fantasy .text-red-500,
+.theme-fantasy .text-red-400,
+.theme-fantasy .text-red-600 {
+  color: #c080ff !important;
+  text-shadow: 0 0 10px rgba(180, 100, 255, 0.5);
+}
+.theme-fantasy .hub-play-btn {
+  background: linear-gradient(135deg, #5020a0, #8040c8) !important;
+  border-color: #c080ff !important;
+  box-shadow: 0 0 20px rgba(140, 60, 220, 0.5) !important;
+}
+.theme-fantasy button:not(.cutscene-skip-btn):hover {
+  background-color: rgba(120, 60, 180, 0.18) !important;
+  box-shadow: 0 0 12px rgba(140, 80, 200, 0.3) !important;
+}
+.theme-fantasy .fog-layer,
+.theme-fantasy .fog-layer-2 {
+  filter: brightness(0) sepia(1) hue-rotate(260deg) saturate(1.5) opacity(0.3);
+}
+.theme-fantasy::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at top right, rgba(80, 30, 140, 0.2) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Cutscene overlay — never affected by theme transforms */
 .cutscene-overlay {
   clip-path: none !important;
