@@ -22,8 +22,10 @@ import { useTelegram } from "../context/TelegramContext";
 export default function GameHub() {
   const navigate = useNavigate();
   const { character, dbLoaded, fear, watermelons, energy, lastEnergyUpdate, storeConfig } = usePlayerStore();
+  const { profile } = useTelegram();
   const [infoModal, setInfoModal] = useState<CurrencyType>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const pvpLobby = usePvpLobby(profile?.telegram_id);
 
   useEffect(() => {
     const calc = () => {
