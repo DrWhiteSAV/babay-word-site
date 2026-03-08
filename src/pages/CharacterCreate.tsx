@@ -119,7 +119,7 @@ export default function CharacterCreate() {
         .replace(/^[-*•]\s*/, "")
         .replace(/["""«»]/g, "")
         .trim();
-      const baseName = cleaned || (g === "Бабай" ? "Бурьяник" : "Тьмарица");
+      const baseName = cleaned && !/пижам/i.test(cleaned) ? cleaned : (g === "Бабай" ? "Бурьяник Лунный" : "Тьмарица Сырая");
       const { finalName, isDuplicate } = await ensureUniqueName(baseName);
       setGeneratedName(finalName);
       setNameHasDuplicate(isDuplicate);
