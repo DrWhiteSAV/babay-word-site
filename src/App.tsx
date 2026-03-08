@@ -73,13 +73,13 @@ function AppContent() {
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const restartSentRef = useRef(false);
 
-  // Send /restart to ProTalk once when profile is loaded
+  // Send /restart to ProTalk once when profile is loaded — skip in Lovable editor
   useEffect(() => {
-    if (!isLoading && profile && !restartSentRef.current) {
+    if (!isLoading && profile && !restartSentRef.current && entryMode !== "lovable") {
       restartSentRef.current = true;
       protalkGenerateText("/restart", profile.telegram_id).catch(() => {});
     }
-  }, [isLoading, profile]);
+  }, [isLoading, profile, entryMode]);
 
   // Sync player stats and achievements
   usePlayerStatsSync();
