@@ -40,7 +40,15 @@ const normalizeSettings = (raw: unknown) => {
 };
 
 export function usePlayerStatsSync() {
-  const { profile } = useTelegram();
+  const { profile, isLoading: tgLoading } = useTelegram();
+
+  // ─── FALLBACK: if TG auth finished but no telegram_id (browser mode) ────────
+  useEffect(() => {
+    if (tgLoading) return;
+    if (profile?.telegram_id) return; // handled by main load effect
+    // No telegram_id after auth finished → mark as loaded to unblock pages
+    usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
+  }, [tgLoading, profile?.telegram_id]);
 
   // ─── LOAD FROM DB ───────────────────────────────────────────────────────────
   useEffect(() => {
