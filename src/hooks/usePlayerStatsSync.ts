@@ -277,6 +277,14 @@ export function usePlayerStatsSync() {
   ]);
 
   // ─── AUTO-SYNC TO DB ─────────────────────────────────────────────────────────
+  // CRITICAL: This effect ONLY writes gameplay stats (fear, watermelons, boss_level, telekinesis_level, energy).
+  const lastWrittenRef = useRef<string | null>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    lastWrittenRef.current = null;
+    loadedRef.current = false;
+  }, [profile?.telegram_id]);
 
   // Helper: write gameplay stats to DB immediately (no delay)
   interface GameplayPayload {
