@@ -272,13 +272,48 @@ ${form.message}`;
   const handleSendBroadcast = async (notif: AdminNotification) => {
     setSending(notif.id);
     try {
-      const { data: users } = await (supabase as any)
-        .from("profiles")
-        .select("telegram_id, first_name, username, telegram_blocked")
-        .eq("telegram_blocked", false)
-        .limit(500);
+      // Load profiles + player_stats for full macro substitution
+      const [profilesRes, statsRes] = await Promise.all([
+        (supabase as any)
+          .from("profiles")
+          .select("telegram_id, first_name, username, telegram_blocked")
+          .eq("telegram_blocked", false)
+          .limit(500),
+        (supabase as any)
+          .from("player_stats")
+          .select("telegram_id, character_name, fear, watermelons, energy, boss_level, telekinesis_level, lore")
+          .limit(500),
+      ]);
 
-      if (!users) return;
+      const users = profilesRes.data || [];
+      if (!users.length) return;
+
+      // Build stats map
+      const statsMap = new Map<number, Record<string, string>>(
+        (statsRes.data || []).map((s: any) => [s.telegram_id, {
+          name: s.character_name || '',
+          fear: String(s.fear ?? 0),
+          watermelons: String(s.watermelons ?? 0),
+          energy: String(s.energy ?? 0),
+          boss_level: String(s.boss_level ?? 1),
+          telekinesis: String(s.telekinesis_level ?? 1),
+          lore: s.lore || '',
+        }])
+      );
+
+      const applyAllMacros = (text: string, user: any) => {
+        const ps = statsMap.get(user.telegram_id) || {};
+        return text
+          .replace(/\{first_name\}/g, user.first_name || '')
+          .replace(/\{username\}/g, user.username || '')
+          .replace(/\{name\}/g, ps.name || user.first_name || '')
+          .replace(/\{fear\}/g, ps.fear || '0')
+          .replace(/\{watermelons\}/g, ps.watermelons || '0')
+          .replace(/\{energy\}/g, ps.energy || '0')
+          .replace(/\{boss_level\}/g, ps.boss_level || '1')
+          .replace(/\{telekinesis\}/g, ps.telekinesis || '1')
+          .replace(/\{lore\}/g, ps.lore || '');
+      };
 
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -286,12 +321,8 @@ ${form.message}`;
       let sent = 0, failed = 0, blocked = 0;
 
       for (const user of users) {
-        const personalizedTitle = notif.title
-          .replace('{first_name}', user.first_name || '')
-          .replace('{username}', user.username || '');
-        const personalizedMsg = notif.message
-          .replace('{first_name}', user.first_name || '')
-          .replace('{username}', user.username || '');
+        const personalizedTitle = applyAllMacros(notif.title, user);
+        const personalizedMsg = applyAllMacros(notif.message, user);
 
         try {
           const res = await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
