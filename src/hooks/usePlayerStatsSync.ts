@@ -61,7 +61,6 @@ const normalizeSettings = (raw: unknown) => {
 export function usePlayerStatsSync() {
   const store = usePlayerStore();
   const { profile } = useTelegram();
-  const hasLoadedFromDB = useRef(false);
   const activeTelegramId = useRef<number | null>(null);
   const lastKnownAvatarUrl = useRef<string>(FALLBACK_AVATAR);
 
@@ -70,9 +69,11 @@ export function usePlayerStatsSync() {
     const telegramId = profile?.telegram_id;
     if (!telegramId) return;
 
-    // Reset on user change
-    hasLoadedFromDB.current = false;
+    // Reset dbLoaded on every new user/session — force fresh DB check
     activeTelegramId.current = telegramId;
+    usePlayerStore.setState({ dbLoaded: false, gameStatus: "loading" });
+
+    let cancelled = false;
 
     const loadStats = async () => {
       try {
@@ -90,7 +91,7 @@ export function usePlayerStatsSync() {
             .limit(12),
         ]);
 
-        if (activeTelegramId.current !== telegramId) return;
+        if (cancelled || activeTelegramId.current !== telegramId) return;
 
         const updates: Record<string, any> = {};
 
@@ -118,6 +119,8 @@ export function usePlayerStatsSync() {
 
         if (error) {
           console.error("[usePlayerStatsSync] player_stats load error:", error.message);
+          // Even on error, mark as loaded so sync doesn't hang
+          usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
           return;
         }
 
@@ -201,6 +204,8 @@ export function usePlayerStatsSync() {
           updates.character = null;
         }
 
+        // CRITICAL: Set dbLoaded=true as the LAST step, only after ALL data is loaded
+        // This ensures the sync-to-DB effect only fires AFTER the store has fresh DB data
         updates.dbLoaded = true;
         usePlayerStore.setState(updates);
 
@@ -212,26 +217,26 @@ export function usePlayerStatsSync() {
         });
       } catch (err) {
         console.error("[usePlayerStatsSync] Unexpected error:", err);
-        if (activeTelegramId.current === telegramId) {
-          hasLoadedFromDB.current = true;
-          usePlayerStore.setState({ dbLoaded: true });
-        }
-      } finally {
-        if (activeTelegramId.current === telegramId) {
-          hasLoadedFromDB.current = true;
+        if (!cancelled && activeTelegramId.current === telegramId) {
+          usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
         }
       }
     };
 
     loadStats();
+    return () => { cancelled = true; };
   }, [profile?.telegram_id]);
 
   // ─── SYNC TO DB (debounced, only after DB hydration) ──────────────────────
+  // CRITICAL: store.dbLoaded (Zustand state) is used — NOT a ref — so this
+  // effect correctly re-evaluates when dbLoaded transitions false→true.
+  // This prevents stale localStorage values from triggering a DB write.
   useEffect(() => {
-    if (!profile?.telegram_id || !store.character) return;
-    if (!hasLoadedFromDB.current) return;
-    // CRITICAL: Never write to DB if game_status is 'reset' — prevents stale data from overwriting a reset
-    if (store.gameStatus === "reset") return;
+    if (!profile?.telegram_id) return;
+    if (!store.dbLoaded) return; // ← Gate #1: Wait for fresh DB load
+    if (!store.character) return; // ← Gate #2: No character = nothing to sync
+    // Gate #3: Never write to DB if game_status is 'reset' or 'loading' or 'new'
+    if (store.gameStatus === "reset" || store.gameStatus === "loading" || store.gameStatus === "new") return;
 
     const currentAvatar = isHttpUrl(store.character.avatarUrl)
       ? store.character.avatarUrl
@@ -288,6 +293,7 @@ export function usePlayerStatsSync() {
     return () => clearTimeout(timer);
   }, [
     profile?.telegram_id,
+    store.dbLoaded, // ← MUST be in deps so effect fires when DB load completes
     store.fear,
     store.energy,
     store.watermelons,
