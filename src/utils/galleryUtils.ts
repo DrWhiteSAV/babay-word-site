@@ -6,7 +6,9 @@ export async function saveImageToGallery(
   imageUrl: string,
   telegramId: number,
   label?: string,
-  prompt?: string
+  prompt?: string,
+  characterName?: string,
+  lore?: string,
 ): Promise<string | null> {
   try {
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -18,7 +20,7 @@ export async function saveImageToGallery(
         "Content-Type": "application/json",
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ imageUrl, telegramId, label, prompt }),
+      body: JSON.stringify({ imageUrl, telegramId, label, prompt, characterName, lore }),
     });
 
     const text = await resp.text();

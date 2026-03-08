@@ -212,7 +212,8 @@ export default function CharacterCreate() {
         body: JSON.stringify({
           imageUrl: rawUrl,
           telegramId: tgId,
-          label: `[avatars] Аватар: ${name}`,
+          label: `[avatars] ${name}`,
+          characterName: name,
           prompt,
           lore: generatedLore || null,
         }),
