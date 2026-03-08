@@ -254,12 +254,12 @@ export default function Game() {
     bossImageReadyRef.current = false;
     setBossImageReady(false);
     setBossGenRetry(false);
-    setBossPreparationCountdown(60);
+    setBossPreparationCountdown(120);
     setIsBossPreparation(true);
     setIsBossBattle(false);
 
-    // Start 60s countdown
-    let countdown = 60;
+    // Start 120s countdown
+    let countdown = 120;
     if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
     bossPreparationIntervalRef.current = setInterval(() => {
       countdown -= 1;
@@ -280,8 +280,8 @@ export default function Game() {
   const retryBossImageGen = useCallback((currentStage: number) => {
     setBossGenRetry(false);
     bossImageReadyRef.current = false;
-    setBossPreparationCountdown(60);
-    let countdown = 60;
+    setBossPreparationCountdown(120);
+    let countdown = 120;
     if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
     bossPreparationIntervalRef.current = setInterval(() => {
       countdown -= 1;
@@ -348,9 +348,9 @@ export default function Game() {
         difficulty: diff,
       };
 
-      // Start 60s countdown for background gen
-      let countdown = 60;
-      setBgGenCountdown(60);
+      // Start 120s countdown for background gen
+      let countdown = 120;
+      setBgGenCountdown(120);
       if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
       bgGenIntervalRef.current = setInterval(() => {
         countdown -= 1;
@@ -365,7 +365,7 @@ export default function Game() {
 
       try {
         const bgPromise = generateBackgroundImage(1, character.style, charData, tgId);
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000));
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 120000));
         const bgResult = await Promise.race([bgPromise, timeoutPromise]);
 
         if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
@@ -401,7 +401,7 @@ export default function Game() {
     if (!character) return;
     setBgGenRetry(false);
     bgGenResolvedRef.current = false;
-    setBgGenCountdown(60);
+    setBgGenCountdown(120);
     setIsGeneratingWorld(true);
 
     const diff = difficulty || "Сложная";
@@ -414,7 +414,7 @@ export default function Game() {
       difficulty: diff,
     };
 
-    let countdown = 60;
+    let countdown = 120;
     if (bgGenIntervalRef.current) clearInterval(bgGenIntervalRef.current);
     bgGenIntervalRef.current = setInterval(() => {
       countdown -= 1;
