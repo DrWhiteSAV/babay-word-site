@@ -319,33 +319,21 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* Gallery Preview */}
-        <section className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
-          <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center justify-between">
-            <span className="flex items-center gap-2"><ImageIcon size={18} /> Галерея</span>
-            <button 
-              onClick={() => navigate("/gallery")}
-              className="text-xs text-red-500 font-bold hover:underline"
-            >
-              СМОТРЕТЬ ВСЕ
-            </button>
-          </h3>
-          <div className="grid grid-cols-4 gap-2">
-            {gallery.slice(0, 4).map((img, i) => (
-              <div 
-                key={i} 
-                className="aspect-square rounded-lg overflow-hidden border border-neutral-800 cursor-pointer"
-                onClick={() => navigate("/gallery")}
-              >
-                <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" crossOrigin="anonymous" />
-              </div>
-            ))}
-            {gallery.length < 4 && Array.from({ length: 4 - gallery.length }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-lg bg-neutral-950 border border-neutral-800 border-dashed flex items-center justify-center text-neutral-800">
-                <ImageIcon size={16} />
-              </div>
-            ))}
+        {/* Gallery Link */}
+        <section
+          className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex items-center justify-between cursor-pointer hover:border-neutral-600 transition-colors"
+          onClick={() => navigate("/gallery")}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center text-red-500">
+              <ImageIcon size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Галерея</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">Аватары, фоны и боссы</p>
+            </div>
           </div>
+          <span className="text-xs text-red-500 font-bold">ОТКРЫТЬ →</span>
         </section>
 
         {/* Lore */}
