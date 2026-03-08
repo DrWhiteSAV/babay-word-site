@@ -47,8 +47,9 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     const videos = isPortrait ? videoCutscenes.vertical : videoCutscenes.horizontal;
     
     if (videos && videos.length > 0) {
-      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-      setVideoUrl(randomVideo);
+      const raw = videos[Math.floor(Math.random() * videos.length)];
+      // Use cached version if already downloaded, else direct URL (fallback)
+      resolveUrl(raw).then(resolved => setVideoUrl(resolved));
     } else {
       // Fallback if no videos are configured
       onComplete();
