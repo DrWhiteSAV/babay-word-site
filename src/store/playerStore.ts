@@ -395,8 +395,8 @@ export const usePlayerStore = create<PlayerState>()(
       }
     }),
     {
-      // Version bumped to "v2" to invalidate old cache that may contain stale settings
-      name: "babai-ui-prefs-v2",
+      // Version bumped to "v3" to invalidate old cache that may contain stale gameStatus
+      name: "babai-ui-prefs-v3",
       // DO NOT persist settings — they always come from DB (custom_settings in player_stats)
       // DO NOT persist character/stats — always loaded from DB on mount
       partialize: (state) => ({
