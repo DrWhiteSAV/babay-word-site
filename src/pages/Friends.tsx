@@ -573,6 +573,8 @@ export default function Friends() {
           )}
         </section>
 
+        {/* Friends List */}
+        <section>
           <h2 className="text-lg font-bold mb-4 text-white">Список друзей ({friends.length})</h2>
           {/* ДанИИл — hardcoded built-in AI friend, always first */}
           <div className="space-y-3">
