@@ -300,7 +300,7 @@ export function usePlayerStatsSync() {
       } catch { /**/ }
     }
 
-    const payload = JSON.parse(snapshot);
+    const payload = JSON.parse(snapshot) as GameplayPayload;
 
     // ⚡ IMMEDIATE write when energy is spent (decreased) or hits 0 — no delay
     const prevEnergy = prev ? (JSON.parse(prev) as Record<string, unknown>).energy as number : null;
