@@ -233,6 +233,7 @@ ${lastMsgLine}
       friend_name: ownerStats?.character_name || owner_character_name || "user",
       chat_key,
       sender_telegram_id: owner_telegram_id,
+      is_ai_reply: true,
     }).select("id").single();
 
     console.log("[ai-sub] Reply saved:", inserted?.id);
