@@ -27,11 +27,14 @@ export default function GameHub() {
     );
   }
 
-  // DB loaded but no character → go home (inline, no race condition)
-  if (!character) {
-    navigate("/", { replace: true });
-    return null;
-  }
+  // DB loaded but no character → go home
+  useEffect(() => {
+    if (dbLoaded && !character) {
+      navigate("/", { replace: true });
+    }
+  }, [dbLoaded, character, navigate]);
+
+  if (dbLoaded && !character) return null;
 
   return (
     <motion.div
