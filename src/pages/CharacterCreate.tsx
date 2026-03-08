@@ -104,7 +104,7 @@ export default function CharacterCreate() {
   const [dbTemplates, setDbTemplates] = useState<Array<{ id: string; image_url: string; label: string | null }>>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-  // Load last 15 avatars for the selected gender from DB
+  // Load avatars filtered by gender AND style from DB
   useEffect(() => {
     if (!gender) return;
     setLoadingTemplates(true);
@@ -114,21 +114,32 @@ export default function CharacterCreate() {
       .select("id, image_url, label")
       .ilike("label", "%[avatars]%")
       .order("created_at", { ascending: false })
-      .limit(60)
+      .limit(100)
       .then(({ data }) => {
-        const filtered = (data || [])
-          .filter(d => {
-            if (!d.label) return true;
-            // Match gender: check if label contains gender keyword (from lore or name)
-            // We use the gender tag stored in avatars table via label — just show all if no gender info
-            const lower = d.label.toLowerCase();
-            return lower.includes(genderLabel.toLowerCase()) || (!lower.includes("бабай") && !lower.includes("бабайка"));
-          })
-          .slice(0, 15);
-        setDbTemplates(filtered.length > 0 ? filtered : (data || []).slice(0, 15));
+        const all = data || [];
+        // Filter by gender
+        const byGender = all.filter(d => {
+          if (!d.label) return true;
+          const lower = d.label.toLowerCase();
+          return lower.includes(genderLabel.toLowerCase()) || (!lower.includes("бабай") && !lower.includes("бабайка"));
+        });
+        // If style is selected, also filter by style
+        if (style) {
+          const byStyle = byGender.filter(d => {
+            if (!d.label) return false;
+            return d.label.toLowerCase().includes(style.toLowerCase());
+          });
+          if (byStyle.length >= 3) {
+            setDbTemplates(byStyle.slice(0, 15));
+            setLoadingTemplates(false);
+            return;
+          }
+        }
+        // Fallback: gender-only filtered or all
+        setDbTemplates(byGender.length > 0 ? byGender.slice(0, 15) : all.slice(0, 15));
         setLoadingTemplates(false);
       });
-  }, [gender]);
+  }, [gender, style]);
 
   const [generatedName, setGeneratedName] = useState<string>("");
   const [generatedLore, setGeneratedLore] = useState<string>("");
