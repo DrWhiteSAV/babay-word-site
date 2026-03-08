@@ -165,12 +165,15 @@ export default function CharacterCreate() {
     }
   };
 
-  const doGenerateName = useCallback(async (g: Gender) => {
+  const doGenerateName = useCallback(async (g: Gender, excludedNames: string[] = []) => {
     setIsGeneratingName(true);
     setNameTimeout(false);
     setNameCountdown(NAME_TIMEOUT);
     const genderDesc = g === "Бабай" ? "мужской" : "женский";
-    const prompt = `Придумай одно уникальное, жутковатое и немного абсурдное имя для славянского духа. Пол: ${genderDesc}. Формат: необычное имя + прилагательное. Например: "Дзяка Мокрая", "Журон Подвальный", "Хрыпач Чердачный", "Кряхта Ржавая". Для ${genderDesc} рода используй соответствующее окончание прилагательного. Запрещены слова: "Бабай", "Дух", "Леший". Верни ТОЛЬКО имя (2 слова), без пояснений, кавычек, нумерации.`;
+    const excludeStr = excludedNames.length > 0
+      ? ` Запрещено использовать уже занятые имена: ${excludedNames.join(", ")}.`
+      : "";
+    const prompt = `Придумай одно уникальное, жутковатое и немного абсурдное имя для славянского духа. Пол: ${genderDesc}. Формат: необычное имя + прилагательное. Например: "Дзяка Мокрая", "Журон Подвальный", "Хрыпач Чердачный", "Кряхта Ржавая". Для ${genderDesc} рода используй соответствующее окончание прилагательного. Запрещены слова: "Бабай", "Дух", "Леший".${excludeStr} Верни ТОЛЬКО имя (2 слова), без пояснений, кавычек, нумерации.`;
 
     let timedOut = false;
     let resolved = false;
@@ -186,8 +189,16 @@ export default function CharacterCreate() {
         .trim();
       const baseName = cleaned && !/пижам/i.test(cleaned) ? cleaned : (g === "Бабай" ? "Бурьяник Лунный" : "Тьмарица Сырая");
       const { finalName, isDuplicate } = await ensureUniqueName(baseName);
+      if (isDuplicate) {
+        // Name is taken — retry once with memory of excluded names
+        const newExcluded = [...excludedNames, baseName];
+        setNameCountdown(0);
+        setIsGeneratingName(false);
+        await doGenerateName(g, newExcluded);
+        return;
+      }
       setGeneratedName(finalName);
-      setNameHasDuplicate(isDuplicate);
+      setNameHasDuplicate(false);
       setNameLocked(true);
       setNameCountdown(0);
       setIsGeneratingName(false);
