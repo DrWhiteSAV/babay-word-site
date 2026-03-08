@@ -51,6 +51,10 @@ export default function PvpRoom() {
   const [timerLeft, setTimerLeft] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Connection test
+  const [connStatus, setConnStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
+  const [connMessage, setConnMessage] = useState("");
+
   // Live chat state
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
