@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion, AnimatePresence } from "motion/react";
-import { MessageSquare, Send, ImagePlus, X, Users, Reply, Check, CheckCheck, RefreshCw, AlertTriangle, Edit2, Bot, Pencil } from "lucide-react";
+import { MessageSquare, Send, ImagePlus, X, Users, Reply, Check, CheckCheck, RefreshCw, AlertTriangle, Edit2, Bot } from "lucide-react";
 import { generateFriendChat, generateMyAiReply } from "../services/ai";
 import ProfilePopup from "../components/ProfilePopup";
 import Header from "../components/Header";
@@ -10,6 +10,36 @@ import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
 import { pushNotification } from "../components/NotificationPopup";
+
+const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000;
+
+async function isUserOnline(telegramId: number): Promise<boolean> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("updated_at")
+    .eq("telegram_id", telegramId)
+    .single();
+  if (!data?.updated_at) return false;
+  return Date.now() - new Date(data.updated_at).getTime() < ONLINE_THRESHOLD_MS;
+}
+
+async function sendTelegramNotification(telegramId: number, text: string) {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ telegram_id: telegramId, caption: text }),
+    });
+  } catch (e) {
+    console.warn("[Chat] TG notify error:", e);
+  }
+}
 
 const AI_REPLY_TIMEOUT = 20;
 
@@ -245,6 +275,47 @@ export default function Chat() {
       chat_key: chatKey,
       sender_telegram_id: role === 'user' ? profile?.telegram_id : null,
     } as any);
+
+    // Notify recipient via Telegram if they're offline (only for user-sent messages)
+    if (role !== 'user') return;
+    const myName = character?.name || senderName;
+    const previewText = msg.imageUrl ? "📷 Фото" : (msg.text || "").slice(0, 100);
+
+    if (friend && friendTelegramId) {
+      const online = await isUserOnline(friendTelegramId);
+      if (!online) {
+        await sendTelegramNotification(
+          friendTelegramId,
+          `💬 *Новое сообщение от ${myName}*\n\n${previewText}`
+        );
+      }
+    } else if (group) {
+      // For group chats: notify all real (non-AI) members that are offline
+      // Check if message is a @mention or a reply
+      const isMention = (name: string) => msg.text?.includes(`@${name}`);
+      const isReply = !!msg.replyTo;
+
+      // Fetch telegram_ids of group members
+      const memberNames = group.members.filter(m => m !== "ДанИИл" && m !== character?.name);
+      if (memberNames.length === 0) return;
+      const { data: memberStats } = await supabase
+        .from("player_stats")
+        .select("telegram_id, character_name")
+        .in("character_name", memberNames);
+
+      for (const member of (memberStats || [])) {
+        if (!member.telegram_id) continue;
+        const shouldNotify = isMention(member.character_name || "") || isReply;
+        if (!shouldNotify) continue;
+        const online = await isUserOnline(member.telegram_id);
+        if (!online) {
+          await sendTelegramNotification(
+            member.telegram_id,
+            `💬 *${myName}* упомянул тебя в группе *${group.name}*\n\n${previewText}`
+          );
+        }
+      }
+    }
   };
 
   const doAiReply = useCallback(async (

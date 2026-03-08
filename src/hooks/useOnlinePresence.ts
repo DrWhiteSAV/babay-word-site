@@ -3,26 +3,38 @@ import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 
 const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes = online
-const HEARTBEAT_INTERVAL_MS = 60 * 1000;   // update own presence every 60s
+const DEBOUNCE_MS = 30_000; // update DB at most every 30s on activity
 
-/** Write current user's heartbeat to profiles.updated_at */
+/**
+ * Write current user's heartbeat to profiles.updated_at on activity.
+ * Much cheaper than a fixed interval: only fires when the user is actually
+ * doing something (click / touch / keydown).
+ */
 export function useOnlinePresence() {
   const { profile } = useTelegram();
+  const lastBeatRef = useRef<number>(0);
 
   useEffect(() => {
     const tid = profile?.telegram_id;
     if (!tid) return;
 
     const beat = async () => {
+      const now = Date.now();
+      if (now - lastBeatRef.current < DEBOUNCE_MS) return;
+      lastBeatRef.current = now;
       await supabase
         .from("profiles")
         .update({ updated_at: new Date().toISOString() })
         .eq("telegram_id", tid);
     };
 
+    // Fire immediately on mount (user just opened the app)
     beat();
-    const interval = setInterval(beat, HEARTBEAT_INTERVAL_MS);
-    return () => clearInterval(interval);
+
+    // Then only on real user activity
+    const events = ["click", "touchstart", "keydown", "scroll"] as const;
+    events.forEach(ev => document.addEventListener(ev, beat, { passive: true }));
+    return () => events.forEach(ev => document.removeEventListener(ev, beat));
   }, [profile?.telegram_id]);
 }
 
@@ -52,7 +64,8 @@ export function useFriendOnlineStatus(friendTelegramIds: number[]) {
     };
 
     check();
-    intervalRef.current = setInterval(check, 30_000); // poll every 30s
+    // Poll every 60s – enough for a 3-min window
+    intervalRef.current = setInterval(check, 60_000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
