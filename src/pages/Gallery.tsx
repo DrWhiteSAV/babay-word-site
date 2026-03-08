@@ -14,6 +14,7 @@ interface GalleryItem {
   id: string;
   image_url: string;
   label: string | null;
+  prompt: string | null;
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ export default function Gallery() {
   const { playClick } = useAudio(settings.musicVolume);
   const { profile, isLoading: tgLoading } = useTelegram();
   const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+  const [selectedLore, setSelectedLore] = useState<string | null>(null);
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<Section>("all");
@@ -50,7 +52,7 @@ export default function Gallery() {
 
     const { data, error } = await supabase
       .from("gallery")
-      .select("id, image_url, label, created_at")
+      .select("id, image_url, label, prompt, created_at")
       .eq("telegram_id", tgId)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -117,7 +119,6 @@ export default function Gallery() {
 
     const telegramId = profile?.telegram_id;
 
-    // First, try to find full metadata in the avatars table
     let parsedName: string | null = null;
     let parsedLore: string | null = null;
     let parsedWishes: string[] = [];
@@ -138,9 +139,7 @@ export default function Gallery() {
         parsedWishes = Array.isArray(avatarRow.wishes) ? avatarRow.wishes : [];
         parsedStyle = avatarRow.style || null;
         parsedGender = avatarRow.gender || null;
-        console.log("[Gallery] Found avatar metadata in avatars table:", { parsedName, parsedLore: parsedLore?.substring(0, 60), parsedWishes });
       } else {
-        // Fallback: parse from label "[avatars] Name | Lore"
         const rawLabel = (selectedImage.label || "")
           .replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "")
           .replace(/^Аватар:\s*/i, "")
@@ -148,25 +147,15 @@ export default function Gallery() {
         const parts = rawLabel.split(/\s*\|\s*/);
         parsedName = parts[0]?.trim() || null;
         parsedLore = parts.slice(1).join(" | ").trim() || null;
-        console.log("[Gallery] Parsed from label (no avatars row found):", { parsedName, parsedLore: parsedLore?.substring(0, 60) });
       }
     }
 
-    const updates: Record<string, unknown> = {
-      avatar_url: selectedImage.image_url,
-    };
+    const updates: Record<string, unknown> = { avatar_url: selectedImage.image_url };
     if (parsedName) updates.character_name = parsedName;
     if (parsedLore) updates.lore = parsedLore;
     if (parsedStyle) updates.character_style = parsedStyle;
     if (parsedGender) updates.character_gender = parsedGender;
 
-    console.log(`[DB WRITE] 📝 Gallery SET AVATAR for telegram_id=${telegramId}`, {
-      avatar_url: selectedImage.image_url.substring(0, 60),
-      character_name: parsedName,
-      lore: parsedLore?.substring(0, 80),
-    });
-
-    // Update store immediately (all identity fields)
     updateCharacter({
       avatarUrl: selectedImage.image_url,
       ...(parsedName ? { name: parsedName } : {}),
@@ -177,19 +166,29 @@ export default function Gallery() {
     });
 
     if (telegramId) {
-      // Update player_stats identity fields ONLY (avatar_url, character_name, lore, style, gender)
-      // NEVER touch custom_settings here
       const { error } = await supabase.from("player_stats")
         .update(updates)
         .eq("telegram_id", telegramId);
-
-      if (error) {
-        console.error("[DB WRITE] ❌ Gallery set avatar error:", error.message);
-      } else {
-        console.log("[DB WRITE] ✅ Gallery avatar + identity saved to player_stats (identity fields only, custom_settings untouched)");
-      }
+      if (error) console.error("[DB WRITE] ❌ Gallery set avatar error:", error.message);
     }
     setSelectedImage(null);
+    setSelectedLore(null);
+  };
+
+  // Load lore from avatars table when opening an avatar image
+  const handleOpenImage = async (item: GalleryItem) => {
+    setSelectedImage(item);
+    setSelectedLore(null);
+    playClick();
+    if (getCategory(item) === "avatars" && profile?.telegram_id) {
+      const { data } = await supabase
+        .from("avatars")
+        .select("lore")
+        .eq("telegram_id", profile.telegram_id)
+        .eq("image_url", item.image_url)
+        .maybeSingle();
+      if (data?.lore) setSelectedLore(data.lore);
+    }
   };
 
   return (
@@ -279,10 +278,7 @@ export default function Gallery() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.03 }}
                 className="aspect-square rounded-xl overflow-hidden border border-neutral-800 cursor-pointer hover:border-red-900/50 transition-colors relative group"
-                onClick={() => {
-                  setSelectedImage(item);
-                  playClick();
-                }}
+                onClick={() => handleOpenImage(item)}
               >
                 <img
                   src={item.image_url}
@@ -317,35 +313,56 @@ export default function Gallery() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-2 backdrop-blur-sm"
+            onClick={() => { setSelectedImage(null); setSelectedLore(null); }}
           >
             <button
               className="absolute top-4 right-4 p-2 bg-neutral-800 rounded-full text-white hover:bg-neutral-700 transition-colors z-50"
-              onClick={(e) => { e.stopPropagation(); playClick(); setSelectedImage(null); }}
+              onClick={(e) => { e.stopPropagation(); playClick(); setSelectedImage(null); setSelectedLore(null); }}
             >
               <X size={24} />
             </button>
 
-            <div className="relative max-w-full max-h-full w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="relative w-full max-w-lg flex flex-col items-center max-h-[95vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <img
                 src={selectedImage.image_url}
                 alt={selectedImage.label || "Full size"}
-                className="max-w-full max-h-[75vh] rounded-lg shadow-2xl border border-neutral-800 object-contain"
+                className="w-full rounded-lg shadow-2xl border border-neutral-800 object-contain max-h-[55vh]"
                 referrerPolicy="no-referrer"
               />
+
+              {/* Label (name) */}
               {selectedImage.label && (
-                <p className="text-center text-neutral-400 text-sm mt-2">
-                  {selectedImage.label.replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "")}
+                <p className="text-center text-neutral-300 text-sm font-semibold mt-3 px-2">
+                  {selectedImage.label.replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "").split("|")[0].trim()}
                 </p>
               )}
 
-              {/* Direct ImgBB link */}
-              <p className="text-[10px] text-neutral-600 mt-1 text-center break-all px-4 max-w-sm">
+              {/* Lore — full, no truncation (avatars only) */}
+              {selectedLore && (
+                <div className="w-full mt-2 px-3 py-2 bg-neutral-900/80 rounded-xl border border-neutral-800">
+                  <p className="text-[11px] text-purple-300 font-bold mb-1 uppercase tracking-wide">Лор</p>
+                  <p className="text-neutral-300 text-xs leading-relaxed whitespace-pre-wrap">{selectedLore}</p>
+                </div>
+              )}
+
+              {/* Prompt — full, no truncation */}
+              {selectedImage.prompt && (
+                <div className="w-full mt-2 px-3 py-2 bg-neutral-900/80 rounded-xl border border-neutral-800">
+                  <p className="text-[11px] text-yellow-500/80 font-bold mb-1 uppercase tracking-wide">Промпт</p>
+                  <p className="text-neutral-400 text-xs leading-relaxed whitespace-pre-wrap">{selectedImage.prompt}</p>
+                </div>
+              )}
+
+              {/* URL */}
+              <p className="text-[10px] text-neutral-600 mt-2 text-center break-all px-4">
                 {selectedImage.image_url}
               </p>
 
-              <div className="mt-3 flex justify-center gap-2 flex-wrap">
+              <div className="mt-3 mb-2 flex justify-center gap-2 flex-wrap">
                 {getCategory(selectedImage) === "avatars" && character && (
                   <button
                     onClick={handleSetAsAvatar}
