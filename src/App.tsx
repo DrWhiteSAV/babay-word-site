@@ -19,7 +19,7 @@ import { usePlayerStatsSync } from "./hooks/usePlayerStatsSync";
 import { useIncomingMessageNotifier } from "./hooks/useIncomingMessageNotifier";
 import { useGroupChatsSync } from "./hooks/useGroupChatsSync";
 import { useTelegram } from "./context/TelegramContext";
-import { protalkGenerateText } from "./services/protalk";
+
 
 // Pages
 import Home from "./pages/Home";
