@@ -254,12 +254,12 @@ export default function Game() {
     bossImageReadyRef.current = false;
     setBossImageReady(false);
     setBossGenRetry(false);
-    setBossPreparationCountdown(60);
+    setBossPreparationCountdown(120);
     setIsBossPreparation(true);
     setIsBossBattle(false);
 
-    // Start 60s countdown
-    let countdown = 60;
+    // Start 120s countdown
+    let countdown = 120;
     if (bossPreparationIntervalRef.current) clearInterval(bossPreparationIntervalRef.current);
     bossPreparationIntervalRef.current = setInterval(() => {
       countdown -= 1;
