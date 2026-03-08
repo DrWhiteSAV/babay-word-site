@@ -202,6 +202,7 @@ export const usePlayerStore = create<PlayerState>()(
       bossItems: DEFAULT_BOSS_ITEMS,
       storeConfig: DEFAULT_STORE_CONFIG,
       dbLoaded: false,
+      gameStatus: "playing",
       setCharacter: (char) => {
         set({ character: char });
       },
