@@ -502,7 +502,7 @@ export default function Chat() {
       }
     }
     return inserted?.id || null;
-  };
+  }, [groupId, profile?.telegram_id, friendTelegramId, friendName, chatKey, character, friend, group]);
 
   const doAiReply = useCallback(async (
     userMessage: string,
