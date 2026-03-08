@@ -384,8 +384,10 @@ export default function Game() {
     setStage(1);
     setScore(0);
     setLocalFear(0);
+    localFearRef.current = 0;
     setLocalWatermelons(0);
     setExitedEarly(false);
+    exitedEarlyRef.current = false;
     setPvpResults(null);
     setIsGameOver(false);
     setWorldReady(false);
