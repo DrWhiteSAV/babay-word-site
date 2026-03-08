@@ -19,9 +19,10 @@ const BUTTON_SIZES: ButtonSize[] = ["small", "medium", "large"];
 const FONT_FAMILIES: FontFamily[] = [
   "Inter", "Roboto", "Montserrat", "Playfair Display", "JetBrains Mono",
   "Press Start 2P", "Russo One", "Rubik Beastly", "Rubik Burned", "Rubik Glitch",
-  "Neucha", "Ruslan Display", "Tektur",
+  "Neucha", "Ruslan Display", "Tektur", "Special Elite", "Cinzel Decorative", "Nunito",
+  "Marck Script", "Cuprum", "Lobster", "Pacifico", "Comfortaa",
 ];
-const THEMES: Theme[] = ["normal", "cyberpunk"];
+const THEMES: Theme[] = ["normal", "cyberpunk", "horror", "steampunk", "anime", "soviet", "fairytale", "cartoon", "fantasy"];
 
 const isHttpUrl = (value: unknown): value is string =>
   typeof value === "string" && /^https?:\/\//i.test(value.trim());

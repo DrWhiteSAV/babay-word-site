@@ -392,8 +392,8 @@ export default function Settings() {
             <Type size={18} /> Стиль шрифта
           </h2>
           <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-2xl p-4">
-            <select
-              value={settings.fontFamily ?? "JetBrains Mono"}
+          <select
+              value={settings.fontFamily ?? "Russo One"}
               onChange={(e) => updateSettings({ fontFamily: e.target.value as FontFamily })}
               className="w-full bg-neutral-800/50 text-white border border-neutral-700 rounded-xl p-3 outline-none focus:border-red-500 transition-colors"
             >
@@ -408,8 +408,16 @@ export default function Settings() {
               <option value="Rubik Burned">Сгоревший (Rubik Burned)</option>
               <option value="Rubik Glitch">Глитч (Rubik Glitch)</option>
               <option value="Neucha">Рукописный (Neucha)</option>
-              <option value="Ruslan Display">Славянский (Ruslan)</option>
+              <option value="Ruslan Display">Русланский (Ruslan)</option>
               <option value="Tektur">Киберпанк (Tektur)</option>
+              <option value="Special Elite">Хоррор (Special Elite)</option>
+              <option value="Cinzel Decorative">Фэнтэзи (Cinzel)</option>
+              <option value="Nunito">Мягкий (Nunito)</option>
+              <option value="Cuprum">Советский (Cuprum)</option>
+              <option value="Marck Script">Сказочный (Marck Script)</option>
+              <option value="Comfortaa">Мультик (Comfortaa)</option>
+              <option value="Lobster">Лобстер (Lobster)</option>
+              <option value="Pacifico">Пасифико (Pacifico)</option>
             </select>
           </div>
         </section>
