@@ -220,20 +220,20 @@ function AppContent() {
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/events" element={<Events />} />
           <Route path="/achievements" element={<Achievements />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/pic" element={<AdminPic />} />
-          <Route path="/admin/video" element={<AdminVideo />} />
-          <Route path="/admin/store" element={<AdminStore />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/ai" element={<AdminAI />} />
-          <Route path="/admin/audio" element={<AdminAudio />} />
-          <Route path="/admin/text" element={<AdminText />} />
-          <Route path="/admin/role" element={<AdminUsers />} />
-          <Route path="/admin/stat" element={<AdminStat />} />
-          <Route path="/admin/notifications" element={<AdminNotifications />} />
-          <Route path="/admin/images" element={<AdminImages />} />
-          <Route path="/admin/events" element={<AdminEvents />} />
-          <Route path="/admin/achievements" element={<AdminAchievements />} />
+          <Route path="/admin" element={<AdminGuard><Admin /></AdminGuard>} />
+          <Route path="/admin/pic" element={<AdminGuard><AdminPic /></AdminGuard>} />
+          <Route path="/admin/video" element={<AdminGuard><AdminVideo /></AdminGuard>} />
+          <Route path="/admin/store" element={<AdminGuard><AdminStore /></AdminGuard>} />
+          <Route path="/admin/users" element={<AdminGuard><AdminUsers /></AdminGuard>} />
+          <Route path="/admin/ai" element={<AdminGuard><AdminAI /></AdminGuard>} />
+          <Route path="/admin/audio" element={<AdminGuard><AdminAudio /></AdminGuard>} />
+          <Route path="/admin/text" element={<AdminGuard><AdminText /></AdminGuard>} />
+          <Route path="/admin/role" element={<AdminGuard><AdminUsers /></AdminGuard>} />
+          <Route path="/admin/stat" element={<AdminGuard><AdminStat /></AdminGuard>} />
+          <Route path="/admin/notifications" element={<AdminGuard><AdminNotifications /></AdminGuard>} />
+          <Route path="/admin/images" element={<AdminGuard><AdminImages /></AdminGuard>} />
+          <Route path="/admin/events" element={<AdminGuard><AdminEvents /></AdminGuard>} />
+          <Route path="/admin/achievements" element={<AdminGuard><AdminAchievements /></AdminGuard>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <BottomNav />
