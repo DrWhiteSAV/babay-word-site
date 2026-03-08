@@ -132,26 +132,21 @@ serve(async (req) => {
       .eq("telegram_id", owner_telegram_id)
       .maybeSingle();
 
-    // Build AI prompt
+    // Build AI prompt — last 4 messages context, focus on the very last one
     const historyStr = history
-      .slice(-8)
+      .slice(-4)
       .map((h) => `${h.sender}: ${h.text}`)
       .join("\n");
 
-    const prompt = `Ты — ИИ-заместитель персонажа по имени ${ownerStats?.character_name || owner_character_name}.
-Пол: ${ownerStats?.character_gender || "неизвестен"}.
-Стиль мира: ${ownerStats?.character_style || "обычный"}.
-Лор: ${ownerStats?.lore || "нет"}.
+    const lastMsg = history.length > 0 ? history[history.length - 1] : null;
+    const lastMsgLine = lastMsg ? `\nПоследнее сообщение от ${sender_name}: «${lastMsg.text}» — ответь ИМЕННО на него.` : "";
 
-Тебе написал друг по имени ${sender_name}. Ответь КРАТКО и IN-CHARACTER как будто ты — ${ownerStats?.character_name || owner_character_name}.
-НЕ упоминай что ты ИИ. Пиши на русском, живо и в духе персонажа.
-
-История чата:
+    const prompt = `Ты — ИИ-заместитель друга по имени ${ownerStats?.character_name || owner_character_name}. Твой собеседник — ${sender_name}.
+Лор Бабая: ${ownerStats?.lore || "нет"}.
+Последние сообщения (только для контекста):
 ${historyStr}
-
-${sender_name}: ${previewText}
-
-Твой ответ (только текст, без кавычек):`;
+${lastMsgLine}
+Ответь коротко (1-3 предложения) в образе ${ownerStats?.character_name || owner_character_name}. Без кавычек, без пояснений.`;
 
     // 6. Generate reply via ProTalk
     const botIdNum = parseInt(PROTALK_BOT_ID);
