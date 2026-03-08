@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion, AnimatePresence } from "motion/react";
-import { MessageSquare, Send, ImagePlus, X, Users, Reply, Check, CheckCheck, RefreshCw, AlertTriangle, Edit2, Bot } from "lucide-react";
+import { MessageSquare, Send, ImagePlus, X, Users, Reply, Check, CheckCheck, RefreshCw, AlertTriangle, Edit2, Bot, Loader2 } from "lucide-react";
 import { generateFriendChat, generateMyAiReply } from "../services/ai";
 import ProfilePopup from "../components/ProfilePopup";
 import Header from "../components/Header";
