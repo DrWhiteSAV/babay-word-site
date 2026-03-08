@@ -169,6 +169,14 @@ export default function Shop() {
 
     const success = buyItem(item.id, item.cost, item.currency);
     if (success && character && profile?.telegram_id) {
+      // Save purchase to player_inventory immediately (before avatar generation)
+      supabase.from("player_inventory").insert({
+        telegram_id: profile.telegram_id,
+        item_id: item.id,
+      } as any).then(({ error }) => {
+        if (error) console.warn("[Shop] inventory insert error:", error.message);
+        else console.log("[Shop] ✅ item saved to player_inventory:", item.id);
+      });
       playSuccessSound();
       setSuccessEffect(item.id);
       setTimeout(() => setSuccessEffect(null), 2000);

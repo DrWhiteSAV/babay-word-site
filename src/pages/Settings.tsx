@@ -45,6 +45,7 @@ export default function Settings() {
   const [resetting, setResetting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
+  const autoSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset dialog state
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
