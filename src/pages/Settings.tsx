@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, ButtonSize, FontFamily, Theme, DEFAULT_SETTINGS } from "../store/playerStore";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Settings as SettingsIcon,
   Volume2,
@@ -12,10 +12,31 @@ import {
   ChevronRight,
   Loader2,
   Save,
+  History,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import Header from "../components/Header";
+
+interface HistorySnapshot {
+  id: string;
+  snapshot_at: string;
+  snapshot_reason: string | null;
+  character_name: string | null;
+  character_gender: string | null;
+  character_style: string | null;
+  avatar_url: string | null;
+  lore: string | null;
+  fear: number;
+  watermelons: number;
+  energy: number;
+  boss_level: number;
+  telekinesis_level: number;
+  custom_settings: Record<string, unknown> | null;
+}
 
 export default function Settings() {
   const navigate = useNavigate();
