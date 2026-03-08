@@ -438,10 +438,40 @@ export default function Chat() {
     if (friend && friendTelegramId) {
       const online = await isUserOnline(friendTelegramId);
       if (!online) {
-        await sendTelegramNotification(
-          friendTelegramId,
-          `💬 *Новое сообщение от ${myName}*\n\n${previewText}`
-        );
+        // Check if recipient has ai_substitute ON for us → trigger background AI worker
+        const { data: friendSubRow } = await supabase
+          .from("friends")
+          .select("ai_substitute")
+          .eq("telegram_id", friendTelegramId)
+          .eq("friend_name", character?.name || myName)
+          .maybeSingle();
+
+        if ((friendSubRow as any)?.ai_substitute) {
+          // Trigger AI substitute worker — it will reply AND notify the recipient via Telegram
+          fetch(`${SUPABASE_URL}/functions/v1/ai-substitute-worker`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              chat_key: chatKey,
+              sender_name: myName,
+              sender_telegram_id: profile?.telegram_id,
+              message_content: content,
+              owner_telegram_id: friendTelegramId,
+              owner_character_name: friend.name,
+              friend_character_name: myName,
+            }),
+          }).catch(() => {});
+        } else {
+          // Regular TG notification (no ai substitute)
+          await sendTelegramNotification(
+            friendTelegramId,
+            `💬 *Новое сообщение от ${myName}*\n\n${previewText}`
+          );
+        }
       }
     } else if (group) {
       const isMention = (name: string) => msg.text?.includes(`@${name}`);
