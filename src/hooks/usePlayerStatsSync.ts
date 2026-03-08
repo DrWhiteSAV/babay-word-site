@@ -160,6 +160,7 @@ export function usePlayerStatsSync() {
           updates.settings = { ...DEFAULT_SETTINGS };
           updates.dbLoaded = true;
           usePlayerStore.setState(updates);
+          dbLoadedAtRef.current = Date.now();
           console.log("[usePlayerStatsSync] game_status=reset — sync blocked, redirecting to create");
           return;
         }
