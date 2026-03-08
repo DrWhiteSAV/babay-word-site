@@ -282,6 +282,7 @@ export default function Settings() {
         musicVolume: 50,
         ttsEnabled: false,
       },
+      gameStatus: "reset",
       dbLoaded: false,
     });
     setSnapshotName("");
