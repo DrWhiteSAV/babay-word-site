@@ -150,6 +150,17 @@ export default function Gallery() {
           <div className="flex items-center justify-center h-full">
             <Loader2 size={32} className="animate-spin text-red-500" />
           </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center h-full text-neutral-500 text-center px-6">
+            <ImageIcon size={48} className="mb-4 opacity-50" />
+            <p>{loadError}</p>
+            <button
+              onClick={loadGallery}
+              className="mt-4 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm"
+            >
+              Повторить
+            </button>
+          </div>
         ) : filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-neutral-500">
             <ImageIcon size={48} className="mb-4 opacity-50" />
@@ -181,13 +192,14 @@ export default function Gallery() {
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   loading="lazy"
                   referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "https://i.ibb.co/BVgY7XrT/babai.png";
                   }}
                 />
                 {item.label && (
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[10px] text-neutral-300 px-2 py-1 truncate">
-                    {item.label.replace(/^\[(avatars|backgrounds|bosses)\]\s*/i, "")}
+                    {item.label.replace(/^\[(avatars|avatar|backgrounds|background|bosses|boss)\]\s*/i, "")}
                   </div>
                 )}
                 <div className="absolute top-2 left-2">
