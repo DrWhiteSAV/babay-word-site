@@ -537,21 +537,6 @@ export default function Friends() {
                             className="p-2 bg-neutral-800 hover:bg-red-900/50 rounded-lg text-red-500 transition-colors"
                           ><Trash2 size={15} /></button>
                         )}
-                      </div>
-                    </div>
-
-                    {/* AI toggle */}
-                    {!isDanil && (
-                      <div className="flex items-center justify-between text-sm border-t border-neutral-800 pt-2">
-                        <span className="text-neutral-400 text-xs">ИИ-заместитель:</span>
-                        <button
-                          onClick={() => toggleFriendAi(friend.name)}
-                          className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${friend.isAiEnabled ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-neutral-800 text-neutral-500 border border-neutral-700'}`}
-                        >
-                          {friend.isAiEnabled ? "ВКЛ" : "ВЫКЛ"}
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
