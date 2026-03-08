@@ -5,20 +5,12 @@ import { supabase } from "../integrations/supabase/client";
 
 const FALLBACK_AVATAR = "https://i.ibb.co/BVgY7XrT/babai.png";
 
-const DEFAULT_SETTINGS: {
-  buttonSize: ButtonSize;
-  fontFamily: FontFamily;
-  fontSize: number;
-  fontBrightness: number;
-  theme: Theme;
-  musicVolume: number;
-  ttsEnabled: boolean;
-} = {
-  buttonSize: "small",
-  fontFamily: "JetBrains Mono",
+const DEFAULT_SETTINGS = {
+  buttonSize: "small" as ButtonSize,
+  fontFamily: "JetBrains Mono" as FontFamily,
   fontSize: 12,
   fontBrightness: 100,
-  theme: "normal",
+  theme: "normal" as Theme,
   musicVolume: 50,
   ttsEnabled: false,
 };
@@ -36,315 +28,223 @@ const isHttpUrl = (value: unknown): value is string =>
 
 const normalizeSettings = (raw: unknown) => {
   const cs = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-
-  const buttonSize = BUTTON_SIZES.includes(cs.buttonSize as ButtonSize)
-    ? (cs.buttonSize as ButtonSize)
-    : DEFAULT_SETTINGS.buttonSize;
-
-  const fontFamily = FONT_FAMILIES.includes(cs.fontFamily as FontFamily)
-    ? (cs.fontFamily as FontFamily)
-    : DEFAULT_SETTINGS.fontFamily;
-
-  const fontSize = typeof cs.fontSize === "number" && cs.fontSize >= 5 && cs.fontSize <= 24
-    ? cs.fontSize
-    : DEFAULT_SETTINGS.fontSize;
-  const fontBrightness =
-    typeof cs.fontBrightness === "number" ? cs.fontBrightness : DEFAULT_SETTINGS.fontBrightness;
-  const theme = THEMES.includes(cs.theme as Theme) ? (cs.theme as Theme) : DEFAULT_SETTINGS.theme;
-  const musicVolume =
-    typeof cs.musicVolume === "number" ? cs.musicVolume : DEFAULT_SETTINGS.musicVolume;
-  const ttsEnabled = typeof cs.ttsEnabled === "boolean" ? cs.ttsEnabled : DEFAULT_SETTINGS.ttsEnabled;
-
-  return { buttonSize, fontFamily, fontSize, fontBrightness, theme, musicVolume, ttsEnabled };
+  return {
+    buttonSize: BUTTON_SIZES.includes(cs.buttonSize as ButtonSize) ? (cs.buttonSize as ButtonSize) : DEFAULT_SETTINGS.buttonSize,
+    fontFamily: FONT_FAMILIES.includes(cs.fontFamily as FontFamily) ? (cs.fontFamily as FontFamily) : DEFAULT_SETTINGS.fontFamily,
+    fontSize: typeof cs.fontSize === "number" && cs.fontSize >= 5 && cs.fontSize <= 24 ? cs.fontSize : DEFAULT_SETTINGS.fontSize,
+    fontBrightness: typeof cs.fontBrightness === "number" ? cs.fontBrightness : DEFAULT_SETTINGS.fontBrightness,
+    theme: THEMES.includes(cs.theme as Theme) ? (cs.theme as Theme) : DEFAULT_SETTINGS.theme,
+    musicVolume: typeof cs.musicVolume === "number" ? cs.musicVolume : DEFAULT_SETTINGS.musicVolume,
+    ttsEnabled: typeof cs.ttsEnabled === "boolean" ? cs.ttsEnabled : DEFAULT_SETTINGS.ttsEnabled,
+  };
 };
 
 export function usePlayerStatsSync() {
-  const store = usePlayerStore();
   const { profile } = useTelegram();
-  const activeTelegramId = useRef<number | null>(null);
-  const lastKnownAvatarUrl = useRef<string>(FALLBACK_AVATAR);
-  // Timestamp when DB load completed — we block all writes for 5s after load
-  // to prevent energy regen / other instant state changes from overwriting fresh DB data
-  const dbLoadedAtRef = useRef<number>(0);
 
-  // ─── LOAD FROM DB — always overwrites localStorage/cache ───────────────────
+  // ─── LOAD FROM DB ───────────────────────────────────────────────────────────
   useEffect(() => {
     const telegramId = profile?.telegram_id;
     if (!telegramId) return;
 
-    // Reset dbLoaded on every new user/session — force fresh DB check
-    activeTelegramId.current = telegramId;
+    // Mark as loading so pages wait before redirecting
     usePlayerStore.setState({ dbLoaded: false, gameStatus: "loading" });
 
     let cancelled = false;
 
-    const loadStats = async () => {
+    const load = async () => {
       try {
-        const [{ data, error }, { data: galleryRows, error: galleryError }] = await Promise.all([
-          supabase
-            .from("player_stats")
-            .select("*")
-            .eq("telegram_id", telegramId)
-            .maybeSingle(),
-          supabase
-            .from("gallery")
-            .select("image_url, label, created_at")
-            .eq("telegram_id", telegramId)
-            .order("created_at", { ascending: false })
-            .limit(12),
+        const [statsResult, galleryResult] = await Promise.all([
+          supabase.from("player_stats").select("*").eq("telegram_id", telegramId).maybeSingle(),
+          supabase.from("gallery").select("image_url, label, created_at")
+            .eq("telegram_id", telegramId).order("created_at", { ascending: false }).limit(12),
         ]);
 
-        if (cancelled || activeTelegramId.current !== telegramId) return;
+        if (cancelled) return;
 
-        const updates: Record<string, any> = {};
-
-        // Gallery URLs for profile preview
-        if (!galleryError && galleryRows && galleryRows.length > 0) {
-          const galleryUrls = Array.from(
-            new Set(
-              galleryRows
-                .map((row) => (typeof row.image_url === "string" ? row.image_url.trim() : ""))
-                .filter((url) => isHttpUrl(url))
-            )
-          );
-          if (galleryUrls.length > 0) {
-            updates.gallery = galleryUrls;
-            // Find most recent avatar
-            const latestAvatar = galleryRows.find((row) => {
-              const label = (row.label || "").toLowerCase();
-              return label.includes("[avatars]") || label.includes("[avatar]") || label.includes("аватар");
-            });
-            if (latestAvatar?.image_url && isHttpUrl(latestAvatar.image_url)) {
-              lastKnownAvatarUrl.current = latestAvatar.image_url;
-            }
-          }
-        }
+        const { data, error } = statsResult;
 
         if (error) {
-          console.error("[usePlayerStatsSync] player_stats load error:", error.message);
-          // Even on error, mark as loaded so sync doesn't hang
+          console.error("[sync] load error:", error.message);
           usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
-          dbLoadedAtRef.current = Date.now();
           return;
         }
 
+        // Gallery
+        let latestAvatarFromGallery: string | null = null;
+        if (galleryResult.data && galleryResult.data.length > 0) {
+          const urls = galleryResult.data
+            .map(r => r.image_url)
+            .filter(isHttpUrl);
+          if (urls.length > 0) {
+            usePlayerStore.setState({ gallery: Array.from(new Set(urls)) });
+          }
+          const avatarRow = galleryResult.data.find(r => {
+            const lbl = (r.label || "").toLowerCase();
+            return lbl.includes("[avatars]") || lbl.includes("[avatar]") || lbl.includes("аватар");
+          });
+          if (avatarRow?.image_url && isHttpUrl(avatarRow.image_url)) {
+            latestAvatarFromGallery = avatarRow.image_url;
+          }
+        }
+
+        // No row yet → new user
         if (!data) {
-          // Brand new user — clean defaults, no character
-          updates.character = null;
-          updates.fear = 0;
-          updates.energy = 100;
-          updates.watermelons = 0;
-          updates.bossLevel = 0;
-          updates.inventory = [];
-          updates.settings = { ...DEFAULT_SETTINGS };
-          updates.gameStatus = "new";
-          updates.dbLoaded = true;
-          usePlayerStore.setState(updates);
-          dbLoadedAtRef.current = Date.now();
+          usePlayerStore.setState({
+            character: null,
+            fear: 0, energy: 100, watermelons: 0, bossLevel: 0,
+            inventory: [],
+            settings: { ...DEFAULT_SETTINGS },
+            gameStatus: "new",
+            dbLoaded: true,
+          });
           return;
         }
 
-        // ── If game_status = 'reset', block sync and treat as new user ────────
         const gameStatus = data.game_status || "playing";
-        updates.gameStatus = gameStatus;
 
+        // Reset state → send to /create, don't load old data
         if (gameStatus === "reset") {
-          // User reset and closed app before completing character creation
-          // Do NOT write anything to DB — just load empty state and send to /create
-          updates.character = null;
-          updates.fear = 0;
-          updates.energy = 100;
-          updates.watermelons = 0;
-          updates.bossLevel = 0;
-          updates.inventory = [];
-          updates.settings = { ...DEFAULT_SETTINGS };
-          updates.dbLoaded = true;
-          usePlayerStore.setState(updates);
-          dbLoadedAtRef.current = Date.now();
-          console.log("[usePlayerStatsSync] game_status=reset — sync blocked, redirecting to create");
+          usePlayerStore.setState({
+            character: null,
+            fear: 0, energy: 100, watermelons: 0, bossLevel: 0,
+            inventory: [],
+            settings: { ...DEFAULT_SETTINGS },
+            gameStatus: "reset",
+            dbLoaded: true,
+          });
           return;
         }
 
-        // ── DB is the source of truth — overwrite everything ──────────────────
-        updates.fear = typeof data.fear === "number" ? data.fear : 0;
-        updates.energy = typeof data.energy === "number" ? data.energy : 100;
-        updates.watermelons = typeof data.watermelons === "number" ? data.watermelons : 0;
-        updates.bossLevel = typeof data.boss_level === "number" ? data.boss_level : 0;
+        const cs = data.custom_settings && typeof data.custom_settings === "object"
+          ? (data.custom_settings as Record<string, unknown>)
+          : {};
 
-        const customSettings =
-          data.custom_settings && typeof data.custom_settings === "object"
-            ? (data.custom_settings as Record<string, unknown>)
-            : {};
-
-        // Settings from DB always win
-        updates.settings = normalizeSettings(customSettings);
-        updates.inventory = Array.isArray(customSettings.inventory)
-          ? customSettings.inventory.filter((item): item is string => typeof item === "string")
+        const settings = normalizeSettings(cs);
+        const inventory = Array.isArray(cs.inventory)
+          ? (cs.inventory as unknown[]).filter((x): x is string => typeof x === "string")
           : [];
 
+        let character = null;
         if (data.character_name) {
-          const wishes = Array.isArray(customSettings.wishes)
-            ? customSettings.wishes.filter((wish): wish is string => typeof wish === "string")
+          const wishes = Array.isArray(cs.wishes)
+            ? (cs.wishes as unknown[]).filter((x): x is string => typeof x === "string")
             : [];
 
-          // Avatar: prefer DB avatar_url (if valid http), then gallery fallback
-          let resolvedAvatar = FALLBACK_AVATAR;
-          if (isHttpUrl(data.avatar_url)) {
-            resolvedAvatar = data.avatar_url;
-          } else if (isHttpUrl(lastKnownAvatarUrl.current)) {
-            resolvedAvatar = lastKnownAvatarUrl.current;
-          }
+          let avatarUrl = FALLBACK_AVATAR;
+          if (isHttpUrl(data.avatar_url)) avatarUrl = data.avatar_url;
+          else if (latestAvatarFromGallery) avatarUrl = latestAvatarFromGallery;
 
-          lastKnownAvatarUrl.current = resolvedAvatar;
-
-          updates.character = {
+          character = {
             name: data.character_name,
             gender: (data.character_gender as any) || "Бабай",
             style: (data.character_style as any) || "Хоррор",
             wishes,
-            avatarUrl: resolvedAvatar,
+            avatarUrl,
             telekinesisLevel: typeof data.telekinesis_level === "number" ? data.telekinesis_level : 1,
             lore: data.lore || undefined,
           };
-        } else {
-          updates.character = null;
         }
 
-        // CRITICAL: Set dbLoaded=true as the LAST step, only after ALL data is loaded
-        // This ensures the sync-to-DB effect only fires AFTER the store has fresh DB data
-        updates.dbLoaded = true;
-        usePlayerStore.setState(updates);
-        // Record when DB load finished — used to block premature writes
-        dbLoadedAtRef.current = Date.now();
-
-        console.log("[usePlayerStatsSync] Loaded from DB:", {
-          character: updates.character?.name,
-          avatar: updates.character?.avatarUrl,
+        console.log("[sync] ✅ loaded from DB:", {
+          name: character?.name,
+          avatar: character?.avatarUrl,
+          fontSize: settings.fontSize,
+          buttonSize: settings.buttonSize,
           gameStatus,
-          settings: updates.settings,
         });
+
+        usePlayerStore.setState({
+          character,
+          fear: typeof data.fear === "number" ? data.fear : 0,
+          energy: typeof data.energy === "number" ? data.energy : 100,
+          watermelons: typeof data.watermelons === "number" ? data.watermelons : 0,
+          bossLevel: typeof data.boss_level === "number" ? data.boss_level : 0,
+          settings,
+          inventory,
+          gameStatus,
+          dbLoaded: true,
+        });
+
       } catch (err) {
-        console.error("[usePlayerStatsSync] Unexpected error:", err);
-        if (!cancelled && activeTelegramId.current === telegramId) {
+        console.error("[sync] unexpected error:", err);
+        if (!cancelled) {
           usePlayerStore.setState({ dbLoaded: true, gameStatus: "playing" });
-          dbLoadedAtRef.current = Date.now();
         }
       }
     };
 
-    loadStats();
+    load();
     return () => { cancelled = true; };
   }, [profile?.telegram_id]);
 
-  // ─── SYNC TO DB ──────────────────────────────────────────────────────────
-  // Uses snapshot-based comparison: only writes when user actually changed something.
-  // energy/fear/watermelons are in syncData payload but NOT in deps — they trigger
-  // writes only when a "real" field (character, settings) changes, preventing
-  // the every-second energy regen from firing constant DB writes on load.
-  const dbSnapshotRef = useRef<string | null>(null);
+  // ─── SYNC TO DB ─────────────────────────────────────────────────────────────
+  // Only writes when the user actually changes something meaningful.
+  // We track a "last written" snapshot and only write when it differs.
+  const lastWrittenRef = useRef<string | null>(null);
+  // Flag: has the initial DB load completed for this session?
+  const loadedRef = useRef(false);
 
+  // Reset tracking on user change
   useEffect(() => {
-    dbSnapshotRef.current = null;
-    dbLoadedAtRef.current = 0;
+    lastWrittenRef.current = null;
+    loadedRef.current = false;
   }, [profile?.telegram_id]);
 
+  const store = usePlayerStore();
+
   useEffect(() => {
-    if (!profile?.telegram_id) return;
-    if (!store.dbLoaded) return;       // Gate #1: wait for DB load
-    if (!store.character) return;      // Gate #2: no character = nothing to sync
-    if (store.gameStatus === "reset" || store.gameStatus === "loading" || store.gameStatus === "new") return; // Gate #3
+    const telegramId = profile?.telegram_id;
+    if (!telegramId) return;
+    if (!store.dbLoaded) return;                         // wait for load
+    if (!store.character) return;                        // no character = nothing to sync
+    if (store.gameStatus !== "playing") return;          // only sync when playing
 
-    const currentAvatar = isHttpUrl(store.character.avatarUrl)
-      ? store.character.avatarUrl
-      : lastKnownAvatarUrl.current;
-    if (isHttpUrl(currentAvatar)) lastKnownAvatarUrl.current = currentAvatar;
-
-    const syncData = {
-      telegram_id: profile.telegram_id,
-      fear: store.fear,
-      energy: store.energy,
-      watermelons: store.watermelons,
-      boss_level: store.bossLevel,
-      telekinesis_level: store.character.telekinesisLevel,
-      character_name: store.character.name,
-      character_gender: store.character.gender,
-      character_style: store.character.style,
-      avatar_url: currentAvatar || FALLBACK_AVATAR,
-      lore: store.character.lore || null,
-      game_status: "playing",
-      custom_settings: {
-        buttonSize: store.settings.buttonSize,
-        fontFamily: store.settings.fontFamily,
-        fontSize: store.settings.fontSize,
-        fontBrightness: store.settings.fontBrightness,
-        theme: store.settings.theme,
-        musicVolume: store.settings.musicVolume,
-        ttsEnabled: store.settings.ttsEnabled,
-        wishes: store.character.wishes,
-        inventory: store.inventory,
-      },
-    };
-
-    const currentSnapshot = JSON.stringify(syncData);
-
-    // Gate #4: first fire after DB load — save snapshot, skip write
-    if (dbSnapshotRef.current === null) {
-      dbSnapshotRef.current = currentSnapshot;
-      console.log("[usePlayerStatsSync] ✅ snapshot saved for", store.character.name);
+    // First time after load: record baseline, do NOT write to DB
+    if (!loadedRef.current) {
+      loadedRef.current = true;
+      lastWrittenRef.current = buildSnapshot(store, telegramId);
+      console.log("[sync] 📌 baseline snapshot saved, skipping write");
       return;
     }
 
-    // Gate #5: nothing changed vs snapshot
-    if (dbSnapshotRef.current === currentSnapshot) return;
+    const snapshot = buildSnapshot(store, telegramId);
+    if (lastWrittenRef.current === snapshot) return;    // nothing changed
 
-    // Real change detected — log diff and schedule write
-    const prevSnapshot = dbSnapshotRef.current;
-    dbSnapshotRef.current = currentSnapshot;
-    try {
-      const prev = JSON.parse(prevSnapshot);
-      const curr = syncData as Record<string, unknown>;
-      const changed = Object.keys(curr).filter(k => JSON.stringify(prev[k]) !== JSON.stringify(curr[k]));
-      console.log("[usePlayerStatsSync] 📝 change detected for", store.character.name, "| changed:", changed);
-    } catch {
-      console.log("[usePlayerStatsSync] 📝 change detected for", store.character.name);
+    // Something changed — schedule write
+    const prev = lastWrittenRef.current;
+    lastWrittenRef.current = snapshot;
+
+    if (prev !== null) {
+      try {
+        const p = JSON.parse(prev) as Record<string, unknown>;
+        const c = JSON.parse(snapshot) as Record<string, unknown>;
+        const changed = Object.keys(c).filter(k => JSON.stringify(p[k]) !== JSON.stringify(c[k]));
+        console.log("[sync] 📝 writing to DB, changed fields:", changed);
+      } catch { /**/ }
     }
 
-    // Capture refs for the timer closure
-    const telegramId = profile.telegram_id;
-    const dbLoadedAt = dbLoadedAtRef.current;
-
+    const payload = JSON.parse(snapshot);
     const timer = setTimeout(async () => {
-      // Gate #0: check cooldown AT WRITE TIME (not at effect-fire time)
-      // This prevents writes that were queued during the 5s window after DB load
-      if (dbLoadedAt > 0 && Date.now() - dbLoadedAt < 5000) {
-        console.log("[usePlayerStatsSync] ⏳ write cancelled — within 5s cooldown after DB load");
-        return;
-      }
+      const { error } = await supabase.from("player_stats")
+        .upsert(payload, { onConflict: "telegram_id" });
+      if (error) console.error("[sync] write error:", error.message);
 
-      console.log("[usePlayerStatsSync] 💾 writing to DB for", syncData.character_name);
-      const { error } = await supabase
-        .from("player_stats")
-        .upsert(syncData, { onConflict: "telegram_id" });
-      if (error) console.error("player_stats sync error:", error.message);
-
-      await supabase.from("leaderboard_cache").upsert(
-        {
-          telegram_id: telegramId,
-          display_name: syncData.character_name || "Безымянный",
-          fear: syncData.fear,
-          telekinesis_level: syncData.telekinesis_level,
-          avatar_url: currentAvatar || FALLBACK_AVATAR,
-        },
-        { onConflict: "telegram_id" }
-      );
+      // Update leaderboard cache
+      await supabase.from("leaderboard_cache").upsert({
+        telegram_id: telegramId,
+        display_name: payload.character_name || "Безымянный",
+        fear: payload.fear,
+        telekinesis_level: payload.telekinesis_level,
+        avatar_url: payload.avatar_url,
+      }, { onConflict: "telegram_id" });
     }, 2000);
 
     return () => clearTimeout(timer);
   }, [
     profile?.telegram_id,
     store.dbLoaded,
-    // ← energy/fear/watermelons NOT in deps: change every second via updateEnergy
-    // Included in syncData payload, written when a real field triggers a sync.
+    store.gameStatus,
     store.bossLevel,
     store.character?.telekinesisLevel,
     store.character?.name,
@@ -362,4 +262,36 @@ export function usePlayerStatsSync() {
     store.settings.ttsEnabled,
     store.inventory?.join(","),
   ]);
+}
+
+function buildSnapshot(store: ReturnType<typeof usePlayerStore.getState>, telegramId: number): string {
+  const avatarUrl = isHttpUrl(store.character?.avatarUrl)
+    ? store.character!.avatarUrl
+    : FALLBACK_AVATAR;
+
+  return JSON.stringify({
+    telegram_id: telegramId,
+    fear: store.fear,
+    energy: store.energy,
+    watermelons: store.watermelons,
+    boss_level: store.bossLevel,
+    telekinesis_level: store.character?.telekinesisLevel ?? 1,
+    character_name: store.character?.name ?? null,
+    character_gender: store.character?.gender ?? null,
+    character_style: store.character?.style ?? null,
+    avatar_url: avatarUrl,
+    lore: store.character?.lore ?? null,
+    game_status: "playing",
+    custom_settings: {
+      buttonSize: store.settings.buttonSize,
+      fontFamily: store.settings.fontFamily,
+      fontSize: store.settings.fontSize,
+      fontBrightness: store.settings.fontBrightness,
+      theme: store.settings.theme,
+      musicVolume: store.settings.musicVolume,
+      ttsEnabled: store.settings.ttsEnabled,
+      wishes: store.character?.wishes ?? [],
+      inventory: store.inventory ?? [],
+    },
+  });
 }
