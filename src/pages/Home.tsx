@@ -38,7 +38,9 @@ export default function Home() {
           return;
         }
 
-        const exists = !!(data?.character_name && data.character_name.trim().length > 0);
+        // game_status='reset' means user reset but didn't finish — treat as new
+        const isReset = data?.game_status === "reset";
+        const exists = !isReset && !!(data?.character_name && data.character_name.trim().length > 0);
         setHasCharacter(exists);
       } catch (err) {
         console.error("[Home] Unexpected error:", err);

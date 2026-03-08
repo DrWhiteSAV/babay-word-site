@@ -247,6 +247,8 @@ export default function CharacterCreate() {
       telekinesisLevel: 1,
       lore: generatedLore || undefined,
     });
+    // Reset gameStatus so sync-to-DB is unblocked after character creation
+    usePlayerStore.setState({ gameStatus: "playing" });
 
     if (tgId) {
       try {
