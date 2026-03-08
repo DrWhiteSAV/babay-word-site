@@ -177,7 +177,8 @@ export default function Gallery() {
     });
 
     if (telegramId) {
-      // Update player_stats identity fields
+      // Update player_stats identity fields ONLY (avatar_url, character_name, lore, style, gender)
+      // NEVER touch custom_settings here
       const { error } = await supabase.from("player_stats")
         .update(updates)
         .eq("telegram_id", telegramId);
@@ -185,23 +186,7 @@ export default function Gallery() {
       if (error) {
         console.error("[DB WRITE] ❌ Gallery set avatar error:", error.message);
       } else {
-        console.log("[DB WRITE] ✅ Gallery avatar + identity saved to player_stats");
-      }
-
-      // Update wishes in custom_settings if we have them
-      if (parsedWishes.length > 0) {
-        const { data: existing } = await supabase
-          .from("player_stats")
-          .select("custom_settings")
-          .eq("telegram_id", telegramId)
-          .single();
-        const cs = existing?.custom_settings && typeof existing.custom_settings === "object"
-          ? existing.custom_settings as Record<string, unknown>
-          : {};
-        await supabase.from("player_stats")
-          .update({ custom_settings: { ...cs, wishes: parsedWishes } })
-          .eq("telegram_id", telegramId);
-        console.log("[DB WRITE] ✅ Gallery avatar wishes saved to custom_settings");
+        console.log("[DB WRITE] ✅ Gallery avatar + identity saved to player_stats (identity fields only, custom_settings untouched)");
       }
     }
     setSelectedImage(null);
