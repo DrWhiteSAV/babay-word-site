@@ -10,15 +10,35 @@ function useUnreadCount() {
   const { profile } = useTelegram();
   const { friends, groupChats } = usePlayerStore();
   const [count, setCount] = useState(0);
+  const [friendTidMap, setFriendTidMap] = useState<Record<string, number>>({});
+
+  // Load friend telegram_ids for correct canonical chat key construction
+  useEffect(() => {
+    if (!profile?.telegram_id) return;
+    const realFriends = friends.filter(f => f.name !== "ДанИИл");
+    if (realFriends.length === 0) return;
+    supabase
+      .from("player_stats")
+      .select("telegram_id, character_name")
+      .in("character_name", realFriends.map(f => f.name))
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, number> = {};
+        for (const row of data) {
+          if (row.character_name && row.telegram_id) map[row.character_name] = row.telegram_id;
+        }
+        setFriendTidMap(map);
+      });
+  }, [profile?.telegram_id, friends.length]);
 
   useEffect(() => {
     if (!profile?.telegram_id) return;
 
     const fetchUnread = async () => {
-      // Personal chat keys
+      // Personal chat keys: canonical sorted tid_tid
       const personalKeys = friends
-        .filter(f => f.name !== "ДанИИл")
-        .map(f => [profile.telegram_id, f.name].sort().join("_"));
+        .filter(f => f.name !== "ДанИИл" && friendTidMap[f.name])
+        .map(f => [String(profile.telegram_id), String(friendTidMap[f.name])].sort().join("_"));
 
       // Group chat keys
       const groupKeys = groupChats.map(g => `group_${g.id}`);
