@@ -549,18 +549,20 @@ export default function CharacterCreate() {
           const { data: myStats } = await supabase
             .from("player_stats").select("referral_bonus_claimed").eq("telegram_id", tgId).single();
           if (!myStats?.referral_bonus_claimed) {
-            // New user gets 100 fear + 100 energy
+            // New user gets flat 100 fear + 100 energy
             addFear(100);
             addEnergy(100);
-            // Inviter also gets flat 100 fear + 100 energy (no telekinesis multiplier)
+            // Inviter gets 100 × telekinesis_level fear + energy
             const { data: inviterStats } = await supabase
-              .from("player_stats").select("fear, energy").eq("telegram_id", inviterTgId).single();
+              .from("player_stats").select("fear, energy, telekinesis_level").eq("telegram_id", inviterTgId).single();
+            const multiplier = Math.max(1, inviterStats?.telekinesis_level || 1);
+            const bonus = 100 * multiplier;
             await supabase.from("player_stats").update({
-              fear: (inviterStats?.fear || 0) + 100,
-              energy: (inviterStats?.energy || 0) + 100,
+              fear: (inviterStats?.fear || 0) + bonus,
+              energy: (inviterStats?.energy || 0) + bonus,
             }).eq("telegram_id", inviterTgId);
             await supabase.from("player_stats").update({ referral_bonus_claimed: true }).eq("telegram_id", tgId);
-            console.log(`[Referral] ✅ Bonus granted: new user ${tgId} +100/+100, inviter ${inviterTgId} +100/+100`);
+            console.log(`[Referral] ✅ Bonus granted: new user ${tgId} +100/+100, inviter ${inviterTgId} +${bonus}/+${bonus} (×${multiplier})`);
           }
         }
       } catch (e) {
