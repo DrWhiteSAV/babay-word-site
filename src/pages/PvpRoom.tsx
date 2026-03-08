@@ -56,7 +56,7 @@ export default function PvpRoom() {
   const [sendingMsg, setSendingMsg] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const isOrganizer = room?.organizer_telegram_id === tgId;
+  const isOrganizer = !!(tgId && room?.organizer_telegram_id === tgId);
   const myMember = members.find(m => m.telegram_id === tgId);
   const isJoined = myMember?.status === "joined" || myMember?.status === "playing" || myMember?.status === "finished";
   const isInvited = myMember?.status === "invited";
