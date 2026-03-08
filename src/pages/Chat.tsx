@@ -122,6 +122,34 @@ export default function Chat() {
       });
   }, [friendName]);
 
+  // Load AI-substitute state from DB for this friend
+  useEffect(() => {
+    if (!profile?.telegram_id || !friendName || isDanil || aiSubstituteLoadedRef.current) return;
+    supabase
+      .from("friends")
+      .select("ai_substitute")
+      .eq("telegram_id", profile.telegram_id)
+      .eq("friend_name", friendName)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data && typeof (data as any).ai_substitute === "boolean") {
+          setIsAiSubstitute((data as any).ai_substitute);
+        }
+        aiSubstituteLoadedRef.current = true;
+      });
+  }, [profile?.telegram_id, friendName, isDanil]);
+
+  // Persist AI-substitute toggle to DB
+  const toggleAiSubstitute = async (value: boolean) => {
+    setIsAiSubstitute(value);
+    if (!profile?.telegram_id || !friendName || isDanil) return;
+    await supabase
+      .from("friends")
+      .update({ ai_substitute: value } as any)
+      .eq("telegram_id", profile.telegram_id)
+      .eq("friend_name", friendName);
+  };
+
   // Canonical chat key:
   // - DM: sorted [myTid, friendTid] joined by "_"  → same for both sides
   // - Group: "group_<groupId>"
