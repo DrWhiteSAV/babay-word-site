@@ -420,7 +420,7 @@ export default function Chat() {
                       src={getAvatarUrl(msg.sender)}
                       alt="av"
                       className="w-7 h-7 rounded-full object-cover border border-white/10 cursor-pointer shadow-md"
-                      onClick={() => setShowProfilePopup(msg.sender)}
+                       onClick={() => setShowProfilePopup({ name: msg.sender, telegramId: msg.sender_telegram_id ?? undefined })}
                     />
                   ) : null}
                 </div>
