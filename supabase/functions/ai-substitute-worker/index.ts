@@ -96,15 +96,28 @@ serve(async (req) => {
       }
     }
 
-    // 4. Load recent chat history for context
+    // 4. Load recent chat history for context (last 4 only)
     const { data: recentMsgs } = await supabase
       .from("chat_messages")
       .select("role, content, friend_name, sender_telegram_id")
       .eq("chat_key", chat_key)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(6); // fetch 6 to slice to 4 after filter
 
-    const history = (recentMsgs || []).reverse().map((m) => {
+    // Anti-repeat guard: check if owner already replied after the last message from sender
+    const msgs = (recentMsgs || []).reverse();
+    const lastSenderMsgIdx = msgs.map(m => m.sender_telegram_id).lastIndexOf(sender_telegram_id);
+    if (lastSenderMsgIdx !== -1) {
+      const ownerRepliedAfter = msgs.slice(lastSenderMsgIdx + 1).some(
+        m => m.sender_telegram_id === owner_telegram_id || m.role === "user"
+      );
+      if (ownerRepliedAfter) {
+        console.log("[ai-sub] Owner already replied after last message — skipping");
+        return new Response(JSON.stringify({ skipped: "already replied" }), { headers: corsHeaders });
+      }
+    }
+
+    const history = msgs.slice(-4).map((m) => {
       const isOwner = m.sender_telegram_id === owner_telegram_id || m.role === "user";
       return {
         sender: isOwner ? owner_character_name : sender_name,
@@ -119,26 +132,21 @@ serve(async (req) => {
       .eq("telegram_id", owner_telegram_id)
       .maybeSingle();
 
-    // Build AI prompt
+    // Build AI prompt — last 4 messages context, focus on the very last one
     const historyStr = history
-      .slice(-8)
+      .slice(-4)
       .map((h) => `${h.sender}: ${h.text}`)
       .join("\n");
 
-    const prompt = `Ты — ИИ-заместитель персонажа по имени ${ownerStats?.character_name || owner_character_name}.
-Пол: ${ownerStats?.character_gender || "неизвестен"}.
-Стиль мира: ${ownerStats?.character_style || "обычный"}.
-Лор: ${ownerStats?.lore || "нет"}.
+    const lastMsg = history.length > 0 ? history[history.length - 1] : null;
+    const lastMsgLine = lastMsg ? `\nПоследнее сообщение от ${sender_name}: «${lastMsg.text}» — ответь ИМЕННО на него.` : "";
 
-Тебе написал друг по имени ${sender_name}. Ответь КРАТКО и IN-CHARACTER как будто ты — ${ownerStats?.character_name || owner_character_name}.
-НЕ упоминай что ты ИИ. Пиши на русском, живо и в духе персонажа.
-
-История чата:
+    const prompt = `Ты — ИИ-заместитель друга по имени ${ownerStats?.character_name || owner_character_name}. Твой собеседник — ${sender_name}.
+Лор Бабая: ${ownerStats?.lore || "нет"}.
+Последние сообщения (только для контекста):
 ${historyStr}
-
-${sender_name}: ${previewText}
-
-Твой ответ (только текст, без кавычек):`;
+${lastMsgLine}
+Ответь коротко (1-3 предложения) в образе ${ownerStats?.character_name || owner_character_name}. Без кавычек, без пояснений.`;
 
     // 6. Generate reply via ProTalk
     const botIdNum = parseInt(PROTALK_BOT_ID);
