@@ -96,10 +96,12 @@ export default function PvpResults() {
   const maxScore = finishedMembers.length > 0 ? Math.max(...finishedMembers.map(m => m.score)) : 0;
   const winners = resultsFinalized && maxScore > 0 ? finishedMembers.filter(m => m.score === maxScore) : [];
   const totalFear = finishedMembers.reduce((sum, m) => sum + (m.score || 0), 0);
+  const totalWatermelons = finishedMembers.reduce((sum, m) => sum + (m.watermelons || 0), 0);
   const isWinner = winners.some(w => w.telegram_id === tgId);
-  const myReward = isWinner ? Math.ceil(totalFear / winners.length) : 0;
+  const myFearReward = isWinner ? Math.ceil(totalFear / winners.length) : 0;
+  const myWatermelonReward = isWinner ? Math.ceil(totalWatermelons / winners.length) : 0;
 
-  // When timer hits 0 → distribute rewards
+  // When results finalized → distribute rewards (fear + watermelons)
   useEffect(() => {
     if (!resultsFinalized || !room || !tgId || rewardAppliedRef.current) return;
     if (members.length === 0) return;
@@ -113,13 +115,16 @@ export default function PvpResults() {
     if (mxScore === 0) return;
 
     const ws = finished.filter(m => m.score === mxScore);
-    const total = finished.reduce((sum, m) => sum + (m.score || 0), 0);
+    const totalF = finished.reduce((sum, m) => sum + (m.score || 0), 0);
+    const totalW = finished.reduce((sum, m) => sum + (m.watermelons || 0), 0);
     const iWin = ws.some(w => w.telegram_id === tgId);
 
     if (iWin) {
-      const reward = Math.ceil(total / ws.length);
-      console.log(`[DB WRITE] 📝 PVP reward: tgId=${tgId}, reward=${reward} fear`);
-      addFear(reward);
+      const fearReward = Math.ceil(totalF / ws.length);
+      const watermelonReward = Math.ceil(totalW / ws.length);
+      console.log(`[DB WRITE] 📝 PVP reward: tgId=${tgId}, fear=${fearReward}, watermelons=${watermelonReward}`);
+      addFear(fearReward);
+      if (watermelonReward > 0) addWatermelons(watermelonReward);
     }
 
     supabase.from("pvp_rooms").update({ status: "finished" }).eq("id", room.id);
