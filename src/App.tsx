@@ -18,6 +18,7 @@ import { useAchievements } from "./hooks/useAchievements";
 import { usePlayerStatsSync } from "./hooks/usePlayerStatsSync";
 import { AssetPreloaderProvider } from "./components/AssetPreloader";
 import { useIncomingMessageNotifier } from "./hooks/useIncomingMessageNotifier";
+import { resolveUrl } from "./utils/cachedUrl";
 
 // Pages
 import Home from "./pages/Home";
@@ -55,6 +56,9 @@ function AppContent() {
   const { playClick } = useAudio(settings.musicVolume);
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+
+  // Resolved (potentially blob:) URLs for background and audio
+  const [resolvedBgUrl, setResolvedBgUrl] = useState<string | null>(null);
 
   // Sync player stats and achievements
   usePlayerStatsSync();
@@ -110,11 +114,15 @@ function AppContent() {
     const normalizedTarget = targetSrc.replace(window.location.origin, "");
 
     if (normalizedCurrent !== normalizedTarget) {
-      bgMusicRef.current.src = targetSrc;
-      const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
-      if (hasInteracted) {
-        bgMusicRef.current.play().catch(() => {});
-      }
+      // Use cached audio blob URL if available, otherwise direct URL
+      resolveUrl(targetSrc).then(resolved => {
+        if (!bgMusicRef.current) return;
+        bgMusicRef.current.src = resolved;
+        const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
+        if (hasInteracted) {
+          bgMusicRef.current.play().catch(() => {});
+        }
+      });
     }
 
     bgMusicRef.current.volume = (settings.musicVolume / 100) * 0.2;
@@ -173,8 +181,16 @@ function AppContent() {
 
   const currentPath = location.pathname;
   const customBg = pageBackgrounds?.[currentPath];
-  const activeBgUrl = customBg?.url || globalBackgroundUrl;
-  
+  const rawBgUrl = customBg?.url || globalBackgroundUrl;
+
+  // Resolve background to cached blob URL when available
+  useEffect(() => {
+    if (!rawBgUrl) { setResolvedBgUrl(null); return; }
+    resolveUrl(rawBgUrl).then(url => setResolvedBgUrl(url));
+  }, [rawBgUrl]);
+
+  const activeBgUrl = resolvedBgUrl ?? rawBgUrl;
+
   // Calculate dimming values based on customBg.dimming (0-100)
   // If no custom dimming, use default 80% to 95% gradient
   const dimmingTop = customBg ? customBg.dimming / 100 : 0.8;
