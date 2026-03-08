@@ -427,10 +427,14 @@ export default function Chat() {
         return;
       }
       const tempId = `pending_ai_${Date.now()}`;
-      const aiMsg: Message = { id: tempId, sender: responder, text: responseText, replyTo: replyToMsgId || undefined, isAiGenerated: isSubstituteCall };
+      // isSubstituteCall: AI replies AS ME (sender='user', role='user')
+      // normal: AI replies AS the friend (sender=responder, role='assistant')
+      const msgSender = isSubstituteCall ? 'user' : responder;
+      const aiMsg: Message = { id: tempId, sender: msgSender, text: responseText, replyTo: replyToMsgId || undefined, isAiGenerated: isSubstituteCall };
       setMessages(prev => [...prev, aiMsg]);
-      const dbId = await saveMessageToDB(aiMsg, 'assistant', responder);
-      // Replace temp ID with real DB UUID to prevent realtime duplication
+      const dbRole = isSubstituteCall ? 'user' : 'assistant';
+      const dbSenderName = isSubstituteCall ? (character?.name || 'user') : responder;
+      const dbId = await saveMessageToDB(aiMsg, dbRole, dbSenderName);
       if (dbId) {
         setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: dbId } : m));
       }
