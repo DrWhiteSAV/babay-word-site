@@ -384,6 +384,59 @@ export type Database = {
           },
         ]
       }
+      group_chat_members: {
+        Row: {
+          character_name: string
+          group_id: string
+          id: string
+          joined_at: string
+          telegram_id: number
+        }
+        Insert: {
+          character_name: string
+          group_id: string
+          id?: string
+          joined_at?: string
+          telegram_id: number
+        }
+        Update: {
+          character_name?: string
+          group_id?: string
+          id?: string
+          joined_at?: string
+          telegram_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "group_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_chats: {
+        Row: {
+          created_at: string
+          created_by: number
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: number
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       leaderboard_cache: {
         Row: {
           avatar_url: string | null
