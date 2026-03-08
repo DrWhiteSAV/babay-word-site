@@ -41,8 +41,8 @@ async function sendTelegramNotification(telegramId: number, text: string) {
   }
 }
 
-const AI_REPLY_TIMEOUT = 20;
-const AI_SUB_TIMEOUT = 30;
+const AI_REPLY_TIMEOUT = 25;
+const AI_SUB_TIMEOUT = 25;
 
 interface Message {
   id: string;
@@ -991,26 +991,6 @@ export default function Chat() {
               <X size={12} />
             </button>
           </div>
-        )}
-
-        {/* AI substitute active: show draft generate button above input */}
-        {friend && isAiSubstitute && (
-          <AnimatePresence>
-            <motion.button
-              key="gen-draft"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              onClick={handleGenerateMyReply}
-              disabled={isMyAiTyping}
-              className="w-full mb-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg,rgba(34,197,94,0.2),rgba(16,185,129,0.15))", border: "1px solid rgba(34,197,94,0.25)" }}
-            >
-              {isMyAiTyping
-                ? <><RefreshCw size={12} className="animate-spin text-green-400" /> Генерирую ответ...</>
-                : <><Bot size={12} className="text-green-400" /> Сгенерировать ответ за меня</>}
-            </motion.button>
-          </AnimatePresence>
         )}
 
         {/* Input row — unified for all modes */}
