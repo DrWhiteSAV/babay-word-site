@@ -27,6 +27,8 @@ interface PvpRoom {
 
 export default function PvpRoom() {
   const { roomId } = useParams<{ roomId: string }>();
+  const [searchParams] = useSearchParams();
+  const autoJoin = searchParams.get("join") === "1";
   const navigate = useNavigate();
   const { character, energy, useEnergy } = usePlayerStore();
   const { profile } = useTelegram();
