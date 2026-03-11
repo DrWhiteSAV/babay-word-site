@@ -143,7 +143,7 @@ export interface PlayerState {
   updateEnergy: () => void;
   updateSettings: (settings: Partial<PlayerState["settings"]>) => void;
   setGlobalBackgroundUrl: (url: string) => void;
-  setPageBackground: (page: string, url: string, dimming: number) => void;
+  setPageBackgrounds: (page: string, entries: Array<{ url: string; dimming: number }>) => void;
   buyItem: (item: string, cost: number, currency?: 'fear' | 'watermelons') => boolean;
   addToGallery: (url: string) => void;
   upgradeTelekinesis: (cost: number) => boolean;
