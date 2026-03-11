@@ -70,7 +70,7 @@ export const useAudio = (volume: number) => {
   const playClick = useCallback(() => {
     const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
     if (!hasInteracted) return;
-    const click = new Audio("https://www.soundjay.com/buttons/button-16.mp3");
+    const click = new Audio("https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/ZvukButtonCam.MP3");
     click.volume = volume / 100;
     click.play().catch(() => {});
   }, [volume]);
@@ -78,7 +78,7 @@ export const useAudio = (volume: number) => {
   const playTransition = useCallback(() => {
     const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
     if (!hasInteracted) return;
-    const whoosh = new Audio("https://www.soundjay.com/free-music/whoosh-01.mp3");
+    const whoosh = new Audio("https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/Zvukwhoosh.MP3");
     whoosh.volume = volume / 100;
     whoosh.play().catch(() => {});
   }, [volume]);
@@ -93,10 +93,10 @@ export const useAudio = (volume: number) => {
 
       const src =
         type === "scream"
-          ? "https://www.soundjay.com/human/man-scream-01.mp3"
+          ? "https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/Zvukscream.MP3"
           : type === "cat"
-            ? "https://www.soundjay.com/mechanical/camera-shutter-click-01.mp3"
-            : "https://www.soundjay.com/human/heartbeat-01.mp3";
+            ? "https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/ZvukMeow.MP3"
+            : "https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/Zvukheartbeat.MP3";
 
       const audio = new Audio(src);
       audio.volume = (volume / 100) * 0.5;
