@@ -89,8 +89,14 @@ function AppContent() {
       ]);
 
       if (bgResult.data && bgResult.data.length > 0) {
+        // Group by page_path into arrays
+        const grouped: Record<string, Array<{ url: string; dimming: number }>> = {};
         bgResult.data.forEach(row => {
-          setPageBackground(row.page_path, row.url || "", row.dimming ?? 80);
+          if (!grouped[row.page_path]) grouped[row.page_path] = [];
+          if (row.url) grouped[row.page_path].push({ url: row.url, dimming: row.dimming ?? 80 });
+        });
+        Object.entries(grouped).forEach(([page, entries]) => {
+          setPageBackgrounds(page, entries);
         });
       }
 
