@@ -488,8 +488,8 @@ export const DEFAULT_BOSS_ITEMS: ShopItem[] = [
   },
 ];
 
-// Базовые фоны страниц (пусто по умолчанию)
-export const DEFAULT_PAGE_BACKGROUNDS: Record<string, { url: string; dimming: number }> = {};
+// Базовые фоны страниц (пусто по умолчанию) — массив для поддержки нескольких фонов
+export const DEFAULT_PAGE_BACKGROUNDS: Record<string, Array<{ url: string; dimming: number }>> = {};
 
 // Базовый глобальный фон (пусто по умолчанию)
 export const DEFAULT_GLOBAL_BACKGROUND: string | null = null;

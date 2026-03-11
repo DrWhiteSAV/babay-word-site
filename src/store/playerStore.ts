@@ -122,7 +122,7 @@ export interface PlayerState {
     ttsEnabled: boolean;
   };
   globalBackgroundUrl: string | null;
-  pageBackgrounds: Record<string, { url: string; dimming: number }>;
+  pageBackgrounds: Record<string, Array<{ url: string; dimming: number }>>;
   videoCutscenes: {
     vertical: string[];
     horizontal: string[];
@@ -143,7 +143,7 @@ export interface PlayerState {
   updateEnergy: () => void;
   updateSettings: (settings: Partial<PlayerState["settings"]>) => void;
   setGlobalBackgroundUrl: (url: string) => void;
-  setPageBackground: (page: string, url: string, dimming: number) => void;
+  setPageBackgrounds: (page: string, entries: Array<{ url: string; dimming: number }>) => void;
   buyItem: (item: string, cost: number, currency?: 'fear' | 'watermelons') => boolean;
   addToGallery: (url: string) => void;
   upgradeTelekinesis: (cost: number) => boolean;
@@ -261,8 +261,8 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
       return { settings: updated };
     }),
   setGlobalBackgroundUrl: (url) => set({ globalBackgroundUrl: url }),
-  setPageBackground: (page, url, dimming) => set((state) => ({
-    pageBackgrounds: { ...state.pageBackgrounds, [page]: { url, dimming } }
+  setPageBackgrounds: (page, entries) => set((state) => ({
+    pageBackgrounds: { ...state.pageBackgrounds, [page]: entries }
   })),
   setVideoCutscenes: (vertical, horizontal) => set({ videoCutscenes: { vertical, horizontal } }),
   updateStoreConfig: (config) => set((state) => ({ storeConfig: { ...state.storeConfig, ...config } })),

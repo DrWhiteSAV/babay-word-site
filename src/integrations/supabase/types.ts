@@ -606,6 +606,7 @@ export type Database = {
           dimming: number
           id: string
           page_path: string
+          sort_order: number
           updated_at: string
           url: string
         }
@@ -613,6 +614,7 @@ export type Database = {
           dimming?: number
           id?: string
           page_path: string
+          sort_order?: number
           updated_at?: string
           url?: string
         }
@@ -620,6 +622,7 @@ export type Database = {
           dimming?: number
           id?: string
           page_path?: string
+          sort_order?: number
           updated_at?: string
           url?: string
         }

@@ -67,7 +67,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const { entryMode, isLoading, profile } = useTelegram();
   const [hasSeenInitialCutscene, setHasSeenInitialCutscene] = useState(false);
-  const { updateEnergy, settings, globalBackgroundUrl, setGlobalBackgroundUrl, character, pageBackgrounds, setPageBackground, setVideoCutscenes } = usePlayerStore();
+  const { updateEnergy, settings, globalBackgroundUrl, setGlobalBackgroundUrl, character, pageBackgrounds, setPageBackgrounds, setVideoCutscenes } = usePlayerStore();
   const { playClick } = useAudio(settings.musicVolume);
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
@@ -89,8 +89,14 @@ function AppContent() {
       ]);
 
       if (bgResult.data && bgResult.data.length > 0) {
+        // Group by page_path into arrays
+        const grouped: Record<string, Array<{ url: string; dimming: number }>> = {};
         bgResult.data.forEach(row => {
-          setPageBackground(row.page_path, row.url || "", row.dimming ?? 80);
+          if (!grouped[row.page_path]) grouped[row.page_path] = [];
+          if (row.url) grouped[row.page_path].push({ url: row.url, dimming: row.dimming ?? 80 });
+        });
+        Object.entries(grouped).forEach(([page, entries]) => {
+          setPageBackgrounds(page, entries);
         });
       }
 
@@ -207,7 +213,12 @@ function AppContent() {
     settings.buttonSize === "large" ? "btn-large" : "btn-medium";
 
   const currentPath = location.pathname;
-  const customBg = pageBackgrounds?.[currentPath];
+  const bgEntries = pageBackgrounds?.[currentPath];
+  // Pick a random background from available entries (stable per page load via useMemo)
+  const [randomBgIndex] = useState(() => Math.random());
+  const customBg = bgEntries && bgEntries.length > 0
+    ? bgEntries[Math.floor(randomBgIndex * bgEntries.length)]
+    : null;
   const activeBgUrl = customBg?.url || globalBackgroundUrl;
 
   // Calculate dimming values based on customBg.dimming (0-100)

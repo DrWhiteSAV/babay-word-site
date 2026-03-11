@@ -265,8 +265,11 @@ export default function Game() {
   }, [isGameOver, pvpParticipants, pvpResults, pvpRoomId, localFear, localWatermelons, maxStages, exitedEarly, addFear, addWatermelons]);
 
   const getDefaultGameBg = () => {
-    const gameBg = pageBackgrounds["/game"];
-    if (gameBg?.url) return gameBg.url;
+    const gameBgs = pageBackgrounds["/game"];
+    if (gameBgs && gameBgs.length > 0) {
+      const picked = gameBgs[Math.floor(Math.random() * gameBgs.length)];
+      if (picked.url) return picked.url;
+    }
     if (globalBackgroundUrl) return globalBackgroundUrl;
     return "https://i.ibb.co/BVgY7XrT/babai.png";
   };
