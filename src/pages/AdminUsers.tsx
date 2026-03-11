@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, Save, Key, Plus, Trash2, Loader2 } from "lucide-react";
+import { Users, Save, Key, Plus, Trash2, Loader2, Search } from "lucide-react";
 import Header from "../components/Header";
 import { DEFAULT_USERS } from "../config/defaultSettings";
 import { supabase } from "../integrations/supabase/client";
@@ -26,9 +26,12 @@ interface UserEntry {
   role: Role;
   username?: string;
   photo_url?: string;
+  avatar_url?: string;
   fear?: number;
   watermelons?: number;
   energy?: number;
+  telekinesis_level?: number;
+  boss_level?: number;
 }
 
 export default function AdminUsers() {
@@ -40,6 +43,8 @@ export default function AdminUsers() {
   const [activeTab, setActiveTab] = useState<"users" | "roles">("users");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [avatarPopup, setAvatarPopup] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -48,7 +53,7 @@ export default function AdminUsers() {
         .select("telegram_id, first_name, last_name, username, photo_url, role");
       const { data: stats } = await supabase
         .from("player_stats")
-        .select("telegram_id, fear, watermelons, energy");
+        .select("telegram_id, fear, watermelons, energy, telekinesis_level, boss_level, avatar_url");
 
       if (profiles && profiles.length > 0) {
         const statsMap = new Map((stats || []).map(s => [s.telegram_id, s]));
@@ -61,14 +66,16 @@ export default function AdminUsers() {
             role: (p.role as Role) || "Бабай",
             username: p.username || undefined,
             photo_url: p.photo_url || undefined,
+            avatar_url: s?.avatar_url || undefined,
             fear: s?.fear,
             watermelons: s?.watermelons,
             energy: s?.energy,
+            telekinesis_level: s?.telekinesis_level,
+            boss_level: s?.boss_level,
           };
         });
         setUsers(mapped);
       } else {
-        // Fallback to defaults if no DB data
         setUsers(DEFAULT_USERS.map(u => ({ ...u, telegram_id: u.id })));
       }
       setLoading(false);
@@ -79,6 +86,10 @@ export default function AdminUsers() {
   const handleRoleChange = async (telegram_id: string, role: Role) => {
     setUsers(prev => prev.map(u => u.telegram_id === telegram_id ? { ...u, role } : u));
     await supabase.from("profiles").update({ role }).eq("telegram_id", Number(telegram_id));
+  };
+
+  const handleStatChange = (telegram_id: string, field: keyof UserEntry, value: number) => {
+    setUsers(prev => prev.map(u => u.telegram_id === telegram_id ? { ...u, [field]: value } : u));
   };
 
   const handleAddUser = () => {
@@ -96,15 +107,32 @@ export default function AdminUsers() {
 
   const handleSave = async () => {
     setSaving(true);
-    // Update all roles in DB
-    const updates = users.map(u =>
-      supabase.from("profiles").update({ role: u.role }).eq("telegram_id", Number(u.telegram_id))
-    );
+    const updates = users.map(async (u) => {
+      await supabase.from("profiles").update({ role: u.role }).eq("telegram_id", Number(u.telegram_id));
+      if (u.fear !== undefined || u.watermelons !== undefined || u.energy !== undefined || u.telekinesis_level !== undefined || u.boss_level !== undefined) {
+        const statUpdate: Record<string, number> = {};
+        if (u.fear !== undefined) statUpdate.fear = u.fear;
+        if (u.watermelons !== undefined) statUpdate.watermelons = u.watermelons;
+        if (u.energy !== undefined) statUpdate.energy = u.energy;
+        if (u.telekinesis_level !== undefined) statUpdate.telekinesis_level = u.telekinesis_level;
+        if (u.boss_level !== undefined) statUpdate.boss_level = u.boss_level;
+        await supabase.from("player_stats").update(statUpdate).eq("telegram_id", Number(u.telegram_id));
+      }
+    });
     await Promise.all(updates);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  const q = search.toLowerCase().trim();
+  const filtered = q
+    ? users.filter(u =>
+        u.telegram_id.includes(q) ||
+        u.name.toLowerCase().includes(q) ||
+        (u.username && u.username.toLowerCase().includes(q))
+      )
+    : users;
 
   return (
     <motion.div
@@ -116,6 +144,13 @@ export default function AdminUsers() {
       <div className="fog-container"><div className="fog-layer"></div><div className="fog-layer-2"></div></div>
       <Header title={<><Users size={20} /> Пользователи</>} backUrl="/admin" />
 
+      {/* Avatar popup */}
+      {avatarPopup && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setAvatarPopup(null)}>
+          <img src={avatarPopup} alt="Аватар" className="max-w-80 max-h-80 rounded-2xl border-2 border-neutral-700 object-contain" />
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Tabs */}
         <div className="flex gap-2">
@@ -125,6 +160,18 @@ export default function AdminUsers() {
               {tab === "users" ? "Профили" : "Уровни доступа"}
             </button>
           ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Поиск по ID, имени или username..."
+            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white focus:border-red-500 outline-none"
+          />
         </div>
 
         {activeTab === "roles" && (
@@ -147,41 +194,72 @@ export default function AdminUsers() {
               <table className="w-full text-left text-xs text-neutral-400">
                 <thead className="text-[10px] text-neutral-500 uppercase bg-neutral-900/50 border-b border-neutral-800">
                   <tr>
-                    <th className="px-3 py-3">ID</th>
-                    <th className="px-3 py-3">Имя</th>
+                    <th className="px-2 py-3">Аватар</th>
+                    <th className="px-2 py-3">ID</th>
+                    <th className="px-2 py-3">Имя</th>
                     {activeTab === "users" && <>
-                      <th className="px-3 py-3">Username</th>
-                      <th className="px-3 py-3">Страх</th>
-                      <th className="px-3 py-3">🍉</th>
-                      <th className="px-3 py-3">⚡</th>
+                      <th className="px-2 py-3">Username</th>
+                      <th className="px-2 py-3">Страх</th>
+                      <th className="px-2 py-3">🍉</th>
+                      <th className="px-2 py-3">⚡</th>
+                      <th className="px-2 py-3">🧠 ТК</th>
+                      <th className="px-2 py-3">👹 Босс</th>
                     </>}
-                    <th className="px-3 py-3">Роль</th>
+                    <th className="px-2 py-3">Роль</th>
                     {activeTab === "roles" && <>
-                      <th className="px-3 py-3">Права</th>
-                      <th className="px-3 py-3">Разделы</th>
+                      <th className="px-2 py-3">Права</th>
+                      <th className="px-2 py-3">Разделы</th>
                     </>}
-                    <th className="px-3 py-3"></th>
+                    <th className="px-2 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filtered.map((user) => (
                     <tr key={user.telegram_id} className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
-                      <td className="px-3 py-2 font-mono text-white">
-                        <div className="flex items-center gap-1.5"><Key size={11} className="text-red-500 shrink-0" />{user.telegram_id}</div>
+                      <td className="px-2 py-2">
+                        {user.avatar_url ? (
+                          <button onClick={() => setAvatarPopup(user.avatar_url!)} className="block">
+                            <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-neutral-700 hover:border-red-500 transition-colors cursor-pointer" />
+                          </button>
+                        ) : user.photo_url ? (
+                          <img src={user.photo_url} alt="" className="w-8 h-8 rounded-full object-cover border border-neutral-700" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-600 text-[10px]">?</div>
+                        )}
                       </td>
-                      <td className="px-3 py-2 font-bold text-white">
-                        <div className="flex items-center gap-1.5">
-                          {user.photo_url && <img src={user.photo_url} className="w-5 h-5 rounded-full" alt="" />}
-                          {user.name}
-                        </div>
+                      <td className="px-2 py-2 font-mono text-white">
+                        <div className="flex items-center gap-1"><Key size={10} className="text-red-500 shrink-0" />{user.telegram_id}</div>
                       </td>
+                      <td className="px-2 py-2 font-bold text-white">{user.name}</td>
                       {activeTab === "users" && <>
-                        <td className="px-3 py-2 text-neutral-400">{user.username ? `@${user.username}` : "—"}</td>
-                        <td className="px-3 py-2 text-red-400">{user.fear ?? "—"}</td>
-                        <td className="px-3 py-2 text-green-400">{user.watermelons ?? "—"}</td>
-                        <td className="px-3 py-2 text-blue-400">{user.energy ?? "—"}</td>
+                        <td className="px-2 py-2 text-neutral-400">{user.username ? `@${user.username}` : "—"}</td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={user.fear ?? 0}
+                            onChange={e => handleStatChange(user.telegram_id, "fear", parseInt(e.target.value) || 0)}
+                            className="w-16 bg-neutral-950 border border-neutral-800 rounded px-1.5 py-0.5 text-red-400 text-xs focus:border-red-500 outline-none" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={user.watermelons ?? 0}
+                            onChange={e => handleStatChange(user.telegram_id, "watermelons", parseInt(e.target.value) || 0)}
+                            className="w-16 bg-neutral-950 border border-neutral-800 rounded px-1.5 py-0.5 text-green-400 text-xs focus:border-green-500 outline-none" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={user.energy ?? 0}
+                            onChange={e => handleStatChange(user.telegram_id, "energy", parseInt(e.target.value) || 0)}
+                            className="w-16 bg-neutral-950 border border-neutral-800 rounded px-1.5 py-0.5 text-blue-400 text-xs focus:border-blue-500 outline-none" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={user.telekinesis_level ?? 0}
+                            onChange={e => handleStatChange(user.telegram_id, "telekinesis_level", parseInt(e.target.value) || 0)}
+                            className="w-14 bg-neutral-950 border border-neutral-800 rounded px-1.5 py-0.5 text-purple-400 text-xs focus:border-purple-500 outline-none" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input type="number" value={user.boss_level ?? 0}
+                            onChange={e => handleStatChange(user.telegram_id, "boss_level", parseInt(e.target.value) || 0)}
+                            className="w-14 bg-neutral-950 border border-neutral-800 rounded px-1.5 py-0.5 text-orange-400 text-xs focus:border-orange-500 outline-none" />
+                        </td>
                       </>}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <select
                           className="bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-1 text-white focus:border-red-500 outline-none text-xs"
                           value={user.role}
@@ -192,10 +270,10 @@ export default function AdminUsers() {
                         </select>
                       </td>
                       {activeTab === "roles" && <>
-                        <td className="px-3 py-2 text-[10px]">{ROLE_ACCESS[user.role].access}</td>
-                        <td className="px-3 py-2 text-[10px] text-neutral-500">{ROLE_ACCESS[user.role].pages}</td>
+                        <td className="px-2 py-2 text-[10px]">{ROLE_ACCESS[user.role].access}</td>
+                        <td className="px-2 py-2 text-[10px] text-neutral-500">{ROLE_ACCESS[user.role].pages}</td>
                       </>}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <button onClick={() => handleDelete(user.telegram_id)} className="p-1 text-neutral-700 hover:text-red-500 transition-colors">
                           <Trash2 size={12} />
                         </button>
@@ -206,7 +284,7 @@ export default function AdminUsers() {
               </table>
             </div>
             <div className="px-3 py-2 text-xs text-neutral-600 border-t border-neutral-800">
-              {users.length} пользователей в базе данных
+              {filtered.length === users.length ? `${users.length} пользователей` : `${filtered.length} из ${users.length} пользователей`}
             </div>
           </div>
         )}

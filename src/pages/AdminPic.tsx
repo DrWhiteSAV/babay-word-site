@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Save, ArrowLeft, Image as ImageIcon, Loader2, Info, Plus, Trash2 } from "lucide-react";
+import { Save, ArrowLeft, Image as ImageIcon, Loader2, Info, Plus, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
 
@@ -37,6 +37,7 @@ export default function AdminPic() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [previewPopup, setPreviewPopup] = useState<BgEntry | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -85,12 +86,8 @@ export default function AdminPic() {
 
   const handleSave = async () => {
     setSaving(true);
-
-    // Delete all existing rows and re-insert
     await supabase.from("page_backgrounds").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
     const rows: { page_path: string; url: string; dimming: number; sort_order: number }[] = [];
-
     Object.entries(bgData).forEach(([page_path, entries]) => {
       if (page_path === GAME_DIMMING_KEY) {
         rows.push({ page_path, url: "", dimming: entries[0]?.dimming ?? 15, sort_order: 0 });
@@ -102,12 +99,10 @@ export default function AdminPic() {
         });
       }
     });
-
     if (rows.length > 0) {
       const { error } = await supabase.from("page_backgrounds").insert(rows);
       if (error) { alert("Ошибка: " + error.message); setSaving(false); return; }
     }
-
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -125,6 +120,48 @@ export default function AdminPic() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="flex-1 flex flex-col bg-neutral-950 text-neutral-200 relative overflow-y-auto h-screen">
+
+      {/* Preview popup */}
+      {previewPopup && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewPopup(null)}>
+          <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setPreviewPopup(null)}
+              className="absolute -top-3 -right-3 z-10 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full p-2 border border-neutral-600 transition-colors">
+              <X size={20} />
+            </button>
+            <h3 className="text-center text-sm text-neutral-400 mb-4">Предпросмотр фона (затемнение {previewPopup.dimming}%)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Portrait */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-xs text-neutral-500">📱 Вертикальная (9:16)</span>
+                <div className="relative w-48 h-[340px] rounded-2xl border-2 border-neutral-700 overflow-hidden mx-auto">
+                  <img src={previewPopup.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-neutral-950 transition-opacity" style={{ opacity: previewPopup.dimming / 100 }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10">
+                    <div className="w-10 h-10 rounded-full bg-neutral-800/60 border border-neutral-600" />
+                    <div className="w-20 h-2 rounded bg-neutral-700/50" />
+                    <div className="w-16 h-2 rounded bg-neutral-700/30" />
+                  </div>
+                </div>
+              </div>
+              {/* Landscape */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-xs text-neutral-500">📱 Горизонтальная (16:9)</span>
+                <div className="relative w-full max-w-[380px] h-[214px] rounded-2xl border-2 border-neutral-700 overflow-hidden mx-auto">
+                  <img src={previewPopup.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-neutral-950 transition-opacity" style={{ opacity: previewPopup.dimming / 100 }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10">
+                    <div className="w-10 h-10 rounded-full bg-neutral-800/60 border border-neutral-600" />
+                    <div className="w-20 h-2 rounded bg-neutral-700/50" />
+                    <div className="w-16 h-2 rounded bg-neutral-700/30" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 md:p-6 max-w-4xl mx-auto w-full pb-24">
         <div className="flex items-center gap-4 mb-8">
           <button onClick={() => navigate("/admin")} className="p-2 bg-neutral-900 rounded-xl hover:bg-neutral-800 transition-colors">
@@ -139,15 +176,13 @@ export default function AdminPic() {
           <p className="flex items-center gap-2 text-neutral-300 font-semibold"><Info size={14} className="text-red-400" /> Как это работает</p>
           <p>• Можно добавить <strong className="text-neutral-300">несколько фонов</strong> для каждой страницы — у игроков они будут показываться <strong className="text-neutral-300">в случайном порядке</strong>.</p>
           <p>• <strong className="text-neutral-300">Затемнение (0–100%)</strong> настраивается отдельно для каждого фона.</p>
-          <p>• Нажмите <strong className="text-neutral-300">+ Добавить фон</strong> чтобы добавить ещё одну картинку для страницы.</p>
+          <p>• Нажмите на <strong className="text-neutral-300">предпросмотр</strong> чтобы увидеть как фон выглядит на мобильном экране.</p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12"><Loader2 size={24} className="animate-spin text-red-500" /></div>
         ) : (
           <div className="space-y-6">
-
-            {/* Game AI dimming */}
             <GameDimmingBlock
               dimming={bgData[GAME_DIMMING_KEY]?.[0]?.dimming ?? 15}
               onChange={(v) => setBgData(prev => ({ ...prev, [GAME_DIMMING_KEY]: [{ url: "", dimming: v }] }))}
@@ -167,6 +202,7 @@ export default function AdminPic() {
                 onRemove={(i) => removeEntry(page.path, i)}
                 onUpdate={(i, field, value) => updateEntry(page.path, i, field, value)}
                 dimmingLabel={dimmingLabel}
+                onPreview={(entry) => setPreviewPopup(entry)}
               />
             ))}
           </div>
@@ -207,13 +243,14 @@ function GameDimmingBlock({ dimming, onChange, dimmingLabel }: { dimming: number
   );
 }
 
-function PageBgBlock({ page, entries, onAdd, onRemove, onUpdate, dimmingLabel }: {
+function PageBgBlock({ page, entries, onAdd, onRemove, onUpdate, dimmingLabel, onPreview }: {
   page: { path: string; name: string };
   entries: BgEntry[];
   onAdd: () => void;
   onRemove: (i: number) => void;
   onUpdate: (i: number, field: "url" | "dimming", value: string | number) => void;
   dimmingLabel: (v: number) => string;
+  onPreview: (entry: BgEntry) => void;
 }) {
   return (
     <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
@@ -262,11 +299,16 @@ function PageBgBlock({ page, entries, onAdd, onRemove, onUpdate, dimmingLabel }:
                 className="w-full accent-red-500" />
             </div>
             {entry.url && (
-              <div className="h-12 rounded-lg border border-neutral-700 overflow-hidden relative">
+              <button
+                onClick={() => onPreview(entry)}
+                className="w-full h-12 rounded-lg border border-neutral-700 overflow-hidden relative cursor-pointer hover:border-red-500 transition-colors group"
+              >
                 <img src={entry.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-neutral-950 transition-opacity" style={{ opacity: entry.dimming / 100 }} />
-                <span className="absolute inset-0 flex items-center justify-center text-xs text-white z-10 font-semibold">Предпросмотр</span>
-              </div>
+                <span className="absolute inset-0 flex items-center justify-center text-xs text-white z-10 font-semibold group-hover:text-red-300 transition-colors">
+                  Нажмите для предпросмотра 📱
+                </span>
+              </button>
             )}
           </div>
         ))}
