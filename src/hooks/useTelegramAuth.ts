@@ -107,9 +107,16 @@ export function useTelegramAuth() {
       const mode = detectEntryMode();
       setEntryMode(mode);
 
-      // Lovable editor or browser → give super admin access (tgId=169262990 for testing)
-      if (mode === "lovable" || mode === "browser") {
+      // Lovable editor → super admin access
+      if (mode === "lovable") {
         setProfile(LOVABLE_SUPER_USER);
+        setIsLoading(false);
+        return;
+      }
+
+      // Browser (bab-ai.ru etc.) → demo mode with restricted access
+      if (mode === "browser") {
+        setProfile(BROWSER_DEMO_USER);
         setIsLoading(false);
         return;
       }
