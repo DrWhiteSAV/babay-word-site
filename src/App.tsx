@@ -213,7 +213,15 @@ function AppContent() {
     settings.buttonSize === "large" ? "btn-large" : "btn-medium";
 
   const currentPath = location.pathname;
-  const bgEntries = pageBackgrounds?.[currentPath];
+  // Map certain paths to share backgrounds with other pages
+  const bgMappedPath = (() => {
+    // PVP rooms and results use /hub backgrounds
+    if (currentPath.startsWith("/pvp/room/") || currentPath.startsWith("/pvp/results/")) return "/hub";
+    // All admin pages use /settings backgrounds
+    if (currentPath.startsWith("/admin")) return "/settings";
+    return currentPath;
+  })();
+  const bgEntries = pageBackgrounds?.[bgMappedPath];
   // Pick a random background from available entries (stable per page load via useMemo)
   const [randomBgIndex] = useState(() => Math.random());
   const customBg = bgEntries && bgEntries.length > 0
