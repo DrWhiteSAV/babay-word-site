@@ -78,6 +78,20 @@ const LOVABLE_SUPER_USER: TelegramProfile = {
   updated_at: new Date().toISOString(),
 };
 
+const BROWSER_DEMO_USER: TelegramProfile = {
+  id: "demo-user",
+  telegram_id: 0,
+  first_name: "Демо",
+  last_name: null,
+  username: null,
+  profile_url: null,
+  photo_url: null,
+  referral_code: null,
+  role: "Демо",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 /**
  * Reads Telegram WebApp initData, registers/updates the user in Supabase profiles table,
  * and returns the stored profile. In Lovable editor returns a super-admin mock profile.
@@ -93,9 +107,16 @@ export function useTelegramAuth() {
       const mode = detectEntryMode();
       setEntryMode(mode);
 
-      // Lovable editor or browser → give super admin access (tgId=169262990 for testing)
-      if (mode === "lovable" || mode === "browser") {
+      // Lovable editor → super admin access
+      if (mode === "lovable") {
         setProfile(LOVABLE_SUPER_USER);
+        setIsLoading(false);
+        return;
+      }
+
+      // Browser (bab-ai.ru etc.) → demo mode with restricted access
+      if (mode === "browser") {
+        setProfile(BROWSER_DEMO_USER);
         setIsLoading(false);
         return;
       }

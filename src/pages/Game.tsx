@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import DemoWall from "../components/DemoWall";
 import ProfilePopup from "../components/ProfilePopup";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
@@ -696,8 +697,19 @@ export default function Game() {
     setIsResultView(true);
   };
 
+  // Demo mode: show wall after stage 1
+  const [showDemoWall, setShowDemoWall] = useState(false);
+  const isDemo = profile?.role === "Демо";
+
   const nextAfterResult = () => {
     const nextStage = stage + 1;
+
+    // Demo users can only play 1 stage
+    if (isDemo && nextStage > 1) {
+      setShowDemoWall(true);
+      return;
+    }
+
     if (nextStage > maxStages) {
       setIsGameOver(true);
     } else {
@@ -781,6 +793,11 @@ export default function Game() {
       reward: Math.floor(storeConfig.bossRewardBase * Math.pow(storeConfig.bossRewardMultiplier, bossLevel - 1) * bossRewardMultiplier),
     };
   };
+
+  // ======== DEMO WALL ========
+  if (showDemoWall) {
+    return <DemoWall showCutscene />;
+  }
 
   // ======== SCREENS ========
 

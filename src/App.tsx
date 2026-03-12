@@ -64,6 +64,14 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Restricts pages from Demo users — redirects to /hub */
+function DemoGuard({ children }: { children: React.ReactNode }) {
+  const { profile, isLoading } = useTelegram();
+  if (isLoading) return null;
+  if (profile?.role === "Демо") return <Navigate to="/hub" replace />;
+  return <>{children}</>;
+}
+
 function AppContent() {
   const { entryMode, isLoading, profile } = useTelegram();
   const [hasSeenInitialCutscene, setHasSeenInitialCutscene] = useState(false);
@@ -268,19 +276,19 @@ function AppContent() {
           <Route path="/hub" element={<GameHub />} />
           <Route path="/game" element={<Game />} />
           <Route path="/shop" element={<Shop />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/notifications" element={<NotificationSettings />} />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/achievements" element={<Achievements />} />
-          <Route path="/chats" element={<Chats />} />
-          <Route path="/pvp" element={<PvpSetup />} />
-          <Route path="/pvp/room/:roomId" element={<PvpRoom />} />
-          <Route path="/pvp/results/:roomId" element={<PvpResults />} />
+          <Route path="/profile" element={<DemoGuard><Profile /></DemoGuard>} />
+          <Route path="/gallery" element={<DemoGuard><Gallery /></DemoGuard>} />
+          <Route path="/settings" element={<DemoGuard><Settings /></DemoGuard>} />
+          <Route path="/settings/notifications" element={<DemoGuard><NotificationSettings /></DemoGuard>} />
+          <Route path="/friends" element={<DemoGuard><Friends /></DemoGuard>} />
+          <Route path="/chat" element={<DemoGuard><Chat /></DemoGuard>} />
+          <Route path="/leaderboard" element={<DemoGuard><Leaderboard /></DemoGuard>} />
+          <Route path="/events" element={<DemoGuard><Events /></DemoGuard>} />
+          <Route path="/achievements" element={<DemoGuard><Achievements /></DemoGuard>} />
+          <Route path="/chats" element={<DemoGuard><Chats /></DemoGuard>} />
+          <Route path="/pvp" element={<DemoGuard><PvpSetup /></DemoGuard>} />
+          <Route path="/pvp/room/:roomId" element={<DemoGuard><PvpRoom /></DemoGuard>} />
+          <Route path="/pvp/results/:roomId" element={<DemoGuard><PvpResults /></DemoGuard>} />
           <Route path="/admin" element={<AdminGuard><Admin /></AdminGuard>} />
           <Route path="/admin/pic" element={<AdminGuard><AdminPic /></AdminGuard>} />
           <Route path="/admin/video" element={<AdminGuard><AdminVideo /></AdminGuard>} />

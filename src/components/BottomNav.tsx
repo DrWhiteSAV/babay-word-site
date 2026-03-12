@@ -76,12 +76,14 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { character } = usePlayerStore();
+  const { profile } = useTelegram();
   const unreadCount = useUnreadCount();
+  const isDemo = profile?.role === "Демо";
 
   const navItems = [
     { path: "/hub", icon: <Home size={24} />, label: "Главная" },
     { path: "/shop", icon: <ShoppingCart size={24} />, label: "Магазин" },
-    {
+    ...(!isDemo ? [{
       path: "/profile",
       icon: character?.avatarUrl ? (
         <img src={character.avatarUrl} alt="profile" className="w-6 h-6 rounded-full object-cover border border-neutral-500" />
@@ -89,8 +91,8 @@ export default function BottomNav() {
         <div className="w-6 h-6 rounded-full bg-neutral-700 border border-neutral-500" />
       ),
       label: "Профиль",
-    },
-    {
+    }] : []),
+    ...(!isDemo ? [{
       path: "/chats",
       icon: (
         <div className="relative">
@@ -103,12 +105,12 @@ export default function BottomNav() {
         </div>
       ),
       label: "Чаты",
-    },
-    {
+    }] : []),
+    ...(!isDemo ? [{
       path: "/friends",
       icon: <Users size={24} />,
       label: "Друзья",
-    },
+    }] : []),
   ];
 
   // Don't show on initial setup screens or game
