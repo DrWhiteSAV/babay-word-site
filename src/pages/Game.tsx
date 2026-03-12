@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import DemoWall from "../components/DemoWall";
 import ProfilePopup from "../components/ProfilePopup";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
