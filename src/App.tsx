@@ -8,7 +8,7 @@ import {
 import { usePlayerStore } from "./store/playerStore";
 import { TelegramProvider } from "./context/TelegramContext";
 import { useState, useEffect, useRef } from "react";
-import { useAudio, menuMusic, bgMusics } from "./hooks/useAudio";
+import { useAudio } from "./hooks/useAudio";
 import BottomNav from "./components/BottomNav";
 import { CutscenePlayer } from "./components/CutscenePlayer";
 import { supabase } from "./integrations/supabase/client";
