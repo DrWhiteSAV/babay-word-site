@@ -1,68 +1,128 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Music, Save, Volume2, Loader2 } from "lucide-react";
+import { Music, Save, Volume2, Loader2, Plus, Trash2 } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../integrations/supabase/client";
 
-const DEFAULT_AUDIO: Record<string, string> = {
-  menuMusic: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-  bgMusic1: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-  bgMusic2: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-  bgMusic3: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-  bgMusic4: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-  bgMusic5: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-  click: "https://www.soundjay.com/buttons/button-16.mp3",
-  transition: "https://www.soundjay.com/free-music/whoosh-01.mp3",
-  scream: "https://www.soundjay.com/human/man-scream-01.mp3",
-  cat: "https://www.soundjay.com/mechanical/camera-shutter-click-01.mp3",
-  fear: "https://www.soundjay.com/human/heartbeat-01.mp3",
-};
+const AUDIO_GROUPS = [
+  { key: "menuMusic", label: "Главное меню", isMusic: true },
+  { key: "bgMusic1", label: "Фон в игре 1", isMusic: true },
+  { key: "bgMusic2", label: "Фон в игре 2", isMusic: true },
+  { key: "bgMusic3", label: "Фон в игре 3", isMusic: true },
+  { key: "bgMusic4", label: "Фон в игре 4", isMusic: true },
+  { key: "bgMusic5", label: "Фон в игре 5", isMusic: true },
+  { key: "click", label: "Клик по кнопке", isMusic: false },
+  { key: "transition", label: "Переход между страницами", isMusic: false },
+  { key: "scream", label: "Крик (scream)", isMusic: false },
+  { key: "cat", label: "Фото/Кот (cat)", isMusic: false },
+  { key: "fear", label: "Страх/Сердцебиение", isMusic: false },
+];
 
-const AUDIO_LABELS: Record<string, string> = {
-  menuMusic: "Главное меню",
-  bgMusic1: "Фон в игре 1",
-  bgMusic2: "Фон в игре 2",
-  bgMusic3: "Фон в игре 3",
-  bgMusic4: "Фон в игре 4",
-  bgMusic5: "Фон в игре 5",
-  click: "Клик по кнопке",
-  transition: "Переход между страницами",
-  scream: "Крик (scream)",
-  cat: "Фото/Кот (cat)",
-  fear: "Страх/Сердцебиение",
-};
+type AudioEntry = { id?: string; key: string; value: string; sort_order: number };
 
 export default function AdminAudio() {
-  const [audio, setAudio] = useState<Record<string, string>>({ ...DEFAULT_AUDIO });
+  const [audioMap, setAudioMap] = useState<Record<string, AudioEntry[]>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from("audio_settings").select("key, value");
-      if (data && data.length > 0) {
-        const merged = { ...DEFAULT_AUDIO };
-        data.forEach(r => { merged[r.key] = r.value; });
-        setAudio(merged);
+      const { data } = await supabase.from("audio_settings").select("id, key, value, sort_order").order("sort_order");
+      const map: Record<string, AudioEntry[]> = {};
+      // Initialize all groups with empty arrays
+      AUDIO_GROUPS.forEach(g => { map[g.key] = []; });
+      if (data) {
+        data.forEach(r => {
+          if (!map[r.key]) map[r.key] = [];
+          map[r.key].push({ id: r.id, key: r.key, value: r.value, sort_order: r.sort_order });
+        });
       }
+      setAudioMap(map);
       setLoading(false);
     };
     load();
   }, []);
 
+  const addUrl = (key: string) => {
+    setAudioMap(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), { key, value: "", sort_order: (prev[key]?.length || 0) }],
+    }));
+  };
+
+  const removeUrl = (key: string, index: number) => {
+    setAudioMap(prev => ({
+      ...prev,
+      [key]: (prev[key] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateUrl = (key: string, index: number, value: string) => {
+    setAudioMap(prev => ({
+      ...prev,
+      [key]: (prev[key] || []).map((entry, i) => i === index ? { ...entry, value } : entry),
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
-    const rows = Object.entries(audio).map(([key, value]) => ({ key, value, label: AUDIO_LABELS[key] || key }));
-    const { error } = await supabase.from("audio_settings").upsert(rows, { onConflict: "key" });
+    // Delete all existing and re-insert
+    await supabase.from("audio_settings").delete().neq("key", "__never__");
+    
+    const rows: { key: string; value: string; label: string; sort_order: number }[] = [];
+    AUDIO_GROUPS.forEach(group => {
+      const entries = audioMap[group.key] || [];
+      entries.forEach((entry, i) => {
+        if (entry.value.trim()) {
+          rows.push({ key: group.key, value: entry.value.trim(), label: group.label, sort_order: i });
+        }
+      });
+    });
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from("audio_settings").insert(rows);
+      if (error) { alert("Ошибка: " + error.message); setSaving(false); return; }
+    }
+
     setSaving(false);
-    if (error) { alert("Ошибка: " + error.message); return; }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const musicKeys = Object.keys(DEFAULT_AUDIO).filter(k => k.toLowerCase().includes("music"));
-  const sfxKeys = Object.keys(DEFAULT_AUDIO).filter(k => !k.toLowerCase().includes("music"));
+  const musicGroups = AUDIO_GROUPS.filter(g => g.isMusic);
+  const sfxGroups = AUDIO_GROUPS.filter(g => !g.isMusic);
+
+  const renderGroup = (group: typeof AUDIO_GROUPS[0]) => {
+    const entries = audioMap[group.key] || [];
+    return (
+      <div key={group.key} className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">{group.label}</label>
+          <button onClick={() => addUrl(group.key)} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1">
+            <Plus size={12} /> Добавить ссылку
+          </button>
+        </div>
+        {entries.length === 0 && (
+          <p className="text-[10px] text-neutral-600 italic">Нет ссылок — будет использован звук по умолчанию</p>
+        )}
+        {entries.map((entry, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <input
+              type="text"
+              className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none"
+              value={entry.value}
+              onChange={e => updateUrl(group.key, i, e.target.value)}
+              placeholder="https://..."
+            />
+            <button onClick={() => removeUrl(group.key, i)} className="text-red-500 hover:text-red-400 p-1">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <motion.div
@@ -76,43 +136,25 @@ export default function AdminAudio() {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="bg-neutral-900/50 p-3 rounded-xl border border-neutral-800 text-xs text-neutral-400">
-          Ссылки на аудиофайлы. Изменения синхронизируются с базой данных.
+          Добавьте несколько ссылок на аудио для каждого типа — они будут воспроизводиться в случайном порядке.
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12"><Loader2 size={24} className="animate-spin text-red-500" /></div>
         ) : (
           <div className="space-y-4">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-4">
               <h3 className="text-sm font-bold text-white border-b border-neutral-800 pb-2 flex items-center gap-2">
                 <Music size={14} className="text-red-500" /> Музыка
               </h3>
-              {musicKeys.map(key => (
-                <div key={key} className="space-y-1">
-                  <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">{AUDIO_LABELS[key]}</label>
-                  <input type="text"
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none"
-                    value={audio[key] || ""}
-                    onChange={e => setAudio(prev => ({ ...prev, [key]: e.target.value }))}
-                  />
-                </div>
-              ))}
+              {musicGroups.map(renderGroup)}
             </div>
 
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-4">
               <h3 className="text-sm font-bold text-white border-b border-neutral-800 pb-2 flex items-center gap-2">
                 <Volume2 size={14} className="text-red-500" /> Звуковые эффекты
               </h3>
-              {sfxKeys.map(key => (
-                <div key={key} className="space-y-1">
-                  <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">{AUDIO_LABELS[key]}</label>
-                  <input type="text"
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-xs focus:border-red-500 outline-none"
-                    value={audio[key] || ""}
-                    onChange={e => setAudio(prev => ({ ...prev, [key]: e.target.value }))}
-                  />
-                </div>
-              ))}
+              {sfxGroups.map(renderGroup)}
             </div>
           </div>
         )}
