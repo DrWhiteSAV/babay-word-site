@@ -1381,13 +1381,13 @@ export default function Game() {
               </motion.div>
 
             ) : scenario ? (
-              <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col overflow-y-auto">
-                <div className="flex items-center justify-center py-8 min-h-[120px]">
+              <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col overflow-y-auto min-h-0">
+                <div className="flex items-center justify-center py-6 shrink-0">
                   <p className="text-lg md:text-xl leading-relaxed font-medium text-center" style={{ fontFamily: "'Playfair Display', serif" }}>
                     {scenario.text}
                   </p>
                 </div>
-                <div className="space-y-3 mt-auto">
+                <div className="space-y-3 mt-auto pb-4 shrink-0">
                   {scenario.options.map((opt, i) => (
                     <button
                       key={i}
