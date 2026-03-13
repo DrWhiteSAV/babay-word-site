@@ -163,6 +163,7 @@ export default function Profile() {
                 <ShieldAlert size={20} />
               </div>
             )}
+            {profile?.role === "Супер-Бабай" && (
             <div
               role="button"
               onClick={() => updateSettings({ ttsEnabled: !settings.ttsEnabled })}
@@ -172,6 +173,7 @@ export default function Profile() {
             >
               {settings.ttsEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </div>
+            )}
             <div
               role="button"
               onClick={() => navigate("/gallery")}
