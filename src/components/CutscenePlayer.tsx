@@ -34,17 +34,6 @@ const GameDescription = () => (
   </div>
 );
 
-/** Pick a random home background from pageBackgrounds["/"] */
-function useHomeBg() {
-  const { pageBackgrounds } = usePlayerStore();
-  const entries = pageBackgrounds["/"];
-  if (!entries || entries.length === 0) return null;
-  // Pick random each render (new mount = new random)
-  const [idx] = useState(() => Math.floor(Math.random() * entries.length));
-  const entry = entries[idx % entries.length];
-  return entry?.url || null;
-}
-
 export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) => {
   const { videoCutscenes } = usePlayerStore();
   const [videoUrl, setVideoUrl] = useState<string>("");
@@ -53,22 +42,6 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   const videoRef = useRef<HTMLVideoElement>(null);
   const videosLoadedRef = useRef(false);
   const hasTriedPlayRef = useRef(false);
-
-  const homeBg = useHomeBg();
-  // Use home bg from admin/pic instead of hardcoded unsplash
-  const bgStyle = homeBg
-    ? {
-        backgroundImage: `url(${homeBg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'grayscale(80%) contrast(130%) brightness(0.5)',
-      }
-    : {
-        backgroundImage: 'url("https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=2000&auto=format&fit=crop")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'grayscale(100%) contrast(150%) brightness(0.5)',
-      };
 
   useEffect(() => {
     const isPortrait = window.innerHeight > window.innerWidth;
@@ -79,8 +52,10 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
       const raw = videos[Math.floor(Math.random() * videos.length)];
       setVideoUrl(raw);
     }
+    // Don't skip if empty — wait for async load from Supabase (handled by separate timer below)
   }, [videoCutscenes]);
 
+  // Fallback: if after 6s still no video loaded from DB, skip cutscene
   useEffect(() => {
     const fallbackTimer = setTimeout(() => {
       if (!videosLoadedRef.current) onComplete();
@@ -88,6 +63,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     return () => clearTimeout(fallbackTimer);
   }, [onComplete]);
 
+  // Show "tap to start" immediately — don't wait for canplay
   useEffect(() => {
     if (!videoUrl) return;
     const timeout = setTimeout(() => {
@@ -110,6 +86,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
           setNeedsInteraction(false);
         })
         .catch(() => {
+          // Autoplay blocked — show tap-to-start overlay
           setIsLoading(false);
           setNeedsInteraction(true);
         });
@@ -123,7 +100,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
 
   const handleManualPlay = () => {
     setNeedsInteraction(false);
-    hasTriedPlayRef.current = false;
+    hasTriedPlayRef.current = false; // allow retry
     if (videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
@@ -135,7 +112,12 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-neutral-950 overflow-hidden">
           <div
             className="absolute inset-0 w-full h-full opacity-30 animate-zoom-pulse pointer-events-none origin-center"
-            style={bgStyle}
+            style={{
+              backgroundImage: 'url("https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=2000&auto=format&fit=crop")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'grayscale(100%) contrast(150%) brightness(0.5)',
+            }}
           />
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
           <div className="relative z-20 flex flex-col items-center">
@@ -161,7 +143,12 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 overflow-hidden">
           <div
             className="absolute inset-0 w-full h-full opacity-30 animate-zoom-pulse pointer-events-none origin-center"
-            style={bgStyle}
+            style={{
+              backgroundImage: 'url("https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=2000&auto=format&fit=crop")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'grayscale(100%) contrast(150%) brightness(0.5)',
+            }}
           />
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
           <div className="relative z-20 flex flex-col items-center">
@@ -198,7 +185,7 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
         />
       )}
 
-      {/* Skip button */}
+      {/* Skip button — always readable regardless of theme */}
       <button
         onClick={onComplete}
         style={{

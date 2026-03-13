@@ -281,7 +281,6 @@ export type Database = {
           reward_fear: number | null
           reward_watermelons: number | null
           start_at: string | null
-          target: number
           title: string
         }
         Insert: {
@@ -296,7 +295,6 @@ export type Database = {
           reward_fear?: number | null
           reward_watermelons?: number | null
           start_at?: string | null
-          target?: number
           title: string
         }
         Update: {
@@ -311,7 +309,6 @@ export type Database = {
           reward_fear?: number | null
           reward_watermelons?: number | null
           start_at?: string | null
-          target?: number
           title?: string
         }
         Relationships: []
@@ -676,9 +673,7 @@ export type Database = {
           completed_at: string | null
           event_id: string
           id: string
-          progress: number
           status: string
-          target: number
           telegram_id: number
         }
         Insert: {
@@ -686,9 +681,7 @@ export type Database = {
           completed_at?: string | null
           event_id: string
           id?: string
-          progress?: number
           status?: string
-          target?: number
           telegram_id: number
         }
         Update: {
@@ -696,9 +689,7 @@ export type Database = {
           completed_at?: string | null
           event_id?: string
           id?: string
-          progress?: number
           status?: string
-          target?: number
           telegram_id?: number
         }
         Relationships: [

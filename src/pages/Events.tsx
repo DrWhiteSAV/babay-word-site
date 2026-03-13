@@ -19,7 +19,6 @@ interface EventRow {
   reward_watermelons: number | null;
   is_active: boolean;
   end_at: string | null;
-  target: number;
 }
 
 interface PlayerEvent {
@@ -34,6 +33,7 @@ function useCountdown(endAt: string | null) {
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
     if (!endAt) {
+      // Daily: countdown to midnight
       const update = () => {
         const now = new Date();
         const midnight = new Date();
@@ -64,21 +64,10 @@ function useCountdown(endAt: string | null) {
   return timeLeft;
 }
 
-function EventCard({
-  event, playerEvent, globalProgress, onComplete,
-}: {
-  event: EventRow;
-  playerEvent?: PlayerEvent;
-  globalProgress?: number;
-  onComplete: (eventId: string) => void;
-}) {
+function EventCard({ event, playerEvent, onComplete }: { event: EventRow; playerEvent?: PlayerEvent; onComplete: (eventId: string) => void }) {
   const countdown = useCountdown(event.event_type === 'global' ? event.end_at : null);
-  const isGlobal = event.event_type === 'global';
-  
-  // For global events: use sum of all users' progress
-  // For daily events: use player's own progress
-  const progress = isGlobal ? (globalProgress ?? 0) : (playerEvent?.progress ?? 0);
-  const target = event.target || 1;
+  const progress = playerEvent?.progress || 0;
+  const target = playerEvent?.target || (event.event_type === 'daily' ? 1 : 100);
   const completed = playerEvent?.status === 'completed';
   const isReady = !completed && progress >= target;
 
@@ -117,10 +106,6 @@ function EventCard({
         <span className="text-xs font-mono text-neutral-500 shrink-0">{progress}/{target}</span>
       </div>
 
-      {isGlobal && !completed && (
-        <p className="text-[10px] text-neutral-600 mt-1">Общий прогресс всех игроков</p>
-      )}
-
       {completed && (
         <div className="mt-3 flex items-center gap-2 text-green-400 text-xs font-bold">
           <CheckCircle2 size={14} /> Выполнено!
@@ -145,42 +130,26 @@ export default function Events() {
   const { profile } = useTelegram();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([]);
-  const [globalProgresses, setGlobalProgresses] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadEvents();
-    // Poll global progress every 10s
-    const interval = setInterval(loadGlobalProgress, 10000);
-    return () => clearInterval(interval);
   }, [profile?.telegram_id]);
-
-  const loadGlobalProgress = async () => {
-    // For global events, sum all players' progress
-    const { data } = await supabase
-      .from("player_events")
-      .select("event_id, progress");
-    if (!data) return;
-    const sums: Record<string, number> = {};
-    data.forEach(row => {
-      sums[row.event_id] = (sums[row.event_id] || 0) + (row.progress || 0);
-    });
-    setGlobalProgresses(sums);
-  };
 
   const loadEvents = async () => {
     setLoading(true);
     const { data: evts } = await supabase.from("events").select("*").eq("is_active", true).order("created_at");
-    setEvents((evts || []) as EventRow[]);
+    setEvents(evts || []);
 
     if (profile?.telegram_id && evts) {
+      // Ensure player_events rows exist for daily events
       const dailyEvts = evts.filter(e => e.event_type === 'daily');
       for (const evt of dailyEvts) {
         await supabase.from("player_events").upsert({
           telegram_id: profile.telegram_id,
           event_id: evt.id,
           status: 'assigned',
-          target: (evt as any).target || 1,
+          target: 1,
         }, { onConflict: "telegram_id,event_id", ignoreDuplicates: true }).then(() => {});
       }
 
@@ -190,7 +159,6 @@ export default function Events() {
         .eq("telegram_id", profile.telegram_id);
       setPlayerEvents((pe || []) as any);
     }
-    await loadGlobalProgress();
     setLoading(false);
   };
 
@@ -199,10 +167,12 @@ export default function Events() {
     const event = events.find(e => e.id === eventId);
     if (!event) return;
 
+    // Give rewards
     if (event.reward_fear) addFear(event.reward_fear);
     if (event.reward_energy) addEnergy(event.reward_energy);
     if (event.reward_watermelons) addWatermelons(event.reward_watermelons);
 
+    // Update DB
     await supabase.from("player_events")
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq("telegram_id", profile.telegram_id)
@@ -282,7 +252,6 @@ export default function Events() {
                     key={evt.id}
                     event={evt}
                     playerEvent={playerEvents.find(pe => pe.event_id === evt.id)}
-                    globalProgress={globalProgresses[evt.id]}
                     onComplete={handleComplete}
                   />
                 ))}

@@ -174,24 +174,13 @@ export async function generateScenario(
   difficulty: string,
   style: string,
   telegramId?: number,
-  characterData?: Record<string, string>,
 ): Promise<{ text: string; options: string[]; correctAnswer: number; successText: string; failureText: string }> {
   try {
     const settings = await loadAISettings("scenario");
-    const macros: Record<string, string> = {
-      style,
-      stage: String(stage),
-      difficulty,
-      name: characterData?.name || "Бабай",
-      gender: characterData?.gender || "Бабай",
-      inventory: characterData?.inventory || "нет предметов",
-      wishes: characterData?.wishes || "",
-      lore: characterData?.lore || "неизвестна",
-    };
     const basePrompt =
       settings?.prompt ||
-      `Ты — ведущий текстовой ролевой игры "Бабай". Игрок — славянский дух по имени {name} (пол: {gender}) с длинным языком и телекинезом. Его история: {lore}. Инвентарь: {inventory}. Особые приметы: {wishes}. Цель: выгнать жильцов из дома. Стиль: {style}. Этап: {stage}. Сложность: {difficulty}. Опиши ситуацию (2-3 предложения) и предложи 3 варианта действий. Только один правильный. Напиши successText и failureText. Ответь строго JSON: {"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
-    const prompt = applyMacros(basePrompt, macros);
+      `Ты — ведущий текстовой ролевой игры "Бабай". Игрок — славянский дух с длинным языком и телекинезом. Цель: выгнать жильцов из дома. Стиль: {style}. Этап: {stage}. Сложность: {difficulty}. Опиши ситуацию (2-3 предложения) и предложи 3 варианта действий. Только один правильный. Напиши successText и failureText. Ответь строго JSON: {"text":"...","options":["...","...","..."],"correctAnswer":0,"successText":"...","failureText":"..."}`;
+    const prompt = applyMacros(basePrompt, { style, stage: String(stage), difficulty });
     const { text } = await callAI(settings?.service || "protalk-text", prompt, telegramId);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);

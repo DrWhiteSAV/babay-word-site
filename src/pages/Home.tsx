@@ -1,24 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "motion/react";
 import { Play, Settings as SettingsIcon, Loader2 } from "lucide-react";
-
-/** Pick a random home background from pageBackgrounds["/"] */
-function useHomeBg() {
-  const { pageBackgrounds } = usePlayerStore();
-  const entries = pageBackgrounds["/"];
-  if (!entries || entries.length === 0) return null;
-  const [idx] = useState(() => Math.floor(Math.random() * entries.length));
-  const entry = entries[idx % entries.length];
-  return entry || null;
-}
 
 export default function Home() {
   const navigate = useNavigate();
   const { character, dbLoaded, gameStatus } = usePlayerStore();
-  const homeBgEntry = useHomeBg();
 
+  // Auto-redirect to hub if character is already created
   useEffect(() => {
     if (dbLoaded && gameStatus === "playing" && character) {
       navigate("/hub", { replace: true });
@@ -33,18 +23,9 @@ export default function Home() {
     }
   };
 
-  // Background style from admin home backgrounds
-  const bgStyle = homeBgEntry?.url
-    ? {
-        backgroundImage: `linear-gradient(to bottom, rgba(10,10,10,0.7), rgba(10,10,10,0.9)), url(${homeBgEntry.url})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {};
-
   if (!dbLoaded) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-transparent" style={bgStyle}>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-transparent">
         <div className="fog-container">
           <div className="fog-layer"></div>
           <div className="fog-layer-2"></div>
@@ -62,6 +43,7 @@ export default function Home() {
     );
   }
 
+  // While redirect is happening (character exists), show nothing
   if (gameStatus === "playing" && character) return null;
 
   const hasCharacter = gameStatus === "playing" && !!character;
@@ -72,7 +54,6 @@ export default function Home() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden bg-transparent"
-      style={bgStyle}
     >
       <div className="fog-container">
         <div className="fog-layer"></div>
