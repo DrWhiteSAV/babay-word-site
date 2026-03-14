@@ -108,7 +108,7 @@ export const useAudio = (volume: number) => {
     const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
     if (!hasInteracted) return;
     const urls = getUrls(dbAudio, "click", [
-      "https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/ZvukButtonCam.MP3",
+      "https://psuvnvqvspqibsezcrny.supabase.co/storage/v1/object/public/SongBabai/Zvukclick.MP3",
     ]);
     const click = new Audio(pickRandom(urls));
     click.volume = volume / 100;
@@ -119,7 +119,7 @@ export const useAudio = (volume: number) => {
     const hasInteracted = (navigator as any).userActivation ? (navigator as any).userActivation.hasBeenActive : true;
     if (!hasInteracted) return;
     const urls = getUrls(dbAudio, "transition", [
-      "https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/Zvukwhoosh.MP3",
+      "https://psuvnvqvspqibsezcrny.supabase.co/storage/v1/object/public/SongBabai/Zvukswoosh.MP3",
     ]);
     const whoosh = new Audio(pickRandom(urls));
     whoosh.volume = volume / 100;
@@ -135,8 +135,8 @@ export const useAudio = (volume: number) => {
       }
 
       const fallbackMap: Record<string, string[]> = {
-        scream: ["https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/Zvukscream.MP3"],
-        cat: ["https://xupshaktgycrrcfgvcno.supabase.co/storage/v1/object/public/song/ZvukMeow.MP3"],
+        scream: ["https://psuvnvqvspqibsezcrny.supabase.co/storage/v1/object/public/SongBabai/Zvukscream.MP3"],
+        cat: ["https://psuvnvqvspqibsezcrny.supabase.co/storage/v1/object/public/SongBabai/ZvukMeow.MP3"],
         fear: ["https://psuvnvqvspqibsezcrny.supabase.co/storage/v1/object/public/SongBabai/Zvukheartbeat.MP3"],
       };
 
