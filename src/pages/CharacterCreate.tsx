@@ -748,6 +748,9 @@ export default function CharacterCreate() {
               )}
             </div>
 
+            {/* Styles - only show after name is generated */}
+            {nameLocked && !nameTimeout && (
+            <>
             <h3 className="text-xl font-bold text-white">Выбери стиль</h3>
             <p className="text-xs text-neutral-400">Стиль сразу меняет оформление — выбери и нажми «Создать легенду!»</p>
             <div className="grid grid-cols-2 gap-3">
@@ -755,7 +758,7 @@ export default function CharacterCreate() {
                 <button
                   key={s}
                   onClick={() => handleStyleSelect(s)}
-                  disabled={isGeneratingName || isGeneratingLore || nameTimeout}
+                  disabled={isGeneratingLore}
                   className={`p-3 rounded-xl border text-sm font-medium transition-all relative ${style === s ? "border-red-600 bg-red-900/30 text-white" : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:bg-neutral-800"} disabled:opacity-60`}
                 >
                   {s}
@@ -763,6 +766,8 @@ export default function CharacterCreate() {
                 </button>
               ))}
             </div>
+            </>
+            )}
 
             {/* "Создать легенду!" button — appears after style selected, before lore generated */}
             <AnimatePresence>
