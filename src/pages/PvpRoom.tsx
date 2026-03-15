@@ -251,6 +251,45 @@ export default function PvpRoom() {
   };
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+  const handleCancelPvp = async () => {
+    if (!roomId || !tgId || !room) return;
+    if (!window.confirm("Отменить PVP? Все участники будут уведомлены.")) return;
+    
+    // Update room status to cancelled
+    await supabase.from("pvp_rooms").update({ status: "cancelled" }).eq("id", roomId);
+    
+    // Notify all members via Telegram
+    const organizerName = character?.name || profile?.first_name || "Организатор";
+    for (const m of members) {
+      if (m.telegram_id === tgId) continue;
+      try {
+        await supabase.functions.invoke("send-telegram-notification", {
+          body: {
+            telegram_id: m.telegram_id,
+            caption: `❌ PVP-битва отменена!\n\n${organizerName} отменил PVP комнату #${roomId}.`,
+          },
+        });
+      } catch (e) {
+        console.error("[PvpRoom] cancel notify error", e);
+      }
+      // Also send in-app chat message
+      const chatKey = [tgId, m.telegram_id].map(String).sort().join('_');
+      try {
+        await supabase.from("chat_messages").insert({
+          chat_key: chatKey,
+          telegram_id: tgId,
+          sender_telegram_id: tgId,
+          role: "user",
+          friend_name: organizerName,
+          content: `❌ PVP комната #${roomId} отменена.`,
+          is_ai_reply: false,
+        } as any);
+      } catch {}
+    }
+    
+    navigate("/hub", { replace: true });
+  };
   const fmtChatTime = (iso: string) => {
     const d = new Date(iso);
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
