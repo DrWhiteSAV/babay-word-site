@@ -296,6 +296,39 @@ export default function GameHub() {
           </motion.a>
         )}
 
+        {/* PVP History button — visible for non-demo */}
+        {!isDemo && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+          >
+            <button
+              onClick={() => navigate("/pvp/history")}
+              className="w-full flex items-center gap-3 bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+            >
+              <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
+                <History size={18} className="text-neutral-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-white text-sm">История PVP</p>
+                <p className="text-[10px] text-neutral-500">Все битвы и результаты</p>
+              </div>
+            </button>
+          </motion.div>
+        )}
+
+        {/* Social links — demo mode */}
+        {isDemo && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <SocialLinksBlock />
+          </motion.div>
+        )}
+
         {/* SAV AI footer */}
         <motion.a
           initial={{ opacity: 0 }}
