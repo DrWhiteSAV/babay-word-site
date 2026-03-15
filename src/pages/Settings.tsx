@@ -20,6 +20,7 @@ import {
 import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import Header from "../components/Header";
+import SocialLinksBlock from "../components/SocialLinksBlock";
 
 interface HistorySnapshot {
   id: string;
