@@ -54,13 +54,13 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   const hasTriedPlayRef = useRef(false);
 
   const homeBg = useHomeBg();
-  // Use home bg from admin/pic instead of hardcoded unsplash
+  // Use home bg from admin/pic — with lighter dimming for cutscene loading
   const bgStyle = homeBg
     ? {
         backgroundImage: `url(${homeBg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        filter: 'grayscale(80%) contrast(130%) brightness(0.5)',
+        filter: 'grayscale(40%) contrast(110%) brightness(0.6)',
       }
     : {
         backgroundImage: 'url("https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?q=80&w=2000&auto=format&fit=crop")',
@@ -131,12 +131,12 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
   return (
     <div className="cutscene-overlay fixed inset-0 z-[9999] bg-black flex items-center justify-center">
       {isLoading && !needsInteraction && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-neutral-950 overflow-hidden">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 overflow-hidden" style={{ backgroundColor: 'rgba(10,10,10,0.6)' }}>
           <div
-            className="absolute inset-0 w-full h-full opacity-30 animate-zoom-pulse pointer-events-none origin-center"
+            className="absolute inset-0 w-full h-full opacity-50 animate-zoom-pulse pointer-events-none origin-center"
             style={bgStyle}
           />
-          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_100%)] z-10" />
           <div className="relative z-20 flex flex-col items-center">
             <img
               src="https://i.ibb.co/BVgY7XrT/babai.png"
@@ -157,12 +157,12 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
       )}
 
       {needsInteraction && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 overflow-hidden">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <div
-            className="absolute inset-0 w-full h-full opacity-30 animate-zoom-pulse pointer-events-none origin-center"
+            className="absolute inset-0 w-full h-full opacity-50 animate-zoom-pulse pointer-events-none origin-center"
             style={bgStyle}
           />
-          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.9)_100%)] z-10" />
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_100%)] z-10" />
           <div className="relative z-20 flex flex-col items-center">
             <button
               onClick={handleManualPlay}

@@ -13,11 +13,14 @@ import {
   Zap,
   Image as ImageIcon,
   MessageSquare,
+  Swords,
+  History,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
-import { usePvpLobby } from "../hooks/usePvpLobby";
+import { usePvpLobbies } from "../hooks/usePvpLobby";
 import PvpLobbyBanner from "../components/PvpLobbyBanner";
 import { useTelegram } from "../context/TelegramContext";
+import SocialLinksBlock from "../components/SocialLinksBlock";
 
 export default function GameHub() {
   const navigate = useNavigate();
@@ -25,7 +28,9 @@ export default function GameHub() {
   const { profile } = useTelegram();
   const [infoModal, setInfoModal] = useState<CurrencyType>(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const pvpLobby = usePvpLobby(profile?.telegram_id);
+  const pvpLobbies = usePvpLobbies(profile?.telegram_id);
+  // Only show active (waiting/playing) lobbies on hub, not finished
+  const activeLobbies = pvpLobbies.filter(l => l.room.status === "waiting" || l.room.status === "playing");
   const isDemo = profile?.role === "Демо";
 
   useEffect(() => {
@@ -154,15 +159,20 @@ export default function GameHub() {
           </button>
         </motion.div>
 
-        {/* 2.5. Active PVP Lobby Banner */}
-        {!isDemo && pvpLobby && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12 }}
-          >
-            <PvpLobbyBanner lobby={pvpLobby} />
-          </motion.div>
+        {/* 2.5. Active PVP Lobby Banners (multiple) */}
+        {!isDemo && activeLobbies.length > 0 && (
+          <div className="space-y-3">
+            {activeLobbies.map((lobby, idx) => (
+              <motion.div
+                key={lobby.room.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 + idx * 0.05 }}
+              >
+                <PvpLobbyBanner lobby={lobby} />
+              </motion.div>
+            ))}
+          </div>
         )}
 
         {/* 3. Leaderboard + Chats row — hidden for demo */}
@@ -252,6 +262,7 @@ export default function GameHub() {
             <p className="text-[10px] text-neutral-500">Предметы и усиления</p>
           </button>
           {!isDemo && (
+          <>
           <button
             onClick={() => navigate("/friends")}
             data-theme-block="hub-friends"
@@ -263,6 +274,7 @@ export default function GameHub() {
             <p className="font-bold text-white text-sm">Друзья</p>
             <p className="text-[10px] text-neutral-500">Чаты и команда</p>
           </button>
+          </>
           )}
         </motion.div>
 
@@ -282,6 +294,39 @@ export default function GameHub() {
             </svg>
             Полная версия в Telegram
           </motion.a>
+        )}
+
+        {/* PVP History button — visible for non-demo */}
+        {!isDemo && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+          >
+            <button
+              onClick={() => navigate("/pvp/history")}
+              className="w-full flex items-center gap-3 bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-2xl px-4 py-4 hover:border-neutral-700 active:scale-[0.98] transition-all"
+            >
+              <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center">
+                <History size={18} className="text-neutral-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-white text-sm">История PVP</p>
+                <p className="text-[10px] text-neutral-500">Все битвы и результаты</p>
+              </div>
+            </button>
+          </motion.div>
+        )}
+
+        {/* Social links — demo mode */}
+        {isDemo && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <SocialLinksBlock />
+          </motion.div>
         )}
 
         {/* SAV AI footer */}

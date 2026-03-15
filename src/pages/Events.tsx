@@ -80,6 +80,7 @@ function EventCard({
   const progress = isGlobal ? (globalProgress ?? 0) : (playerEvent?.progress ?? 0);
   const target = event.target || 1;
   const completed = playerEvent?.status === 'completed';
+  // For global events, check if global progress >= target; for daily, personal progress
   const isReady = !completed && progress >= target;
 
   const rewardText = [
@@ -180,7 +181,17 @@ export default function Events() {
           telegram_id: profile.telegram_id,
           event_id: evt.id,
           status: 'assigned',
-          target: (evt as any).target || 1,
+          target: evt.target || 1,
+        }, { onConflict: "telegram_id,event_id", ignoreDuplicates: true }).then(() => {});
+      }
+      // Also ensure global events have player_events records so they can be claimed
+      const globalEvts = evts.filter(e => e.event_type === 'global');
+      for (const evt of globalEvts) {
+        await supabase.from("player_events").upsert({
+          telegram_id: profile.telegram_id,
+          event_id: evt.id,
+          status: 'assigned',
+          target: evt.target || 1,
         }, { onConflict: "telegram_id,event_id", ignoreDuplicates: true }).then(() => {});
       }
 

@@ -54,6 +54,7 @@ import TelegramOnly from "./pages/TelegramOnly";
 import PvpSetup from "./pages/PvpSetup";
 import PvpRoom from "./pages/PvpRoom";
 import PvpResults from "./pages/PvpResults";
+import PvpHistory from "./pages/PvpHistory";
 
 /** Restricts a route to Супер-Бабай and Ад-Бабай only */
 function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -229,8 +230,8 @@ function AppContent() {
   const currentPath = location.pathname;
   // Map certain paths to share backgrounds with other pages
   const bgMappedPath = (() => {
-    // PVP rooms and results use /hub backgrounds
-    if (currentPath.startsWith("/pvp/room/") || currentPath.startsWith("/pvp/results/")) return "/hub";
+    // PVP rooms, results, and history use /hub backgrounds
+    if (currentPath.startsWith("/pvp/")) return "/hub";
     // All admin pages use /settings backgrounds
     if (currentPath.startsWith("/admin")) return "/settings";
     return currentPath;
@@ -289,6 +290,7 @@ function AppContent() {
           <Route path="/pvp" element={<DemoGuard><PvpSetup /></DemoGuard>} />
           <Route path="/pvp/room/:roomId" element={<DemoGuard><PvpRoom /></DemoGuard>} />
           <Route path="/pvp/results/:roomId" element={<DemoGuard><PvpResults /></DemoGuard>} />
+          <Route path="/pvp/history" element={<DemoGuard><PvpHistory /></DemoGuard>} />
           <Route path="/admin" element={<AdminGuard><Admin /></AdminGuard>} />
           <Route path="/admin/pic" element={<AdminGuard><AdminPic /></AdminGuard>} />
           <Route path="/admin/video" element={<AdminGuard><AdminVideo /></AdminGuard>} />

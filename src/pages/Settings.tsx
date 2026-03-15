@@ -20,6 +20,7 @@ import {
 import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
 import Header from "../components/Header";
+import SocialLinksBlock from "../components/SocialLinksBlock";
 
 interface HistorySnapshot {
   id: string;
@@ -656,6 +657,9 @@ export default function Settings() {
             <ChevronRight size={18} className="text-neutral-500" />
           </button>
         </section>
+
+        {/* Social links */}
+        <SocialLinksBlock />
 
         <div className="flex justify-center pt-8 pb-4 opacity-50">
           <img 

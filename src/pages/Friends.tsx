@@ -9,6 +9,7 @@ import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
 import { notifyFriendAdded } from "../services/friendNotify";
 import { useFriendOnlineStatus } from "../hooks/useOnlinePresence";
+import SocialLinksBlock from "../components/SocialLinksBlock";
 
 const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdXZudnF2c3BxaWJzZXpjcm55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMDI5NTIsImV4cCI6MjA4NzU3ODk1Mn0.VHI6Kefzbz6Hc8TpLI5_JRXAyPJ-y4oeE3Bkh16jFRU";
@@ -687,6 +688,10 @@ export default function Friends() {
           </div>
         )}
       </AnimatePresence>
+      {/* Social links */}
+      <div className="relative z-10 px-4 pb-6">
+        <SocialLinksBlock />
+      </div>
 
       {showProfilePopup && (
         <ProfilePopup

@@ -71,7 +71,7 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden bg-transparent"
+      className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden bg-transparent min-h-[100dvh]"
       style={bgStyle}
     >
       <div className="fog-container">
