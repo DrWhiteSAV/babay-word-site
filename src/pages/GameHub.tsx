@@ -13,11 +13,14 @@ import {
   Zap,
   Image as ImageIcon,
   MessageSquare,
+  Swords,
+  History,
 } from "lucide-react";
 import CurrencyModal, { CurrencyType } from "../components/CurrencyModal";
 import { usePvpLobbies } from "../hooks/usePvpLobby";
 import PvpLobbyBanner from "../components/PvpLobbyBanner";
 import { useTelegram } from "../context/TelegramContext";
+import SocialLinksBlock from "../components/SocialLinksBlock";
 
 export default function GameHub() {
   const navigate = useNavigate();
