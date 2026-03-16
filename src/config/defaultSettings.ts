@@ -85,6 +85,16 @@ export const DEFAULT_TEXTS: Record<string, string> = {
   friends_add_btn: "Добавить",
   friends_empty: "Нет друзей. Добавьте первого!",
 
+  // Гендерные шаблоны (редактируются в /admin/text)
+  referral_invite_male: "👻 Привет! Я — {name}, бессмертный кибер-дух Бабай!\n\n🔥 Приглашаю тебя в игру «Бабай» — стань своим Бабаем, пугай жильцов и собирай арбузы!\n\n⚡ Если зайдёшь по моей ссылке — получишь бонус {energy_bonus} энергии и {fear_bonus} страха!\n\n👇 Жми сюда:\n{link}",
+  referral_invite_female: "👻 Привет! Я — {name}, бессмертная кибер-духовка Бабайка!\n\n🔥 Приглашаю тебя в игру «Бабай» — стань своей Бабайкой, пугай жильцов и собирай арбузы!\n\n⚡ Если зайдёшь по моей ссылке — получишь бонус {energy_bonus} энергии и {fear_bonus} страха!\n\n👇 Жми сюда:\n{link}",
+  notif_friend_added_male: "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавил тебя как контакт в игре Бабай.\n\n🧿 *Бабай:* {name}\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
+  notif_friend_added_female: "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавила тебя как контакт в игре Бабай.\n\n🧿 *Бабайка:* {name}\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
+  notif_chat_offline_male: "💬 *{sender_name}* написал тебе:\n\n{message_preview}",
+  notif_chat_offline_female: "💬 *{sender_name}* написала тебе:\n\n{message_preview}",
+  notif_pvp_invite_male: "⚔️ *{sender_name}* вызывает тебя на PVP-битву!\n\n🎮 Режим: {difficulty}\n🏠 Комната: `{room_id}`\n\nПрими вызов — покажи кто настоящий Бабай! 👻",
+  notif_pvp_invite_female: "⚔️ *{sender_name}* вызывает тебя на PVP-битву!\n\n🎮 Режим: {difficulty}\n🏠 Комната: `{room_id}`\n\nПрими вызов — покажи кто настоящая Бабайка! 👻",
+
   // Чат
   chat_title: "Чат",
   chat_placeholder: "Введите сообщение...",

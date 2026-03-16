@@ -1,4 +1,5 @@
 import { supabase } from "../integrations/supabase/client";
+import { renderGenderedText } from "./appTextTemplates";
 
 // Use hardcoded values matching the supabase client (anon key is publishable/safe)
 const SUPABASE_URL = "https://psuvnvqvspqibsezcrny.supabase.co";
@@ -24,7 +25,7 @@ export async function notifyFriendAdded(
         .single(),
       supabase
         .from("player_stats")
-        .select("character_name, avatar_url, lore, telekinesis_level, fear")
+        .select("character_name, avatar_url, lore, telekinesis_level, fear, character_gender")
         .eq("telegram_id", adderTelegramId)
         .single(),
     ]);
@@ -39,18 +40,24 @@ export async function notifyFriendAdded(
     const tk = stats?.telekinesis_level ?? 1;
     const fear = stats?.fear ?? 0;
 
-    // Build Telegram link — use plain Markdown (not V2) to avoid escaping issues
-    const tgLink = prof?.username
-      ? `[${fullName} @${prof.username}](https://t.me/${prof.username})`
-      : fullName;
+    const senderName = prof?.username ? `${fullName} @${prof.username}` : fullName;
 
-    // Plain Markdown (parse_mode: 'Markdown') — no escaping needed
-    const caption =
-      `👻 *Тебя добавили в друзья!*\n\n` +
-      `${tgLink} добавил тебя как контакт в игре Бабай.\n\n` +
-      `🧿 *Бабай:* ${babayName}\n` +
-      `⚡ Телекинез: ${tk} ур. · 😱 Страх: ${fear}\n\n` +
-      `📖 *Лор:* _${lore}_`;
+    const caption = await renderGenderedText({
+      gender: stats?.character_gender || "Бабай",
+      maleKey: "notif_friend_added_male",
+      femaleKey: "notif_friend_added_female",
+      maleFallback:
+        "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавил тебя как контакт в игре Бабай.\n\n🧿 *Бабай:* {name}\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
+      femaleFallback:
+        "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавила тебя как контакт в игре Бабай.\n\n🧿 *Бабайка:* {name}\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
+      macros: {
+        sender_name: senderName,
+        name: babayName,
+        telekinesis: tk,
+        fear,
+        lore,
+      },
+    });
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
       method: "POST",
