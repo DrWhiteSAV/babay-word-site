@@ -1388,19 +1388,19 @@ export default function Game() {
               </motion.div>
 
             ) : scenario ? (
-              <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col overflow-y-auto min-h-0">
-                <div className="overflow-y-auto flex-1 pb-4">
-                  <div className="flex items-center justify-center py-6">
-                    <p className="text-lg md:text-xl leading-relaxed font-medium text-center" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="overflow-y-auto flex-1 pb-6 -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <div className="py-4">
+                    <p className="text-base md:text-lg leading-relaxed font-medium text-center" style={{ fontFamily: "'Playfair Display', serif" }}>
                       {scenario.text}
                     </p>
                   </div>
-                  <div className="space-y-3 mt-4">
+                  <div className="space-y-3 mt-2 pb-4">
                     {scenario.options.map((opt, i) => (
                       <button
                         key={i}
                         onClick={() => handleOptionSelect(i)}
-                        className="w-full p-4 bg-neutral-900/80 backdrop-blur-md border border-neutral-800 hover:border-red-900 rounded-2xl text-left transition-all active:scale-95 text-sm md:text-base font-medium lightning-btn"
+                        className="w-full p-3 bg-neutral-900/80 backdrop-blur-md border border-neutral-800 hover:border-red-900 rounded-2xl text-left transition-all active:scale-95 text-sm font-medium lightning-btn"
                       >
                         {opt}
                       </button>
