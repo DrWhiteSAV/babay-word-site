@@ -688,8 +688,8 @@ export default function Friends() {
           </div>
         )}
       </AnimatePresence>
-      {/* Social links */}
-      <div className="relative z-10 px-4 pb-6">
+      {/* Social links - as a scrollable block, not fixed */}
+      <div className="relative z-10 px-4 pb-6 overflow-y-auto">
         <SocialLinksBlock />
       </div>
 

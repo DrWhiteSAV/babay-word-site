@@ -295,7 +295,7 @@ export default function Shop() {
         {/* Items */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2">Товары за Страх</h2>
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
             {shopItems.map((item) => {
               const isOwned = inventory.includes(item.id);
               return (
@@ -324,7 +324,7 @@ export default function Shop() {
         {/* Boss Items */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2">Экипировка для Боссов</h2>
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
             {bossItems.map((item) => {
               const isOwned = inventory.includes(item.id);
               return (

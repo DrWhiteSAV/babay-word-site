@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Swords, Crown, Timer, Users, ChevronRight, Clock } from "lucide-react";
+import { Swords, Crown, Timer, Users, ChevronRight, Clock, XCircle } from "lucide-react";
 import { PvpLobbyData } from "../hooks/usePvpLobby";
 import { useTelegram } from "../context/TelegramContext";
 import { useState, useEffect } from "react";
+import { supabase } from "../integrations/supabase/client";
 
 interface Props {
   lobby: PvpLobbyData;
+  onDeclined?: () => void;
 }
 
 function useCountdown(endsAt: string | null) {
@@ -32,24 +34,42 @@ const statusLabel = (s: string) => {
   if (s === "playing") return { text: "🎮 Играет", cls: "text-blue-400" };
   if (s === "timeout") return { text: "⏱ Время вышло", cls: "text-neutral-500" };
   if (s === "invited") return { text: "📨 Приглашён", cls: "text-yellow-400" };
+  if (s === "declined") return { text: "❌ Отклонён", cls: "text-red-400" };
   return { text: "⏳ Ждёт", cls: "text-neutral-400" };
 };
 
-export default function PvpLobbyBanner({ lobby }: Props) {
+export default function PvpLobbyBanner({ lobby, onDeclined }: Props) {
   const navigate = useNavigate();
   const { profile } = useTelegram();
   const tgId = profile?.telegram_id;
   const { room, members, myStatus } = lobby;
   const countdown = useCountdown(room.timer_ends_at);
+  const [declining, setDeclining] = useState(false);
+  const [declined, setDeclined] = useState(false);
 
   const isOrganizer = !!(tgId && room.organizer_telegram_id === tgId);
-  const joinedMembers = members.filter(m => m.status !== "invited");
+  const joinedMembers = members.filter(m => m.status !== "invited" && m.status !== "declined");
   const finishedCount = members.filter(m => m.status === "finished" || m.status === "timeout").length;
 
   const roomStatus =
     room.status === "waiting" ? { text: "Ожидание", cls: "bg-yellow-900/60 text-yellow-400" } :
     room.status === "playing" ? { text: "Идёт игра", cls: "bg-green-900/60 text-green-400" } :
     { text: "Завершено", cls: "bg-neutral-800 text-neutral-400" };
+
+  const handleDecline = async () => {
+    if (!tgId || declining) return;
+    setDeclining(true);
+    // Remove self from room members (or update status to declined)
+    await supabase.from("pvp_room_members")
+      .update({ status: "declined" })
+      .eq("room_id", room.id)
+      .eq("telegram_id", tgId);
+    setDeclined(true);
+    setDeclining(false);
+    onDeclined?.();
+  };
+
+  if (declined) return null;
 
   return (
     <AnimatePresence>
@@ -139,12 +159,21 @@ export default function PvpLobbyBanner({ lobby }: Props) {
 
           {/* CTA */}
           {myStatus === "invited" && room.status === "waiting" && (
-            <button
-              onClick={() => navigate(`/pvp/room/${room.id}?join=1`)}
-              className="w-full mt-1 py-2.5 bg-red-700 hover:bg-red-600 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(220,38,38,0.3)]"
-            >
-              <Swords size={14} /> Принять вызов
-            </button>
+            <div className="space-y-2 mt-1">
+              <button
+                onClick={() => navigate(`/pvp/room/${room.id}?join=1`)}
+                className="w-full py-2.5 bg-red-700 hover:bg-red-600 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(220,38,38,0.3)]"
+              >
+                <Swords size={14} /> Принять вызов
+              </button>
+              <button
+                onClick={handleDecline}
+                disabled={declining}
+                className="w-full py-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl font-bold text-sm text-neutral-400 flex items-center justify-center gap-2"
+              >
+                <XCircle size={14} /> {declining ? "Отклоняю..." : "Отклонить"}
+              </button>
+            </div>
           )}
           {myStatus === "playing" && room.status === "playing" && (
             <button

@@ -442,6 +442,36 @@ export default function Game() {
     setBgImage(defaultBg);
 
     if (character) {
+      // Check if user already has 10+ backgrounds in gallery — skip generation
+      const activeTgId = tgIdRef.current ?? tgId;
+      let bgCount = 0;
+      if (activeTgId) {
+        const { count } = await supabase
+          .from("gallery")
+          .select("id", { count: "exact", head: true })
+          .eq("telegram_id", activeTgId)
+          .ilike("label", "%[backgrounds]%");
+        bgCount = count || 0;
+      }
+
+      if (bgCount >= 10 && activeTgId) {
+        // Use random existing background from gallery
+        const { data: existingBgs } = await supabase
+          .from("gallery")
+          .select("image_url")
+          .eq("telegram_id", activeTgId)
+          .ilike("label", "%[backgrounds]%")
+          .limit(10);
+        if (existingBgs && existingBgs.length > 0) {
+          const randomBg = existingBgs[Math.floor(Math.random() * existingBgs.length)];
+          setBgImage(randomBg.image_url);
+          bgGenResolvedRef.current = true;
+        }
+        setBgGenStatus("done");
+        setIsGeneratingWorld(false);
+        return;
+      }
+
       setIsGeneratingWorld(true);
       setBgGenStatus("generating");
 
@@ -481,16 +511,13 @@ export default function Game() {
           const bgUrl = (bgResult as any).url;
           setBgImage(bgUrl);
           setBgGenRetry(false);
-          // Save to gallery [backgrounds] via saveImageToGallery (unified approach)
           const charTgId = Number(charData?.telegram_id) || undefined;
-          const activeTgId = tgIdRef.current ?? tgId ?? charTgId;
-          console.log(`[Game] 🖼 background ready, tgId=${activeTgId}, saving to gallery...`);
-          if (activeTgId) {
-            saveImageToGallery(bgUrl, activeTgId, `[backgrounds] Фон: ${diff}`, (bgResult as any).prompt)
+          const saveTgId = tgIdRef.current ?? tgId ?? charTgId;
+          console.log(`[Game] 🖼 background ready, tgId=${saveTgId}, saving to gallery...`);
+          if (saveTgId) {
+            saveImageToGallery(bgUrl, saveTgId, `[backgrounds] Фон: ${diff}`, (bgResult as any).prompt)
               .then(saved => console.log("[Game] 📦 bg gallery save:", saved ? "ok" : "failed"))
               .catch(console.error);
-          } else {
-            console.warn("[Game] ⚠️ no tgId — bg not saved to gallery");
           }
         } else {
           if (!bgGenResolvedRef.current) setBgGenRetry(true);
@@ -946,7 +973,7 @@ export default function Game() {
 
   // Main game screen
   return (
-    <div className="flex-1 flex flex-col bg-transparent text-white relative">
+    <div className="flex-1 flex flex-col bg-transparent text-white relative overflow-y-auto">
       <AnimatePresence>
         {showScreamer && (
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-50 flex items-center justify-center bg-red-900">
@@ -983,7 +1010,7 @@ export default function Game() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex justify-between items-center p-4 bg-neutral-950/50 backdrop-blur-sm border-b border-neutral-800">
+      <header className="relative z-10 flex justify-between items-center p-4 pt-12 bg-neutral-950/50 backdrop-blur-sm border-b border-neutral-800">
         <div className="flex items-center gap-3">
           <button
             onClick={async () => {
@@ -1091,7 +1118,7 @@ export default function Game() {
 
       {/* Main Content Area */}
       {!isGeneratingWorld && (worldReady || stage > 1 || isDanilChat || isBossBattle || isBossPreparation || showBossWarning) && (
-        <div className="relative z-10 flex-1 flex flex-col p-6 overflow-y-auto pb-24 min-h-0">
+        <div className="relative z-10 flex-1 flex flex-col p-4 overflow-y-auto pb-28 min-h-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
           <AnimatePresence mode="wait">
 
             {/* --- STAGE LOADING with countdown --- */}
@@ -1388,19 +1415,19 @@ export default function Game() {
               </motion.div>
 
             ) : scenario ? (
-              <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col overflow-y-auto min-h-0">
-                <div className="overflow-y-auto flex-1 pb-4">
-                  <div className="flex items-center justify-center py-6">
-                    <p className="text-lg md:text-xl leading-relaxed font-medium text-center" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <motion.div key="scenario" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="overflow-y-auto flex-1 pb-6 -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <div className="py-4">
+                    <p className="text-base md:text-lg leading-relaxed font-medium text-center" style={{ fontFamily: "'Playfair Display', serif" }}>
                       {scenario.text}
                     </p>
                   </div>
-                  <div className="space-y-3 mt-4">
+                  <div className="space-y-3 mt-2 pb-4">
                     {scenario.options.map((opt, i) => (
                       <button
                         key={i}
                         onClick={() => handleOptionSelect(i)}
-                        className="w-full p-4 bg-neutral-900/80 backdrop-blur-md border border-neutral-800 hover:border-red-900 rounded-2xl text-left transition-all active:scale-95 text-sm md:text-base font-medium lightning-btn"
+                        className="w-full p-3 bg-neutral-900/80 backdrop-blur-md border border-neutral-800 hover:border-red-900 rounded-2xl text-left transition-all active:scale-95 text-sm font-medium lightning-btn"
                       >
                         {opt}
                       </button>

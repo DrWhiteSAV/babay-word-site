@@ -107,10 +107,14 @@ export default function Gallery() {
     ? items
     : items.filter(item => getCategory(item) === activeSection);
 
+  const bgItems = items.filter(i => getCategory(i) === "backgrounds");
+  const bgCount = bgItems.length;
+  const BG_LIMIT = 10;
+
   const sectionTabs: { key: Section; label: string; icon: React.ReactNode }[] = [
     { key: "all", label: "Все", icon: <ImageIcon size={14} /> },
     { key: "avatars", label: "Аватары", icon: <User size={14} /> },
-    { key: "backgrounds", label: "Фоны", icon: <Mountain size={14} /> },
+    { key: "backgrounds", label: `Фоны (${bgCount}/${BG_LIMIT})`, icon: <Mountain size={14} /> },
     { key: "bosses", label: "Боссы", icon: <Skull size={14} /> },
   ];
 
@@ -271,7 +275,16 @@ export default function Gallery() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredItems.map((item, index) => (
+            {filteredItems.map((item, index) => {
+              const cat = getCategory(item);
+              // For backgrounds, compute the index number (1-based, oldest first)
+              let bgNumber: number | null = null;
+              if (cat === "backgrounds") {
+                // bgItems is sorted desc by created_at; reverse index
+                const bgIdx = bgItems.findIndex(b => b.id === item.id);
+                if (bgIdx >= 0) bgNumber = bgItems.length - bgIdx;
+              }
+              return (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -295,14 +308,20 @@ export default function Gallery() {
                     {item.label.replace(/^\[(avatars?|backgrounds?|bosses?)\]\s*/i, "")}
                   </div>
                 )}
-                <div className="absolute top-2 left-2">
-                  {getCategory(item) === "avatars" && <span className="bg-purple-900/80 text-purple-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">АВАТАР</span>}
-                  {getCategory(item) === "backgrounds" && <span className="bg-blue-900/80 text-blue-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">ФОН</span>}
-                  {getCategory(item) === "bosses" && <span className="bg-red-900/80 text-red-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">БОСС</span>}
+                <div className="absolute top-2 left-2 flex gap-1">
+                  {cat === "avatars" && <span className="bg-purple-900/80 text-purple-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">АВАТАР</span>}
+                  {cat === "backgrounds" && <span className="bg-blue-900/80 text-blue-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">ФОН</span>}
+                  {cat === "bosses" && <span className="bg-red-900/80 text-red-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">БОСС</span>}
                 </div>
+                {bgNumber !== null && (
+                  <div className="absolute top-2 right-2 bg-blue-900/80 text-blue-200 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                    #{bgNumber}
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
