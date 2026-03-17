@@ -442,6 +442,36 @@ export default function Game() {
     setBgImage(defaultBg);
 
     if (character) {
+      // Check if user already has 10+ backgrounds in gallery — skip generation
+      const activeTgId = tgIdRef.current ?? tgId;
+      let bgCount = 0;
+      if (activeTgId) {
+        const { count } = await supabase
+          .from("gallery")
+          .select("id", { count: "exact", head: true })
+          .eq("telegram_id", activeTgId)
+          .ilike("label", "%[backgrounds]%");
+        bgCount = count || 0;
+      }
+
+      if (bgCount >= 10 && activeTgId) {
+        // Use random existing background from gallery
+        const { data: existingBgs } = await supabase
+          .from("gallery")
+          .select("image_url")
+          .eq("telegram_id", activeTgId)
+          .ilike("label", "%[backgrounds]%")
+          .limit(10);
+        if (existingBgs && existingBgs.length > 0) {
+          const randomBg = existingBgs[Math.floor(Math.random() * existingBgs.length)];
+          setBgImage(randomBg.image_url);
+          bgGenResolvedRef.current = true;
+        }
+        setBgGenStatus("done");
+        setIsGeneratingWorld(false);
+        return;
+      }
+
       setIsGeneratingWorld(true);
       setBgGenStatus("generating");
 
@@ -481,16 +511,13 @@ export default function Game() {
           const bgUrl = (bgResult as any).url;
           setBgImage(bgUrl);
           setBgGenRetry(false);
-          // Save to gallery [backgrounds] via saveImageToGallery (unified approach)
           const charTgId = Number(charData?.telegram_id) || undefined;
-          const activeTgId = tgIdRef.current ?? tgId ?? charTgId;
-          console.log(`[Game] 🖼 background ready, tgId=${activeTgId}, saving to gallery...`);
-          if (activeTgId) {
-            saveImageToGallery(bgUrl, activeTgId, `[backgrounds] Фон: ${diff}`, (bgResult as any).prompt)
+          const saveTgId = tgIdRef.current ?? tgId ?? charTgId;
+          console.log(`[Game] 🖼 background ready, tgId=${saveTgId}, saving to gallery...`);
+          if (saveTgId) {
+            saveImageToGallery(bgUrl, saveTgId, `[backgrounds] Фон: ${diff}`, (bgResult as any).prompt)
               .then(saved => console.log("[Game] 📦 bg gallery save:", saved ? "ok" : "failed"))
               .catch(console.error);
-          } else {
-            console.warn("[Game] ⚠️ no tgId — bg not saved to gallery");
           }
         } else {
           if (!bgGenResolvedRef.current) setBgGenRetry(true);
