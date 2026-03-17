@@ -1091,7 +1091,7 @@ export default function Game() {
 
       {/* Main Content Area */}
       {!isGeneratingWorld && (worldReady || stage > 1 || isDanilChat || isBossBattle || isBossPreparation || showBossWarning) && (
-        <div className="relative z-10 flex-1 flex flex-col p-6 overflow-y-auto pb-24 min-h-0">
+        <div className="relative z-10 flex-1 flex flex-col p-4 overflow-y-auto pb-28 min-h-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
           <AnimatePresence mode="wait">
 
             {/* --- STAGE LOADING with countdown --- */}
