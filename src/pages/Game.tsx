@@ -275,6 +275,9 @@ export default function Game() {
     return "https://i.ibb.co/BVgY7XrT/babai.png";
   };
 
+  const generatedBgDimming = Math.max(0, Math.min(100, pageBackgrounds["__game_generated_bg"]?.[0]?.dimming ?? 15));
+  const generatedBgOverlayOpacity = generatedBgDimming / 100;
+
   const getBossTimeBonus = () => {
     if (inventory.includes("pajama_star")) return 15;
     if (inventory.includes("pajama_forest")) return 5;
