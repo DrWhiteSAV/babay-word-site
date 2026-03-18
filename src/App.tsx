@@ -247,6 +247,7 @@ function AppContent() {
   // Calculate dimming values based on customBg.dimming (0-100)
   const dimmingTop = customBg ? customBg.dimming / 100 : 0.8;
   const dimmingBottom = customBg ? Math.min(1, (customBg.dimming + 15) / 100) : 0.95;
+  const isGameRoute = location.pathname === "/game";
 
   return (
     <>
@@ -269,7 +270,7 @@ function AppContent() {
           }
         `}</style>
         <div 
-          className="w-full max-w-7xl mx-auto h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col md:flex-row pb-16 md:pb-0"
+          className={`w-full max-w-7xl mx-auto h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col md:flex-row ${isGameRoute ? "pb-0" : "pb-16 md:pb-0"}`}
         >
         <Routes>
           <Route path="/" element={<Home />} />
