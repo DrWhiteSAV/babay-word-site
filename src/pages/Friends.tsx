@@ -38,6 +38,7 @@ export default function Friends() {
   const [energyAmount, setEnergyAmount] = useState(10);
   const [energySending, setEnergySending] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
+  const [showSocialPopup, setShowSocialPopup] = useState(false);
 
   // Collect all friend telegram IDs for online status polling
   const friendTelegramIds = useMemo(
@@ -688,10 +689,41 @@ export default function Friends() {
           </div>
         )}
       </AnimatePresence>
-      {/* Social links - as a scrollable block, not fixed */}
-      <div className="relative z-10 px-4 pb-6 overflow-y-auto">
-        <SocialLinksBlock />
+      {/* Social links popup trigger */}
+      <div className="relative z-10 px-4 pb-6">
+        <button
+          onClick={() => setShowSocialPopup(true)}
+          className="w-full flex items-center gap-3 p-3 bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 rounded-xl hover:border-neutral-600 transition-all"
+        >
+          <Link size={16} className="text-neutral-400" />
+          <span className="font-bold text-white text-sm">Ссылки и сообщество</span>
+        </button>
       </div>
+
+      {/* Social links popup */}
+      <AnimatePresence>
+        {showSocialPopup && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setShowSocialPopup(false)}>
+            <motion.div
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-neutral-900 border-t border-neutral-700 rounded-t-3xl p-4 pb-8 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-2">
+                  <Link size={14} /> Ссылки и сообщество
+                </h2>
+                <button onClick={() => setShowSocialPopup(false)} className="p-2 bg-neutral-800 rounded-full">
+                  <X size={16} />
+                </button>
+              </div>
+              <SocialLinksBlock />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {showProfilePopup && (
         <ProfilePopup

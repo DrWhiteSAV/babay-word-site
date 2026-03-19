@@ -356,14 +356,13 @@ export default function Shop() {
       {/* Item detail modal */}
       <AnimatePresence>
         {selectedItem && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
-              animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-              exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="fixed bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-[90%] shadow-2xl"
-              style={{ top: "50%", left: "50%" }}
+              className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
             >
               <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 bg-neutral-800 rounded-full transition-colors"><X size={20} /></button>
               <div className="text-center mb-4">

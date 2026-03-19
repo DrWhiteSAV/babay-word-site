@@ -176,12 +176,21 @@ export default function PvpLobbyBanner({ lobby, onDeclined }: Props) {
             </div>
           )}
           {myStatus === "playing" && room.status === "playing" && (
-            <button
-              onClick={() => navigate(`/game?pvp=${room.id}&diff=${encodeURIComponent(room.difficulty)}`)}
-              className="w-full mt-1 py-2.5 bg-blue-700 hover:bg-blue-600 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2"
-            >
-              🎮 Вернуться в игру
-            </button>
+            <div className="space-y-2 mt-1">
+              <button
+                onClick={() => navigate(`/pvp/room/${room.id}`)}
+                className="w-full py-2.5 bg-blue-700 hover:bg-blue-600 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+              >
+                🎮 Перейти в лобби
+              </button>
+              <button
+                onClick={handleDecline}
+                disabled={declining}
+                className="w-full py-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl font-bold text-sm text-neutral-400 flex items-center justify-center gap-2"
+              >
+                <XCircle size={14} /> {isOrganizer ? (declining ? "Отмена..." : "Отменить игру") : (declining ? "Выхожу..." : "Выйти из игры")}
+              </button>
+            </div>
           )}
           {room.status === "finished" && (
             <button

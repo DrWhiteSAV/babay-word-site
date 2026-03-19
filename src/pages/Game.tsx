@@ -1016,37 +1016,38 @@ export default function Game() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex justify-between items-center p-4 pt-[calc(env(safe-area-inset-top)+2.5rem)] bg-neutral-950/30 backdrop-blur-sm border-b border-neutral-800">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={async () => {
-              if (pvpRoomId && tgId) {
-                // PVP real room: write timeout immediately then go to lobby
-                exitedEarlyRef.current = true;
-                pvpSavedRef.current = true;
-                await writePvpTimeout(pvpRoomId, tgId);
-                navigate(`/pvp/room/${pvpRoomId}`, { replace: true });
-              } else if (pvpParticipants.length > 0) {
-                exitedEarlyRef.current = true;
-                setExitedEarly(true);
-                setIsGameOver(true);
-              } else navigate("/hub");
-            }}
-            className="p-2 bg-neutral-900/80 rounded-full hover:bg-neutral-800 transition-colors"
-          >
-            <X size={18} />
-          </button>
+      <header className="relative z-10 flex flex-col items-center p-3 pt-[calc(env(safe-area-inset-top)+1rem)] bg-neutral-950/30 backdrop-blur-sm border-b border-neutral-800">
+        {/* Row 1: Close button centered */}
+        <button
+          onClick={async () => {
+            if (pvpRoomId && tgId) {
+              exitedEarlyRef.current = true;
+              pvpSavedRef.current = true;
+              await writePvpTimeout(pvpRoomId, tgId);
+              navigate(`/pvp/room/${pvpRoomId}`, { replace: true });
+            } else if (pvpParticipants.length > 0) {
+              exitedEarlyRef.current = true;
+              setExitedEarly(true);
+              setIsGameOver(true);
+            } else navigate("/hub");
+          }}
+          className="p-2 bg-neutral-900/80 rounded-full hover:bg-neutral-800 transition-colors mb-1"
+        >
+          <X size={18} />
+        </button>
+        {/* Row 2: Stage info + stats */}
+        <div className="flex w-full justify-between items-center">
           <div>
             <div className="text-xs text-neutral-400 uppercase tracking-widest font-bold">Этап {stage}</div>
             <div className="text-sm font-bold text-red-500">{difficulty}</div>
           </div>
-        </div>
-        <div className="flex gap-3 font-bold text-sm">
-          {bgGenStatus === "generating" && (
-            <span className="text-yellow-400 flex items-center gap-1 text-xs"><Loader2 size={12} className="animate-spin" /> Мир</span>
-          )}
-          <span className="text-red-500 flex items-center gap-1"><Skull size={14} /> {pvpParticipants.length > 0 ? localFear : fear}</span>
-          <span className="text-green-500 flex items-center gap-1">🍉 {pvpParticipants.length > 0 ? localWatermelons : watermelons}</span>
+          <div className="flex gap-3 font-bold text-sm">
+            {bgGenStatus === "generating" && (
+              <span className="text-yellow-400 flex items-center gap-1 text-xs"><Loader2 size={12} className="animate-spin" /> Мир</span>
+            )}
+            <span className="text-red-500 flex items-center gap-1"><Skull size={14} /> {pvpParticipants.length > 0 ? localFear : fear}</span>
+            <span className="text-green-500 flex items-center gap-1">🍉 {pvpParticipants.length > 0 ? localWatermelons : watermelons}</span>
+          </div>
         </div>
       </header>
 
