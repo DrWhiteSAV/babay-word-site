@@ -144,6 +144,16 @@ export default function PvpResults() {
       animate={{ opacity: 1 }}
       className="flex-1 flex flex-col bg-transparent text-white relative z-10 overflow-hidden"
     >
+      {/* Close button — centered at top */}
+      <div className="flex justify-center pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-1 bg-transparent relative z-20">
+        <button
+          onClick={() => navigate("/pvp/history")}
+          className="p-2 bg-neutral-900/80 rounded-full hover:bg-neutral-800 transition-colors"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
       {/* Hero banner */}
       <AnimatePresence mode="wait">
         {timerRunning ? (
