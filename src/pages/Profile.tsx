@@ -502,17 +502,16 @@ export default function Profile() {
 
       {/* Item Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelectedItem(null)}
+        >
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
-            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-            exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className="fixed bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-[90%] shadow-2xl"
-            style={{ 
-              top: selectedItem.y ? Math.max(200, Math.min(selectedItem.y, window.innerHeight - 200)) : '50%', 
-              left: '50%' 
-            }}
+            className="relative bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl max-h-[85vh] overflow-y-auto"
           >
             <button
               onClick={() => setSelectedItem(null)}
@@ -525,13 +524,13 @@ export default function Profile() {
               <div className="w-24 h-24 rounded-3xl bg-neutral-800 flex items-center justify-center text-5xl mb-4 shadow-inner">
                 {selectedItem.item.icon}
               </div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1">
+              <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 break-words">
                 {selectedItem.item.name}
               </h3>
               <p className="text-xs text-neutral-500 uppercase tracking-widest mb-4">
                 {selectedItem.item.type}
               </p>
-              <p className="text-neutral-300 text-sm leading-relaxed">
+              <p className="text-neutral-300 text-sm leading-relaxed break-words">
                 {selectedItem.item.description}
               </p>
             </div>

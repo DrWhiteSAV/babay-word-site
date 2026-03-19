@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../store/playerStore";
 import { motion } from "motion/react";
-import { Target, Star, CheckCircle2, Clock, Loader2, Trophy } from "lucide-react";
+import { Target, Star, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import Header from "../components/Header";
 import { supabase } from "../integrations/supabase/client";
 import { useTelegram } from "../context/TelegramContext";
@@ -30,6 +30,43 @@ interface PlayerEvent {
   target: number;
 }
 
+function parseTargetFromText(text?: string | null): number | null {
+  if (!text) return null;
+
+  const match = text.match(/(\d[\d\s.,]*)/);
+  if (!match) return null;
+
+  const normalized = match[1].replace(/\D/g, "");
+  if (!normalized) return null;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function resolveEventTarget(event: Pick<EventRow, "target" | "description" | "title">, fallbackTarget?: number | null) {
+  const dbTarget = Number(event.target);
+  if (Number.isFinite(dbTarget) && dbTarget > 1) {
+    return Math.floor(dbTarget);
+  }
+
+  const fallback = Number(fallbackTarget);
+  if (Number.isFinite(fallback) && fallback > 1) {
+    return Math.floor(fallback);
+  }
+
+  const parsedFromDescription = parseTargetFromText(event.description);
+  if (parsedFromDescription && parsedFromDescription > 1) {
+    return parsedFromDescription;
+  }
+
+  const parsedFromTitle = parseTargetFromText(event.title);
+  if (parsedFromTitle && parsedFromTitle > 1) {
+    return parsedFromTitle;
+  }
+
+  return 1;
+}
+
 function useCountdown(endAt: string | null) {
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
@@ -50,7 +87,10 @@ function useCountdown(endAt: string | null) {
     } else {
       const update = () => {
         const diff = new Date(endAt).getTime() - Date.now();
-        if (diff <= 0) { setTimeLeft("Завершён"); return; }
+        if (diff <= 0) {
+          setTimeLeft("Завершён");
+          return;
+        }
         const days = Math.floor(diff / 86400000);
         const h = Math.floor((diff % 86400000) / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
@@ -65,34 +105,39 @@ function useCountdown(endAt: string | null) {
 }
 
 function EventCard({
-  event, playerEvent, globalProgress, onComplete,
+  event,
+  playerEvent,
+  globalProgress,
+  onComplete,
 }: {
   event: EventRow;
   playerEvent?: PlayerEvent;
   globalProgress?: number;
   onComplete: (eventId: string) => void;
 }) {
-  const countdown = useCountdown(event.event_type === 'global' ? event.end_at : null);
-  const isGlobal = event.event_type === 'global';
-  
-  // Always use event.target from the events table (not player_events.target which may be stale)
-  const target = event.target || 1;
-  // For global events: use sum of all users' progress; for daily: player's own progress
+  const countdown = useCountdown(event.event_type === "global" ? event.end_at : null);
+  const isGlobal = event.event_type === "global";
+
+  const target = resolveEventTarget(event, playerEvent?.target);
   const progress = isGlobal ? (globalProgress ?? 0) : (playerEvent?.progress ?? 0);
-  const completed = playerEvent?.status === 'completed';
+  const completed = playerEvent?.status === "completed";
   const isReady = !completed && progress >= target;
 
   const rewardText = [
-    event.reward_fear ? `+${event.reward_fear} 👻` : '',
-    event.reward_energy ? `+${event.reward_energy} ⚡` : '',
-    event.reward_watermelons ? `+${event.reward_watermelons} 🍉` : '',
-  ].filter(Boolean).join(' ');
+    event.reward_fear ? `+${event.reward_fear} 👻` : "",
+    event.reward_energy ? `+${event.reward_energy} ⚡` : "",
+    event.reward_watermelons ? `+${event.reward_watermelons} 🍉` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`bg-neutral-900 border rounded-2xl p-4 transition-all ${completed ? 'border-green-900/50 opacity-60' : isReady ? 'border-red-500' : 'border-neutral-800'}`}>
+    <div
+      className={`bg-neutral-900 border rounded-2xl p-4 transition-all ${completed ? "border-green-900/50 opacity-60" : isReady ? "border-red-500" : "border-neutral-800"}`}
+    >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3">
-          <span className="text-2xl">{event.icon || '🎯'}</span>
+          <span className="text-2xl">{event.icon || "🎯"}</span>
           <div>
             <h3 className="font-bold text-white text-sm">{event.title}</h3>
             <p className="text-xs text-neutral-400 mt-0.5">{event.description}</p>
@@ -110,16 +155,16 @@ function EventCard({
       <div className="flex items-center gap-3">
         <div className="flex-1 bg-neutral-950 h-2 rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all ${completed ? 'bg-green-500' : 'bg-red-600'}`}
+            className={`h-full transition-all ${completed ? "bg-green-500" : "bg-red-600"}`}
             style={{ width: `${Math.min(100, (progress / target) * 100)}%` }}
           />
         </div>
-        <span className="text-xs font-mono text-neutral-500 shrink-0">{progress}/{target}</span>
+        <span className="text-xs font-mono text-neutral-500 shrink-0">
+          {progress}/{target}
+        </span>
       </div>
 
-      {isGlobal && !completed && (
-        <p className="text-[10px] text-neutral-600 mt-1">Общий прогресс всех игроков</p>
-      )}
+      {isGlobal && !completed && <p className="text-[10px] text-neutral-600 mt-1">Общий прогресс всех игроков</p>}
 
       {completed && (
         <div className="mt-3 flex items-center gap-2 text-green-400 text-xs font-bold">
@@ -157,12 +202,10 @@ export default function Events() {
 
   const loadGlobalProgress = async () => {
     // For global events, sum all players' progress
-    const { data } = await supabase
-      .from("player_events")
-      .select("event_id, progress");
+    const { data } = await supabase.from("player_events").select("event_id, progress");
     if (!data) return;
     const sums: Record<string, number> = {};
-    data.forEach(row => {
+    data.forEach((row) => {
       sums[row.event_id] = (sums[row.event_id] || 0) + (row.progress || 0);
     });
     setGlobalProgresses(sums);
@@ -170,82 +213,83 @@ export default function Events() {
 
   const loadEvents = async () => {
     setLoading(true);
+
     const { data: evts } = await supabase.from("events").select("*").eq("is_active", true).order("created_at");
-    setEvents((evts || []) as EventRow[]);
+    const normalizedEvents = ((evts || []) as EventRow[]).map((evt) => ({
+      ...evt,
+      target: resolveEventTarget(evt),
+    }));
+    setEvents(normalizedEvents);
 
-    if (profile?.telegram_id && evts) {
-      const dailyEvts = evts.filter(e => e.event_type === 'daily');
-      for (const evt of dailyEvts) {
-        // Upsert with target from event; update target if event target changed
-        await supabase.from("player_events").upsert({
-          telegram_id: profile.telegram_id,
-          event_id: evt.id,
-          status: 'assigned',
-          target: evt.target || 1,
-        }, { onConflict: "telegram_id,event_id", ignoreDuplicates: true });
-        // Also update target in case it changed in admin
-        await supabase.from("player_events")
-          .update({ target: evt.target || 1 })
-          .eq("telegram_id", profile.telegram_id)
-          .eq("event_id", evt.id)
-          .eq("status", "assigned");
-      }
-      const globalEvts = evts.filter(e => e.event_type === 'global');
-      for (const evt of globalEvts) {
-        await supabase.from("player_events").upsert({
-          telegram_id: profile.telegram_id,
-          event_id: evt.id,
-          status: 'assigned',
-          target: evt.target || 1,
-        }, { onConflict: "telegram_id,event_id", ignoreDuplicates: true });
-        await supabase.from("player_events")
-          .update({ target: evt.target || 1 })
-          .eq("telegram_id", profile.telegram_id)
-          .eq("event_id", evt.id)
-          .eq("status", "assigned");
-      }
+    if (profile?.telegram_id && normalizedEvents.length > 0) {
+      const trackedEvents = normalizedEvents.filter((e) => e.event_type === "daily" || e.event_type === "global");
 
-      const { data: pe } = await supabase
-        .from("player_events")
-        .select("*")
-        .eq("telegram_id", profile.telegram_id);
-      setPlayerEvents((pe || []) as any);
+      await Promise.all(
+        trackedEvents.map(async (evt) => {
+          await supabase.from("player_events").upsert(
+            {
+              telegram_id: profile.telegram_id,
+              event_id: evt.id,
+              status: "assigned",
+              target: evt.target,
+            },
+            { onConflict: "telegram_id,event_id", ignoreDuplicates: true }
+          );
+
+          await supabase
+            .from("player_events")
+            .update({ target: evt.target })
+            .eq("telegram_id", profile.telegram_id)
+            .eq("event_id", evt.id)
+            .eq("status", "assigned");
+        })
+      );
+
+      const { data: pe } = await supabase.from("player_events").select("*").eq("telegram_id", profile.telegram_id);
+      setPlayerEvents((pe || []) as PlayerEvent[]);
+    } else {
+      setPlayerEvents([]);
     }
+
     await loadGlobalProgress();
     setLoading(false);
   };
 
   const handleComplete = async (eventId: string) => {
     if (!profile?.telegram_id) return;
-    const event = events.find(e => e.id === eventId);
+    const event = events.find((e) => e.id === eventId);
     if (!event) return;
 
     if (event.reward_fear) addFear(event.reward_fear);
     if (event.reward_energy) addEnergy(event.reward_energy);
     if (event.reward_watermelons) addWatermelons(event.reward_watermelons);
 
-    await supabase.from("player_events")
-      .update({ status: 'completed', completed_at: new Date().toISOString() })
+    await supabase
+      .from("player_events")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
       .eq("telegram_id", profile.telegram_id)
       .eq("event_id", eventId);
 
     pushNotification({
-      type: 'event',
-      title: '🎯 Эвент выполнен!',
+      type: "event",
+      title: "🎯 Эвент выполнен!",
       message: event.title,
-      icon: event.icon || '🎯',
-      reward: [
-        event.reward_fear ? `+${event.reward_fear} страха` : '',
-        event.reward_energy ? `+${event.reward_energy} энергии` : '',
-        event.reward_watermelons ? `+${event.reward_watermelons} арбузов` : '',
-      ].filter(Boolean).join(', ') || undefined,
+      icon: event.icon || "🎯",
+      reward:
+        [
+          event.reward_fear ? `+${event.reward_fear} страха` : "",
+          event.reward_energy ? `+${event.reward_energy} энергии` : "",
+          event.reward_watermelons ? `+${event.reward_watermelons} арбузов` : "",
+        ]
+          .filter(Boolean)
+          .join(", ") || undefined,
     });
 
     loadEvents();
   };
 
-  const dailyEvents = events.filter(e => e.event_type === 'daily');
-  const globalEvents = events.filter(e => e.event_type === 'global');
+  const dailyEvents = events.filter((e) => e.event_type === "daily");
+  const globalEvents = events.filter((e) => e.event_type === "global");
 
   return (
     <motion.div
@@ -254,13 +298,9 @@ export default function Events() {
       exit={{ opacity: 0, scale: 1.05 }}
       className="flex-1 flex flex-col bg-transparent text-neutral-200 relative overflow-hidden"
     >
-      <Header
-        title={<><Target size={20} className="text-red-500" /> Ивенты и Задания</>}
-        backUrl="/leaderboard"
-      />
+      <Header title={<><Target size={20} className="text-red-500" /> Ивенты и Задания</>} backUrl="/leaderboard" />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-8 relative z-10">
-
         <section className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-neutral-800">
           <h2 className="text-sm font-bold mb-2 text-white">О заданиях</h2>
           <p className="text-xs text-neutral-400">
@@ -272,7 +312,9 @@ export default function Events() {
         </section>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-red-500" /></div>
+          <div className="flex justify-center py-12">
+            <Loader2 className="animate-spin text-red-500" />
+          </div>
         ) : (
           <>
             <section>
@@ -281,11 +323,11 @@ export default function Events() {
                 <span className="text-xs text-neutral-500 font-normal normal-case">— сбрасываются в полночь</span>
               </h2>
               <div className="space-y-3">
-                {dailyEvents.map(evt => (
+                {dailyEvents.map((evt) => (
                   <EventCard
                     key={evt.id}
                     event={evt}
-                    playerEvent={playerEvents.find(pe => pe.event_id === evt.id)}
+                    playerEvent={playerEvents.find((pe) => pe.event_id === evt.id)}
                     onComplete={handleComplete}
                   />
                 ))}
@@ -298,11 +340,11 @@ export default function Events() {
                 <Star size={18} className="text-blue-400" /> Глобальные эвенты
               </h2>
               <div className="space-y-3">
-                {globalEvents.map(evt => (
+                {globalEvents.map((evt) => (
                   <EventCard
                     key={evt.id}
                     event={evt}
-                    playerEvent={playerEvents.find(pe => pe.event_id === evt.id)}
+                    playerEvent={playerEvents.find((pe) => pe.event_id === evt.id)}
                     globalProgress={globalProgresses[evt.id]}
                     onComplete={handleComplete}
                   />
