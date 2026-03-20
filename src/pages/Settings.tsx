@@ -186,6 +186,12 @@ export default function Settings() {
         theme: currentSettings.theme,
         musicVolume: currentSettings.musicVolume,
         ttsEnabled: currentSettings.ttsEnabled,
+        volumeBgMusic: currentSettings.volumeBgMusic,
+        volumeBgSounds: currentSettings.volumeBgSounds,
+        volumeClicks: currentSettings.volumeClicks,
+        volumeTransitions: currentSettings.volumeTransitions,
+        volumeCutscene: currentSettings.volumeCutscene,
+        volumeAnswerSfx: currentSettings.volumeAnswerSfx,
       };
       const { error } = await supabase
         .from("player_stats")
