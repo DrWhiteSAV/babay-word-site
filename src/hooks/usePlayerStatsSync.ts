@@ -5,14 +5,7 @@ import { supabase } from "../integrations/supabase/client";
 
 const FALLBACK_AVATAR = "https://i.ibb.co/BVgY7XrT/babai.png";
 
-const DEFAULT_SETTINGS = {
-  buttonSize: "small" as ButtonSize,
-  fontFamily: "Russo One" as FontFamily,
-  fontSize: 12,
-  fontBrightness: 100,
-  theme: "normal" as Theme,
-  musicVolume: 50,
-  ttsEnabled: false,
+// Use DEFAULT_SETTINGS from playerStore
 };
 
 const BUTTON_SIZES: ButtonSize[] = ["small", "medium", "large"];
