@@ -53,6 +53,7 @@ const EMPTY_FORM = {
   reward_fear: 0,
   reward_watermelons: 0,
   reward_energy: 0,
+  target: 1,
   condition_type: "fear_total",
   condition_value: 100,
 };
