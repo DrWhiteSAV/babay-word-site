@@ -19,6 +19,7 @@ interface GameEvent {
   reward_fear: number | null;
   reward_watermelons: number | null;
   reward_energy: number | null;
+  target: number;
   created_at: string;
 }
 
