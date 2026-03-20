@@ -364,6 +364,7 @@ export default function AdminEvents() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-orange-400">{typeInfo?.label || ev.event_type}</span>
                         {!ev.is_active && <span className="text-[10px] text-neutral-500">Неактивен</span>}
+                        <span className="text-[10px] text-blue-400">🎯 {ev.target || 1}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] text-neutral-500 shrink-0">
