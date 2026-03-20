@@ -218,7 +218,7 @@ export default function Settings() {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [settings.buttonSize, settings.fontFamily, settings.fontSize, settings.fontBrightness, settings.theme, settings.musicVolume, settings.ttsEnabled]);
+  }, [settings.buttonSize, settings.fontFamily, settings.fontSize, settings.fontBrightness, settings.theme, settings.musicVolume, settings.ttsEnabled, settings.volumeBgMusic, settings.volumeBgSounds, settings.volumeClicks, settings.volumeTransitions, settings.volumeCutscene, settings.volumeAnswerSfx]);
 
   const handleSaveSettings = async () => {
     setSaving(true);
