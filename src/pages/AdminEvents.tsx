@@ -118,6 +118,7 @@ export default function AdminEvents() {
       reward_fear: ev.reward_fear || 0,
       reward_watermelons: ev.reward_watermelons || 0,
       reward_energy: ev.reward_energy || 0,
+      target: ev.target || 1,
       condition_type: "manual",
       condition_value: 0,
     });
