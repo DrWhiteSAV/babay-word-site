@@ -290,15 +290,7 @@ export default function Settings() {
       achievements: [],
       friends: [],
       quests: [],
-      settings: {
-        buttonSize: "small",
-        fontFamily: "Russo One",
-        fontSize: 12,
-        fontBrightness: 100,
-        theme: "normal",
-        musicVolume: 50,
-        ttsEnabled: false,
-      },
+      settings: { ...DEFAULT_SETTINGS },
       gameStatus: "reset",
       dbLoaded: false,
     });
