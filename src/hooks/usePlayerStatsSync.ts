@@ -1,19 +1,12 @@
 import { useEffect, useRef } from "react";
-import { usePlayerStore, ButtonSize, FontFamily, Theme } from "../store/playerStore";
+import { usePlayerStore, ButtonSize, FontFamily, Theme, DEFAULT_SETTINGS } from "../store/playerStore";
 import { useTelegram } from "../context/TelegramContext";
 import { supabase } from "../integrations/supabase/client";
 
 const FALLBACK_AVATAR = "https://i.ibb.co/BVgY7XrT/babai.png";
 
-const DEFAULT_SETTINGS = {
-  buttonSize: "small" as ButtonSize,
-  fontFamily: "Russo One" as FontFamily,
-  fontSize: 12,
-  fontBrightness: 100,
-  theme: "normal" as Theme,
-  musicVolume: 50,
-  ttsEnabled: false,
-};
+// Use DEFAULT_SETTINGS from playerStore
+
 
 const BUTTON_SIZES: ButtonSize[] = ["small", "medium", "large"];
 const FONT_FAMILIES: FontFamily[] = [
@@ -40,6 +33,12 @@ const normalizeSettings = (raw: unknown) => {
     theme: THEMES.includes(cs.theme as Theme) ? (cs.theme as Theme) : DEFAULT_SETTINGS.theme,
     musicVolume: typeof cs.musicVolume === "number" ? cs.musicVolume : DEFAULT_SETTINGS.musicVolume,
     ttsEnabled: typeof cs.ttsEnabled === "boolean" ? cs.ttsEnabled : DEFAULT_SETTINGS.ttsEnabled,
+    volumeBgMusic: typeof cs.volumeBgMusic === "number" ? cs.volumeBgMusic : DEFAULT_SETTINGS.volumeBgMusic,
+    volumeBgSounds: typeof cs.volumeBgSounds === "number" ? cs.volumeBgSounds : DEFAULT_SETTINGS.volumeBgSounds,
+    volumeClicks: typeof cs.volumeClicks === "number" ? cs.volumeClicks : DEFAULT_SETTINGS.volumeClicks,
+    volumeTransitions: typeof cs.volumeTransitions === "number" ? cs.volumeTransitions : DEFAULT_SETTINGS.volumeTransitions,
+    volumeCutscene: typeof cs.volumeCutscene === "number" ? cs.volumeCutscene : DEFAULT_SETTINGS.volumeCutscene,
+    volumeAnswerSfx: typeof cs.volumeAnswerSfx === "number" ? cs.volumeAnswerSfx : DEFAULT_SETTINGS.volumeAnswerSfx,
   };
 };
 

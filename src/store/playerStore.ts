@@ -120,6 +120,12 @@ export interface PlayerState {
     theme: Theme;
     musicVolume: number;
     ttsEnabled: boolean;
+    volumeBgMusic: number;
+    volumeBgSounds: number;
+    volumeClicks: number;
+    volumeTransitions: number;
+    volumeCutscene: number;
+    volumeAnswerSfx: number;
   };
   globalBackgroundUrl: string | null;
   pageBackgrounds: Record<string, Array<{ url: string; dimming: number }>>;
@@ -172,6 +178,12 @@ export const DEFAULT_SETTINGS = {
   theme: "normal" as Theme,
   musicVolume: 50,
   ttsEnabled: false,
+  volumeBgMusic: 50,
+  volumeBgSounds: 50,
+  volumeClicks: 50,
+  volumeTransitions: 50,
+  volumeCutscene: 50,
+  volumeAnswerSfx: 50,
 };
 
 // Pure in-memory store — NO localStorage persistence at all

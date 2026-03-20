@@ -703,20 +703,17 @@ export default function Friends() {
       {/* Social links popup */}
       <AnimatePresence>
         {showSocialPopup && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center" onClick={() => setShowSocialPopup(false)}>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowSocialPopup(false)}>
             <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-neutral-900 border-t border-neutral-700 rounded-t-3xl p-4 pb-8 max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl p-4 max-h-[80vh] overflow-y-auto"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-2">
-                  <Link size={14} /> Ссылки и сообщество
-                </h2>
-                <button onClick={() => setShowSocialPopup(false)} className="p-2 bg-neutral-800 rounded-full">
-                  <X size={16} />
+              <div className="flex justify-center mb-3">
+                <button onClick={() => setShowSocialPopup(false)} className="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors">
+                  <X size={18} />
                 </button>
               </div>
               <SocialLinksBlock />

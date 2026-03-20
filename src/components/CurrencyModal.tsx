@@ -56,12 +56,14 @@ export default function CurrencyModal({ type, onClose, clickY }: CurrencyModalPr
           className="relative bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl max-h-[85vh] overflow-y-auto"
           style={verticalOffset ? { marginTop: `${verticalOffset}px` } : undefined}
         >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 bg-neutral-800 rounded-full transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex justify-center mb-2">
+            <button
+              onClick={onClose}
+              className="p-2 text-neutral-400 hover:text-white bg-neutral-800 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
           <div className="flex flex-col items-center text-center gap-4 mt-2">
             <div className="p-6 bg-neutral-800/50 rounded-full border border-neutral-700/50 shadow-inner">{info.icon}</div>
             <h2 className="text-2xl font-black text-white uppercase tracking-widest mt-2">{info.title}</h2>

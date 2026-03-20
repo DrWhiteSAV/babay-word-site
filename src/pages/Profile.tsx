@@ -472,14 +472,14 @@ export default function Profile() {
               onClick={(e) => e.stopPropagation()}
               className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 max-w-sm w-full max-h-[70vh] flex flex-col"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Users size={18} className="text-red-500" /> Приглашённые ({referralCount})
-                </h2>
-                <button onClick={() => setShowReferralPopup(false)} className="text-neutral-500 hover:text-white">
+              <div className="flex justify-center mb-2">
+                <button onClick={() => setShowReferralPopup(false)} className="p-2 bg-neutral-800 rounded-full text-neutral-400 hover:text-white transition-colors">
                   <X size={20} />
                 </button>
               </div>
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2 mb-4">
+                <Users size={18} className="text-red-500" /> Приглашённые ({referralCount})
+              </h2>
               <div className="overflow-y-auto space-y-2 flex-1">
                 {referralFriends.length === 0 ? (
                   <p className="text-neutral-500 text-sm text-center py-4">Пока никто не пришёл по вашей ссылке</p>
@@ -513,12 +513,14 @@ export default function Profile() {
             onClick={(e) => e.stopPropagation()}
             className="relative bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl max-h-[85vh] overflow-y-auto"
           >
-            <button
-              onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white bg-neutral-800 rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex justify-center mb-2">
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="p-2 text-neutral-400 hover:text-white bg-neutral-800 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
             <div className="flex flex-col items-center text-center mt-4">
               <div className="w-24 h-24 rounded-3xl bg-neutral-800 flex items-center justify-center text-5xl mb-4 shadow-inner">

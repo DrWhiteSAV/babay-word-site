@@ -19,6 +19,7 @@ interface GameEvent {
   reward_fear: number | null;
   reward_watermelons: number | null;
   reward_energy: number | null;
+  target: number;
   created_at: string;
 }
 
@@ -52,6 +53,7 @@ const EMPTY_FORM = {
   reward_fear: 0,
   reward_watermelons: 0,
   reward_energy: 0,
+  target: 1,
   condition_type: "fear_total",
   condition_value: 100,
 };
@@ -60,6 +62,7 @@ export default function AdminEvents() {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -88,6 +91,7 @@ export default function AdminEvents() {
       reward_fear: form.reward_fear || 0,
       reward_watermelons: form.reward_watermelons || 0,
       reward_energy: form.reward_energy || 0,
+      target: form.target || 1,
     };
 
     if (editId) {
@@ -115,6 +119,7 @@ export default function AdminEvents() {
       reward_fear: ev.reward_fear || 0,
       reward_watermelons: ev.reward_watermelons || 0,
       reward_energy: ev.reward_energy || 0,
+      target: ev.target || 1,
       condition_type: "manual",
       condition_value: 0,
     });
@@ -131,6 +136,24 @@ export default function AdminEvents() {
   const handleToggle = async (ev: GameEvent) => {
     await supabase.from("events").update({ is_active: !ev.is_active }).eq("id", ev.id);
     load();
+  };
+
+  const handleSyncTargets = async () => {
+    setSyncing(true);
+    try {
+      for (const ev of events) {
+        await supabase
+          .from("player_events")
+          .update({ target: ev.target || 1 })
+          .eq("event_id", ev.id)
+          .eq("status", "assigned");
+      }
+      alert("✅ Targets синхронизированы во всех player_events!");
+    } catch (e) {
+      console.error("Sync error:", e);
+      alert("❌ Ошибка синхронизации");
+    }
+    setSyncing(false);
   };
 
   const upd = (field: string, value: any) => setForm(f => ({ ...f, [field]: value }));
@@ -170,6 +193,16 @@ export default function AdminEvents() {
           className="w-full py-3 bg-orange-900/50 hover:bg-orange-800/60 text-orange-300 border border-orange-900/50 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
         >
           <Plus size={18} /> Создать новый эвент
+        </button>
+
+        {/* Sync targets button */}
+        <button
+          onClick={handleSyncTargets}
+          disabled={syncing || events.length === 0}
+          className="w-full py-3 bg-blue-900/50 hover:bg-blue-800/60 text-blue-300 border border-blue-900/50 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          Синхронизировать target → player_events
         </button>
 
         {/* Form */}
@@ -268,7 +301,16 @@ export default function AdminEvents() {
                   </div>
                 </div>
 
-                {/* Active toggle */}
+                {/* Target (goal) */}
+                <div className="space-y-1">
+                  <label className="text-[10px] text-neutral-500 uppercase font-bold">🎯 Цель (target) — сколько нужно выполнить</label>
+                  <input type="number" min={1} value={form.target}
+                    onChange={e => upd("target", parseInt(e.target.value) || 1)}
+                    placeholder="Например: 5, 1000, 1000000"
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500" />
+                  <p className="text-[9px] text-neutral-600">Для ежедневных — цель на игрока. Для глобальных — сумма по всем игрокам.</p>
+                </div>
+
                 <label className="flex items-center gap-3 cursor-pointer">
                   <div onClick={() => upd("is_active", !form.is_active)}
                     className={`w-10 h-5 rounded-full flex items-center transition-colors ${form.is_active ? "bg-orange-600" : "bg-neutral-700"}`}>
@@ -322,6 +364,7 @@ export default function AdminEvents() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-orange-400">{typeInfo?.label || ev.event_type}</span>
                         {!ev.is_active && <span className="text-[10px] text-neutral-500">Неактивен</span>}
+                        <span className="text-[10px] text-blue-400">🎯 {ev.target || 1}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] text-neutral-500 shrink-0">

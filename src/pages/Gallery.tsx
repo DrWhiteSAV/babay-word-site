@@ -335,12 +335,14 @@ export default function Gallery() {
             className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-2 backdrop-blur-sm"
             onClick={() => { setSelectedImage(null); setSelectedLore(null); }}
           >
-            <button
-              className="absolute top-4 right-4 p-2 bg-neutral-800 rounded-full text-white hover:bg-neutral-700 transition-colors z-50"
-              onClick={(e) => { e.stopPropagation(); playClick(); setSelectedImage(null); setSelectedLore(null); }}
-            >
-              <X size={24} />
-            </button>
+            <div className="absolute top-4 left-0 right-0 flex justify-center z-50">
+              <button
+                className="p-2 bg-neutral-800 rounded-full text-white hover:bg-neutral-700 transition-colors"
+                onClick={(e) => { e.stopPropagation(); playClick(); setSelectedImage(null); setSelectedLore(null); }}
+              >
+                <X size={24} />
+              </button>
+            </div>
 
             <div
               className="relative w-full max-w-lg flex flex-col items-center max-h-[95vh] overflow-y-auto"

@@ -141,6 +141,7 @@ export default function Settings() {
         energy: snap.energy ?? 100,
         bossLevel: snap.boss_level ?? 0,
         settings: {
+          ...DEFAULT_SETTINGS,
           buttonSize: (cs.buttonSize as any) || "small",
           fontFamily: (cs.fontFamily as any) || "Russo One",
           fontSize: typeof cs.fontSize === "number" ? cs.fontSize : 12,
@@ -148,6 +149,12 @@ export default function Settings() {
           theme: (cs.theme as any) || "normal",
           musicVolume: typeof cs.musicVolume === "number" ? cs.musicVolume : 50,
           ttsEnabled: typeof cs.ttsEnabled === "boolean" ? cs.ttsEnabled : false,
+          volumeBgMusic: typeof cs.volumeBgMusic === "number" ? cs.volumeBgMusic : 50,
+          volumeBgSounds: typeof cs.volumeBgSounds === "number" ? cs.volumeBgSounds : 50,
+          volumeClicks: typeof cs.volumeClicks === "number" ? cs.volumeClicks : 50,
+          volumeTransitions: typeof cs.volumeTransitions === "number" ? cs.volumeTransitions : 50,
+          volumeCutscene: typeof cs.volumeCutscene === "number" ? cs.volumeCutscene : 50,
+          volumeAnswerSfx: typeof cs.volumeAnswerSfx === "number" ? cs.volumeAnswerSfx : 50,
         },
         gameStatus: snap.character_name ? "playing" : "reset",
         dbLoaded: true,
@@ -179,6 +186,12 @@ export default function Settings() {
         theme: currentSettings.theme,
         musicVolume: currentSettings.musicVolume,
         ttsEnabled: currentSettings.ttsEnabled,
+        volumeBgMusic: currentSettings.volumeBgMusic,
+        volumeBgSounds: currentSettings.volumeBgSounds,
+        volumeClicks: currentSettings.volumeClicks,
+        volumeTransitions: currentSettings.volumeTransitions,
+        volumeCutscene: currentSettings.volumeCutscene,
+        volumeAnswerSfx: currentSettings.volumeAnswerSfx,
       };
       const { error } = await supabase
         .from("player_stats")
@@ -205,7 +218,7 @@ export default function Settings() {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [settings.buttonSize, settings.fontFamily, settings.fontSize, settings.fontBrightness, settings.theme, settings.musicVolume, settings.ttsEnabled]);
+  }, [settings.buttonSize, settings.fontFamily, settings.fontSize, settings.fontBrightness, settings.theme, settings.musicVolume, settings.ttsEnabled, settings.volumeBgMusic, settings.volumeBgSounds, settings.volumeClicks, settings.volumeTransitions, settings.volumeCutscene, settings.volumeAnswerSfx]);
 
   const handleSaveSettings = async () => {
     setSaving(true);
@@ -283,15 +296,7 @@ export default function Settings() {
       achievements: [],
       friends: [],
       quests: [],
-      settings: {
-        buttonSize: "small",
-        fontFamily: "Russo One",
-        fontSize: 12,
-        fontBrightness: 100,
-        theme: "normal",
-        musicVolume: 50,
-        ttsEnabled: false,
-      },
+      settings: { ...DEFAULT_SETTINGS },
       gameStatus: "reset",
       dbLoaded: false,
     });
@@ -494,7 +499,37 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Save Settings Button */}
+        {/* Granular Volume Controls */}
+        <section>
+          <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-wider border-b border-neutral-800 pb-2 flex items-center gap-2">
+            <Volume2 size={18} /> Настройки громкости
+          </h2>
+          <div className="space-y-4">
+            {([
+              { key: "volumeBgMusic" as const, label: "🎵 Фоновая музыка меню и игры", value: settings.volumeBgMusic },
+              { key: "volumeBgSounds" as const, label: "🌿 Фоновые звуки", value: settings.volumeBgSounds },
+              { key: "volumeClicks" as const, label: "👆 Звуки кликов", value: settings.volumeClicks },
+              { key: "volumeTransitions" as const, label: "🚪 Звуки переходов на страницы", value: settings.volumeTransitions },
+              { key: "volumeCutscene" as const, label: "🎬 Катсцены видео", value: settings.volumeCutscene },
+              { key: "volumeAnswerSfx" as const, label: "✅ Звуки ответов (успех/неудача)", value: settings.volumeAnswerSfx },
+            ]).map(item => (
+              <div key={item.key} className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-2xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-neutral-300">{item.label}</span>
+                  <span className="text-sm font-bold text-white">{item.value ?? 50}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100"
+                  value={item.value ?? 50}
+                  onChange={(e) => updateSettings({ [item.key]: parseInt(e.target.value) })}
+                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-red-600"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+
         <section>
           <button
             onClick={handleSaveSettings}
