@@ -125,9 +125,9 @@ export const useAudio = (masterVolume: number, volumeClicks?: number, volumeTran
       "https://psuvnvqvspqibsezcrny.supabase.co/storage/v1/object/public/SongBabai/Zvukswoosh.MP3",
     ]);
     const whoosh = new Audio(pickRandom(urls));
-    whoosh.volume = volume / 100;
+    whoosh.volume = (masterVolume / 100) * (transVol / 100);
     whoosh.play().catch(() => {});
-  }, [volume, dbAudio]);
+  }, [masterVolume, transVol, dbAudio]);
 
   const playSound = useCallback(
     (type: "scream" | "cat" | "fear") => {
