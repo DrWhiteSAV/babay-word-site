@@ -117,6 +117,49 @@ export default function Friends() {
     loadFriendsMeta();
   }, [profile?.telegram_id, friends]);
 
+  // Load friend requests
+  useEffect(() => {
+    if (!profile?.telegram_id) return;
+    const loadRequests = async () => {
+      // Incoming pending requests
+      const { data: incoming } = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("to_telegram_id", profile.telegram_id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (incoming && incoming.length > 0) {
+        const fromIds = incoming.map(r => r.from_telegram_id);
+        const [profRes, statsRes] = await Promise.all([
+          supabase.from("profiles").select("telegram_id, first_name, username").in("telegram_id", fromIds),
+          supabase.from("player_stats").select("telegram_id, character_name, avatar_url").in("telegram_id", fromIds),
+        ]);
+        const profMap = Object.fromEntries((profRes.data || []).map(p => [p.telegram_id, p]));
+        const statsMap = Object.fromEntries((statsRes.data || []).map(s => [s.telegram_id, s]));
+        setIncomingRequests(incoming.map(r => ({
+          ...r,
+          avatar_url: statsMap[r.from_telegram_id]?.avatar_url || undefined,
+          username: profMap[r.from_telegram_id]?.username || undefined,
+          first_name: profMap[r.from_telegram_id]?.first_name || undefined,
+        })));
+      } else {
+        setIncomingRequests([]);
+      }
+
+      // Outgoing pending requests
+      const { data: outgoing } = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("from_telegram_id", profile.telegram_id)
+        .eq("status", "pending");
+      setOutgoingRequests(outgoing || []);
+    };
+    loadRequests();
+    const interval = setInterval(loadRequests, 10000);
+    return () => clearInterval(interval);
+  }, [profile?.telegram_id]);
+
   const { dbLoaded } = usePlayerStore();
 
   useEffect(() => {
