@@ -77,7 +77,7 @@ function AppContent() {
   const { entryMode, isLoading, profile } = useTelegram();
   const [hasSeenInitialCutscene, setHasSeenInitialCutscene] = useState(false);
   const { updateEnergy, settings, globalBackgroundUrl, setGlobalBackgroundUrl, character, pageBackgrounds, setPageBackgrounds, setVideoCutscenes } = usePlayerStore();
-  const { playClick, getMenuMusicUrls, getBgMusicUrls } = useAudio(settings.musicVolume);
+  const { playClick, getMenuMusicUrls, getBgMusicUrls } = useAudio(settings.musicVolume, settings.volumeClicks, settings.volumeTransitions, settings.volumeBgSounds);
   const location = useLocation();
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
 
