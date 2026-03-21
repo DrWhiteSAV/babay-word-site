@@ -45,7 +45,10 @@ function getUrls(settings: Record<string, string[]> | null, key: string, fallbac
   return fallback;
 }
 
-export const useAudio = (volume: number) => {
+export const useAudio = (masterVolume: number, volumeClicks?: number, volumeTransitions?: number, volumeBgSounds?: number) => {
+  const clickVol = volumeClicks ?? masterVolume;
+  const transVol = volumeTransitions ?? masterVolume;
+  const bgSoundVol = volumeBgSounds ?? masterVolume;
   const location = useLocation();
   const specialAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastPathRef = useRef(location.pathname);
