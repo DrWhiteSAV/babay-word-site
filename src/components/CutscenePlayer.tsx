@@ -127,6 +127,8 @@ export const CutscenePlayer: React.FC<CutscenePlayerProps> = ({ onComplete }) =>
     setNeedsInteraction(false);
     hasTriedPlayRef.current = false;
     if (videoRef.current) {
+      const cutsceneVol = (settings.musicVolume / 100) * ((settings.volumeCutscene ?? 50) / 100);
+      videoRef.current.volume = Math.min(1, cutsceneVol);
       videoRef.current.play().catch(() => {});
     }
   };
