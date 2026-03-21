@@ -725,7 +725,7 @@ export default function Game() {
         });
       } else addFear(fearReward);
       setScore(s => s + 1);
-      playSuccess(settings.musicVolume);
+      playSuccess((settings.musicVolume / 100) * ((settings.volumeAnswerSfx ?? 50) / 100) * 100);
       setShowSuccessAvatar(true);
       await new Promise(r => setTimeout(r, 1000));
       setShowSuccessAvatar(false);
