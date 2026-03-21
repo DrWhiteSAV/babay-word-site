@@ -153,7 +153,7 @@ function AppContent() {
 
     const bgMusicVol = (settings.volumeBgMusic ?? 50) / 100;
     bgMusicRef.current.volume = (settings.musicVolume / 100) * bgMusicVol * 0.2;
-  }, [location.pathname, settings.musicVolume, getMenuMusicUrls, getBgMusicUrls]);
+  }, [location.pathname, settings.musicVolume, settings.volumeBgMusic, getMenuMusicUrls, getBgMusicUrls]);
 
   useEffect(() => {
     const handleInteraction = () => {
