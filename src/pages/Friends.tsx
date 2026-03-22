@@ -277,11 +277,12 @@ export default function Friends() {
         setOutgoingRequests(prev => [...prev, { id: "temp", to_telegram_id: foundUser.telegram_id, status: "pending", created_at: new Date().toISOString() }]);
         // Send telegram notification
         try {
-          const caption = `👋 *Заявка в друзья!*\n\n*${character?.name || "Бабай"}* хочет добавить тебя в друзья в игре Бабай.\n\nОткрой раздел Друзья, чтобы принять или отклонить заявку!`;
+          const senderAvatar = character?.avatarUrl || null;
+          const caption = `👋 *Заявка в друзья!*\n\n\`${character?.name || "Бабай"}\` хочет добавить тебя в друзья в игре Бабай.\n\nОткрой раздел Друзья, чтобы принять или отклонить заявку!`;
           await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({ telegram_id: foundUser.telegram_id, caption }),
+            body: JSON.stringify({ telegram_id: foundUser.telegram_id, photo_url: senderAvatar, caption }),
           });
         } catch (e) { console.error("Notify error:", e); }
       }
