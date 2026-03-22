@@ -317,11 +317,12 @@ export default function Friends() {
 
     // Notify the requester
     try {
-      const caption = `✅ *Заявка принята!*\n\n*${myName}* принял(а) вашу заявку в друзья!`;
+      const myAvatar = character?.avatarUrl || null;
+      const caption = `✅ *Заявка принята!*\n\n\`${myName}\` принял(а) вашу заявку в друзья!`;
       await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ telegram_id: req.from_telegram_id, caption }),
+        body: JSON.stringify({ telegram_id: req.from_telegram_id, photo_url: myAvatar, caption }),
       });
     } catch (e) { console.error("Notify error:", e); }
 
