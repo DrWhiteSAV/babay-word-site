@@ -47,9 +47,9 @@ export async function notifyFriendAdded(
       maleKey: "notif_friend_added_male",
       femaleKey: "notif_friend_added_female",
       maleFallback:
-        "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавил тебя как контакт в игре Бабай.\n\n🧿 *Бабай:* {name}\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
+        "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавил тебя как контакт в игре Бабай.\n\n🧿 *Бабай:* `{name}`\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
       femaleFallback:
-        "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавила тебя как контакт в игре Бабай.\n\n🧿 *Бабайка:* {name}\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
+        "👻 *Тебя добавили в друзья!*\n\n*{sender_name}* добавила тебя как контакт в игре Бабай.\n\n🧿 *Бабайка:* `{name}`\n⚡ Телекинез: {telekinesis} ур. · 😱 Страх: {fear}\n\n📖 *Лор:* _{lore}_",
       macros: {
         sender_name: senderName,
         name: babayName,

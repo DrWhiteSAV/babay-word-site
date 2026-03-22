@@ -118,46 +118,61 @@ export default function Friends() {
   }, [profile?.telegram_id, friends]);
 
   // Load friend requests
+  const loadRequests = async () => {
+    if (!profile?.telegram_id) return;
+    const { data: incoming } = await supabase
+      .from("friend_requests")
+      .select("*")
+      .eq("to_telegram_id", profile.telegram_id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (incoming && incoming.length > 0) {
+      const fromIds = incoming.map(r => r.from_telegram_id);
+      const [profRes, statsRes] = await Promise.all([
+        supabase.from("profiles").select("telegram_id, first_name, username").in("telegram_id", fromIds),
+        supabase.from("player_stats").select("telegram_id, character_name, avatar_url").in("telegram_id", fromIds),
+      ]);
+      const profMap = Object.fromEntries((profRes.data || []).map(p => [p.telegram_id, p]));
+      const statsMap = Object.fromEntries((statsRes.data || []).map(s => [s.telegram_id, s]));
+      setIncomingRequests(incoming.map(r => ({
+        ...r,
+        avatar_url: statsMap[r.from_telegram_id]?.avatar_url || undefined,
+        username: profMap[r.from_telegram_id]?.username || undefined,
+        first_name: profMap[r.from_telegram_id]?.first_name || undefined,
+      })));
+    } else {
+      setIncomingRequests([]);
+    }
+
+    const { data: outgoing } = await supabase
+      .from("friend_requests")
+      .select("*")
+      .eq("from_telegram_id", profile.telegram_id)
+      .eq("status", "pending");
+    setOutgoingRequests(outgoing || []);
+  };
+
   useEffect(() => {
     if (!profile?.telegram_id) return;
-    const loadRequests = async () => {
-      // Incoming pending requests
-      const { data: incoming } = await supabase
-        .from("friend_requests")
-        .select("*")
-        .eq("to_telegram_id", profile.telegram_id)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-
-      if (incoming && incoming.length > 0) {
-        const fromIds = incoming.map(r => r.from_telegram_id);
-        const [profRes, statsRes] = await Promise.all([
-          supabase.from("profiles").select("telegram_id, first_name, username").in("telegram_id", fromIds),
-          supabase.from("player_stats").select("telegram_id, character_name, avatar_url").in("telegram_id", fromIds),
-        ]);
-        const profMap = Object.fromEntries((profRes.data || []).map(p => [p.telegram_id, p]));
-        const statsMap = Object.fromEntries((statsRes.data || []).map(s => [s.telegram_id, s]));
-        setIncomingRequests(incoming.map(r => ({
-          ...r,
-          avatar_url: statsMap[r.from_telegram_id]?.avatar_url || undefined,
-          username: profMap[r.from_telegram_id]?.username || undefined,
-          first_name: profMap[r.from_telegram_id]?.first_name || undefined,
-        })));
-      } else {
-        setIncomingRequests([]);
-      }
-
-      // Outgoing pending requests
-      const { data: outgoing } = await supabase
-        .from("friend_requests")
-        .select("*")
-        .eq("from_telegram_id", profile.telegram_id)
-        .eq("status", "pending");
-      setOutgoingRequests(outgoing || []);
-    };
     loadRequests();
     const interval = setInterval(loadRequests, 10000);
-    return () => clearInterval(interval);
+
+    // Realtime subscription for instant updates
+    const channel = supabase
+      .channel(`friend_requests_${profile.telegram_id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "friend_requests",
+        filter: `to_telegram_id=eq.${profile.telegram_id}`,
+      }, () => { loadRequests(); })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, [profile?.telegram_id]);
 
   const { dbLoaded } = usePlayerStore();
@@ -262,11 +277,12 @@ export default function Friends() {
         setOutgoingRequests(prev => [...prev, { id: "temp", to_telegram_id: foundUser.telegram_id, status: "pending", created_at: new Date().toISOString() }]);
         // Send telegram notification
         try {
-          const caption = `👋 *Заявка в друзья!*\n\n*${character?.name || "Бабай"}* хочет добавить тебя в друзья в игре Бабай.\n\nОткрой раздел Друзья, чтобы принять или отклонить заявку!`;
+          const senderAvatar = character?.avatarUrl || null;
+          const caption = `👋 *Заявка в друзья!*\n\n\`${character?.name || "Бабай"}\` хочет добавить тебя в друзья в игре Бабай.\n\nОткрой раздел Друзья, чтобы принять или отклонить заявку!`;
           await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({ telegram_id: foundUser.telegram_id, caption }),
+            body: JSON.stringify({ telegram_id: foundUser.telegram_id, photo_url: senderAvatar, caption }),
           });
         } catch (e) { console.error("Notify error:", e); }
       }
@@ -301,11 +317,12 @@ export default function Friends() {
 
     // Notify the requester
     try {
-      const caption = `✅ *Заявка принята!*\n\n*${myName}* принял(а) вашу заявку в друзья!`;
+      const myAvatar = character?.avatarUrl || null;
+      const caption = `✅ *Заявка принята!*\n\n\`${myName}\` принял(а) вашу заявку в друзья!`;
       await fetch(`${SUPABASE_URL}/functions/v1/send-telegram-notification`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ telegram_id: req.from_telegram_id, caption }),
+        body: JSON.stringify({ telegram_id: req.from_telegram_id, photo_url: myAvatar, caption }),
       });
     } catch (e) { console.error("Notify error:", e); }
 
@@ -594,13 +611,17 @@ export default function Friends() {
           </AnimatePresence>
         </section>
 
-        {/* Incoming Friend Requests */}
-        {incomingRequests.length > 0 && (
-          <section className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-yellow-900/40 space-y-3">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-400">
-              <UserPlus size={18} /> Заявки в друзья
+        {/* Incoming Friend Requests — always visible */}
+        <section className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-yellow-900/40 space-y-3">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-400">
+            <UserPlus size={18} /> Заявки в друзья
+            {incomingRequests.length > 0 && (
               <span className="bg-yellow-900/50 text-yellow-300 text-xs px-2 py-0.5 rounded-full font-black">{incomingRequests.length}</span>
-            </h2>
+            )}
+          </h2>
+          {incomingRequests.length === 0 ? (
+            <p className="text-neutral-500 text-sm text-center py-2">Нет входящих заявок</p>
+          ) : (
             <div className="space-y-2">
               {incomingRequests.map(req => (
                 <div key={req.id} className="flex items-center gap-3 bg-neutral-950/80 border border-neutral-800 rounded-xl p-3">
@@ -631,8 +652,8 @@ export default function Friends() {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         <section>
           <div className="flex items-center gap-2 mb-3">
