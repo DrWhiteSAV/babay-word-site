@@ -609,13 +609,17 @@ export default function Friends() {
           </AnimatePresence>
         </section>
 
-        {/* Incoming Friend Requests */}
-        {incomingRequests.length > 0 && (
-          <section className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-yellow-900/40 space-y-3">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-400">
-              <UserPlus size={18} /> Заявки в друзья
+        {/* Incoming Friend Requests — always visible */}
+        <section className="bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-yellow-900/40 space-y-3">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-yellow-400">
+            <UserPlus size={18} /> Заявки в друзья
+            {incomingRequests.length > 0 && (
               <span className="bg-yellow-900/50 text-yellow-300 text-xs px-2 py-0.5 rounded-full font-black">{incomingRequests.length}</span>
-            </h2>
+            )}
+          </h2>
+          {incomingRequests.length === 0 ? (
+            <p className="text-neutral-500 text-sm text-center py-2">Нет входящих заявок</p>
+          ) : (
             <div className="space-y-2">
               {incomingRequests.map(req => (
                 <div key={req.id} className="flex items-center gap-3 bg-neutral-950/80 border border-neutral-800 rounded-xl p-3">
@@ -646,8 +650,8 @@ export default function Friends() {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         <section>
           <div className="flex items-center gap-2 mb-3">
