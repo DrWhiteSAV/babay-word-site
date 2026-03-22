@@ -113,7 +113,7 @@ export function usePlayerStatsSync() {
         if (!data) {
           usePlayerStore.setState({
             character: null,
-            fear: 0, energy: 3, watermelons: 0, bossLevel: 1,
+            fear: 0, energy: 10, watermelons: 0, bossLevel: 1,
             inventory: inventoryFromDB,
             friends: friendsList,
             settings: { ...DEFAULT_SETTINGS },

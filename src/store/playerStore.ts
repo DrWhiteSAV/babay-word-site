@@ -190,7 +190,7 @@ export const DEFAULT_SETTINGS = {
 export const usePlayerStore = create<PlayerState>()((set, get) => ({
   character: null,
   fear: 0,
-  energy: 100,
+  energy: 10,
   watermelons: 0,
   bossLevel: 1, // starts at 1
   lastEnergyUpdate: Date.now(),
